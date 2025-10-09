@@ -22,4 +22,6 @@ public interface Renderer {
     void renderFrame();
 
     void cleanup();
+
+    Window getWindow();
 }

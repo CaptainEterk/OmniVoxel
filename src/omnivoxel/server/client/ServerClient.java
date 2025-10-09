@@ -27,14 +27,42 @@ public class ServerClient extends MobEntity implements ServerItem {
 
     @Override
     public byte[] getBytes() {
-        byte[] out = new byte[playerID.length + Integer.BYTES + Double.BYTES * 5];
-        System.arraycopy(playerID, 0, out, 0, playerID.length);
-        ByteUtils.addInt(out, EntityType.Type.PLAYER.ordinal(), playerID.length);
-        ByteUtils.addDouble(out, x, playerID.length + Integer.BYTES);
-        ByteUtils.addDouble(out, y, playerID.length + Integer.BYTES + Double.BYTES);
-        ByteUtils.addDouble(out, z, playerID.length + Integer.BYTES + Double.BYTES * 2);
-        ByteUtils.addDouble(out, pitch, playerID.length + Integer.BYTES + Double.BYTES * 3);
-        ByteUtils.addDouble(out, yaw, playerID.length + Integer.BYTES + Double.BYTES * 4);
+        byte[] nameBytes = clientID.getBytes();
+        int totalSize = Integer.BYTES
+                + playerID.length
+                + Integer.BYTES
+                + Double.BYTES * 5
+                + Integer.BYTES
+                + nameBytes.length;
+
+        byte[] out = new byte[totalSize];
+        int offset = 0;
+
+        ByteUtils.addInt(out, playerID.length, offset);
+        offset += Integer.BYTES;
+
+        System.arraycopy(playerID, 0, out, offset, playerID.length);
+        offset += playerID.length;
+
+        ByteUtils.addInt(out, EntityType.Type.PLAYER.ordinal(), offset);
+        offset += Integer.BYTES;
+
+        ByteUtils.addDouble(out, x, offset);
+        offset += Double.BYTES;
+        ByteUtils.addDouble(out, y, offset);
+        offset += Double.BYTES;
+        ByteUtils.addDouble(out, z, offset);
+        offset += Double.BYTES;
+        ByteUtils.addDouble(out, pitch, offset);
+        offset += Double.BYTES;
+        ByteUtils.addDouble(out, yaw, offset);
+        offset += Double.BYTES;
+
+        ByteUtils.addInt(out, nameBytes.length, offset);
+        offset += Integer.BYTES;
+
+        System.arraycopy(nameBytes, 0, out, offset, nameBytes.length);
+
         return out;
     }
 

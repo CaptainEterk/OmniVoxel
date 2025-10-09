@@ -155,17 +155,13 @@ public class Server {
             ServerClient serverClient = new ServerClient(clientID, ctx);
             byte[] encodedServerPlayer = serverClient.getBytes();
 
-            byte[] playerList = new byte[32 * clients.size()];
-
             final int[] i = {0};
 
             clients.values().forEach(player -> {
-                sendBytes(player.getCTX(), PackageID.NEW_PLAYER, encodedServerPlayer);
-                byte[] playerBytes = player.getBytes();
-                System.arraycopy(playerBytes, 0, playerList, i[0] * 32, 32);
+                sendBytes(player.getCTX(), PackageID.NEW_ENTITY, encodedServerPlayer);
+                sendBytes(ctx, PackageID.NEW_ENTITY, player.getBytes());
                 i[0]++;
             });
-            sendBytes(ctx, PackageID.REGISTER_PLAYERS, playerList);
 
             blockShapeCache.forEach((id, blockShape) -> sendBlockShape(serverClient.getCTX(), blockShape));
 

@@ -51,7 +51,7 @@ public class ServerWorldHandler {
             }
         }
         if (client != null) {
-            sendBytes(client.getCTX(), success ? PackageID.REMOVE_BLOCK_SUCCESS : PackageID.REMOVE_BLOCK_FAILURE);
+//            sendBytes(client.getCTX(), success ? PackageID.REMOVE_BLOCK_SUCCESS : PackageID.REMOVE_BLOCK_FAILURE);
         }
     }
 

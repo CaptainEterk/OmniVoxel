@@ -49,6 +49,8 @@ public final class ServerWorldDataService {
     public ServerWorldDataService(ServerBlockService blockService, Map<String, BlockShape> blockShapeCache, GameNode gameNode, long seed) {
         this.blockService = blockService;
 
+
+
         addDensityFunction(Noise3DDensityFunction.class);
         addDensityFunction(ValueDensityFunction.class);
 

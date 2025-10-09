@@ -105,6 +105,7 @@ public final class Client {
             return;
         }
         if (!channel.isActive()) {
+            close();
             logger.error("Channel is closed. Cannot send data.");
             return;
         }
@@ -121,14 +122,6 @@ public final class Client {
     void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) throws InterruptedException {
         try {
             switch (packageID) {
-                case REGISTER_PLAYERS:
-                    registerPlayers(byteBuf);
-                    byteBuf.release();
-                    break;
-                case NEW_PLAYER:
-                    newPlayer(byteBuf);
-                    byteBuf.release();
-                    break;
                 case CHUNK:
                     receiveChunk(byteBuf);
                     break;
@@ -169,31 +162,42 @@ public final class Client {
     }
 
     private void updateEntity(ByteBuf byteBuf) {
-        String entityID = ByteUtils.bytesToHex(ByteUtils.getBytes(byteBuf, 8, 32));
+        int offset = 8;
+
+        int idLength = byteBuf.getInt(offset);
+        offset += Integer.BYTES;
+
+        byte[] entityIDBytes = new byte[idLength];
+        byteBuf.getBytes(offset, entityIDBytes);
+        offset += idLength;
+
+        String entityID = ByteUtils.bytesToHex(entityIDBytes);
         ClientEntity entity = entities.get(entityID);
         if (entity == null) {
             System.err.println("Received update for unknown player: " + entityID);
-        } else {
-            double x = byteBuf.getDouble(44);
-            double y = byteBuf.getDouble(52);
-            double z = byteBuf.getDouble(60);
-            double pitch = byteBuf.getDouble(68);
-            double yaw = byteBuf.getDouble(76);
+            return;
+        }
 
-            entity.set(x, y, z, pitch, yaw);
+        double x = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double y = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double z = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double pitch = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double yaw = byteBuf.getDouble(offset);
 
-            if (entity.getMesh() != null) {
-                entity.getMeshData().setModel(new Matrix4f().identity()
-                        .translate((float) x, (float) (y - 0.75f / 2), (float) z)
-                        .scale(0.5f)
-                        .rotateY((float) -yaw));
-                if (!entity.getMesh().getChildren().isEmpty()) {
-                    entity.getMesh().getChildren().getFirst().getMeshData().setModel(new Matrix4f().translate(0, 0.75f, 0).rotateX((float) -pitch));
-                    entity.getMesh().getChildren().get(1).getMeshData().setModel(new Matrix4f().translate(-0.5f, 0.75f, 0));
-                    entity.getMesh().getChildren().get(2).getMeshData().setModel(new Matrix4f().translate(0.5f, 0.75f, 0));
-                    entity.getMesh().getChildren().get(3).getMeshData().setModel(new Matrix4f().translate(-0.25f, -0.75f, 0));
-                    entity.getMesh().getChildren().get(4).getMeshData().setModel(new Matrix4f().translate(0.25f, -0.75f, 0));
-                }
+        entity.set(x, y, z, pitch, yaw);
+
+        if (entity.getMesh() != null) {
+            entity.getMeshData().setModel(new Matrix4f().identity()
+                    .translate((float) x, (float) (y - 0.75f / 2), (float) z)
+                    .scale(0.5f)
+                    .rotateY((float) -yaw));
+
+            if (!entity.getMesh().getChildren().isEmpty()) {
+                entity.getMesh().getChildren().getFirst().getMeshData().setModel(new Matrix4f().translate(0, 0.75f, 0).rotateX((float) -pitch));
+                entity.getMesh().getChildren().get(1).getMeshData().setModel(new Matrix4f().translate(-0.5f, 0.75f, 0));
+                entity.getMesh().getChildren().get(2).getMeshData().setModel(new Matrix4f().translate(0.5f, 0.75f, 0));
+                entity.getMesh().getChildren().get(3).getMeshData().setModel(new Matrix4f().translate(-0.25f, -0.75f, 0));
+                entity.getMesh().getChildren().get(4).getMeshData().setModel(new Matrix4f().translate(0.25f, -0.75f, 0));
             }
         }
     }

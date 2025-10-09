@@ -36,7 +36,7 @@ public final class GameLoop {
         this.renderer = new OpenGLRenderer();
     }
 
-    public void run() {
+    public void init() {
         this.renderer.init(
                 new Logger("Game Loop", OmniVoxel.SHOW_LOGS),
                 state,
@@ -47,6 +47,13 @@ public final class GameLoop {
                 gameRunning,
                 contextTasks
         );
+    }
+
+    public Renderer getRenderer() {
+        return renderer;
+    }
+
+    public void run() {
         while (!renderer.shouldClose()) {
             renderer.renderFrame();
         }
