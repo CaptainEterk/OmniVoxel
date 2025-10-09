@@ -11,6 +11,7 @@ import omnivoxel.server.client.chunk.result.ChunkResult;
 import omnivoxel.server.client.chunk.result.GeneratedChunk;
 import omnivoxel.server.client.chunk.worldDataService.ChunkInfo;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
+import omnivoxel.server.world.ChunkCacheHandler;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.util.boundingBox.WorldBoundingBox;
 import omnivoxel.util.cache.LRUCache;
@@ -18,21 +19,18 @@ import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 
 import java.io.IOException;
-import java.util.Queue;
 import java.util.Set;
 
 public final class ChunkGenerator {
     private final ServerWorldDataService worldDataService;
     private final ServerWorld world;
     private final Set<WorldBoundingBox> worldBoundingBoxes;
-    private final Queue<ChunkCacheItem> chunkCacheQueue;
     private final LRUCache<Position2D, ChunkInfo> chunkInfoLRUCache = new LRUCache<>(100);
 
-    public ChunkGenerator(ServerWorldDataService worldDataService, ServerBlockService blockService, ServerWorld world, Set<WorldBoundingBox> worldBoundingBoxes, Queue<ChunkCacheItem> chunkCacheQueue) {
+    public ChunkGenerator(ServerWorldDataService worldDataService, ServerBlockService blockService, ServerWorld world, Set<WorldBoundingBox> worldBoundingBoxes) {
         this.worldDataService = worldDataService;
         this.world = world;
         this.worldBoundingBoxes = worldBoundingBoxes;
-        this.chunkCacheQueue = chunkCacheQueue;
     }
 
     private void sendChunkBytes(ChannelHandlerContext ctx, int x, int y, int z, byte[] chunk) {
@@ -74,7 +72,7 @@ public final class ChunkGenerator {
                                                 y == -1 || y == ConstantGameSettings.CHUNK_HEIGHT ||
                                                 z == -1 || z == ConstantGameSettings.CHUNK_LENGTH;
 
-                                chunk = chunk.setBlock(x, y, z, worldDataService.getBlockAt(position3D, x, y, z, worldX, worldY, worldZ, border, chunkInfo));
+                                chunk = chunk.setBlock(x, y, z, worldDataService.getBlockAt(x, y, z, worldX, worldY, worldZ, border, chunkInfo));
                             }
                         }
                     }
@@ -85,7 +83,7 @@ public final class ChunkGenerator {
                 chunkResult = GeneratedChunk.getResult(chunk, task.serverClient());
                 world.add(position3D, chunkResult.chunk());
 
-                chunkCacheQueue.add(new ChunkCacheItem(position3D, chunkResult.bytes()));
+                ChunkCacheHandler.queueCache(new ChunkCacheItem(position3D, chunkResult.bytes()));
 
                 sendChunkBytes(task.serverClient().getCTX(), task.x(), task.y(), task.z(), chunkResult.bytes());
             }
