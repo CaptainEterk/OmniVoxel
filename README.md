@@ -1,5 +1,5 @@
-# OmniVoxel v0.7.8-alpha
+# OmniVoxel v0.7.9-alpha
 
-OmniVoxel is a Minecraft clone developed by CaptainEterk.
+OmniVoxel is a voxel game-engine developed by CaptainEterk, written in Java.
 
 ![img_1.png](.images/img_1.png)
