@@ -29,9 +29,8 @@ import java.util.function.Consumer;
 public class PlayerController {
     private static final double GRAVITY = 0.8f;
     private static final double JUMP_VELOCITY = 12f * ConstantGameSettings.TARGET_TPS;
-    private static final double SPRINT_SPEED = 2.6f * ConstantGameSettings.TARGET_TPS; // Optional
-    private static final double AIR_RESISTANCE = 0.91f * ConstantGameSettings.TARGET_TPS; // Multiplied every frame
-    private static final double GROUND_FRICTION = 0.546f * ConstantGameSettings.TARGET_TPS; // Like stone in Minecraft
+    private static final double AIR_RESISTANCE = 0.91f * ConstantGameSettings.TARGET_TPS;
+    private static final double GROUND_FRICTION = 0.546f * ConstantGameSettings.TARGET_TPS;
     private static final byte COLLISION_X = 0b001;
     private static final byte COLLISION_Y = 2;
     private static final byte COLLISION_Z = 4;
@@ -47,7 +46,6 @@ public class PlayerController {
     private final IDCache<String, BlockHitbox> blockHitboxCache;
     private final Hitbox hitbox;
     private final Window window;
-    private final double speed = 4.317f * ConstantGameSettings.TARGET_TPS;
 
     @NotNull
     private MovementMode movementMode = MovementMode.FLY_COLLIDE;
@@ -150,7 +148,7 @@ public class PlayerController {
 
         BooleanRef changeRot = new BooleanRef(false);
         if (mouseButtonInput.isMouseLocked()) {
-            handleInput(deltaTime, deltaTime * ConstantGameSettings.TARGET_TPS, changeRot, movementMode != MovementMode.FALL_COLLIDE);
+            handleInput(deltaTime, changeRot, movementMode != MovementMode.FALL_COLLIDE);
 
             if (keyInput.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
                 contextTasks.add(mouseButtonInput::unlockMouse);
@@ -288,7 +286,7 @@ public class PlayerController {
         }
     }
 
-    private void handleInput(double deltaTime, double tickDelta, BooleanRef changeRot, boolean fly) {
+    private void handleInput(double deltaTime, BooleanRef changeRot, boolean fly) {
         double deltaX = mouseInput.getDeltaX();
         double deltaY = mouseInput.getDeltaY();
 
@@ -303,6 +301,7 @@ public class PlayerController {
             this.yaw = camera.getYaw();
         }
 
+        double speed = 4.317f * ConstantGameSettings.TARGET_TPS;
         if (!fly) {
             if (onGround && keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE)) {
                 velocityY = (float) (JUMP_VELOCITY * deltaTime);
