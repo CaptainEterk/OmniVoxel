@@ -30,10 +30,7 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
 import org.joml.Matrix4f;
 
-import java.util.ArrayDeque;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -174,9 +171,11 @@ public final class Client {
         String entityID = ByteUtils.bytesToHex(entityIDBytes);
         ClientEntity entity = entities.get(entityID);
         if (entity == null) {
-            System.err.println("Received update for unknown player: " + entityID);
+            System.err.println("Received update for unknown entity: " + entityID);
             return;
         }
+
+        offset += Integer.BYTES;
 
         double x = byteBuf.getDouble(offset); offset += Double.BYTES;
         double y = byteBuf.getDouble(offset); offset += Double.BYTES;
@@ -232,7 +231,11 @@ public final class Client {
         byte[] entityID = new byte[entityIDLength];
         byteBuf.getBytes(12, entityID);
 
-        int doubleStart = 12 + entityIDLength;
+        int typeStart = 12 + entityIDLength;
+        int typeOrdinal = byteBuf.getInt(typeStart);
+        EntityType.Type type = EntityType.Type.values()[typeOrdinal];
+
+        int doubleStart = typeStart + Integer.BYTES;
         double x = byteBuf.getDouble(doubleStart);
         double y = byteBuf.getDouble(doubleStart + Double.BYTES);
         double z = byteBuf.getDouble(doubleStart + Double.BYTES * 2);
@@ -240,28 +243,20 @@ public final class Client {
         double yaw = byteBuf.getDouble(doubleStart + Double.BYTES * 4);
 
         int nameLength = byteBuf.getInt(doubleStart + Double.BYTES * 5);
-        int nameStart = doubleStart + Double.BYTES * 5;
+        int nameStart = doubleStart + Double.BYTES * 5 + Integer.BYTES;
+
         byte[] nameBytes = new byte[nameLength];
         byteBuf.getBytes(nameStart, nameBytes);
         String name = new String(nameBytes);
 
-        int typeOrdinal = byteBuf.getInt(nameStart + nameLength);
-        EntityType.Type type = EntityType.Type.values()[typeOrdinal];
-
         String id = ByteUtils.bytesToHex(entityID);
         ClientEntity entity = new ClientEntity(name, id, new EntityType(type, name));
         entity.set(x, y, z, pitch, yaw);
-        entity.setMeshData(new ModelEntityMeshData(entity).setModel(new Matrix4f().translate((float) x, (float) y, (float) z)));
+        entity.setMeshData(new ModelEntityMeshData(entity)
+                .setModel(new Matrix4f().translate((float) x, (float) y, (float) z)));
+
         entities.put(id, entity);
-
         meshDataGenerators.submit(new EntityMeshDataTask(entity));
-    }
-
-    private void registerPlayers(ByteBuf byteBuf) throws InterruptedException {
-        int playerCount = Math.floorDiv(byteBuf.readableBytes(), 32);
-        for (int i = 0; i < playerCount; i++) {
-            loadPlayer(ByteUtils.getBytes(byteBuf, i * 32 + 8, 32), "Other client that was already here!!");
-        }
     }
 
     public Map<String, ClientEntity> getEntities() {

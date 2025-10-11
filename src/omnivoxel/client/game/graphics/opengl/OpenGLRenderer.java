@@ -267,7 +267,7 @@ public class OpenGLRenderer implements Renderer {
 
             camera.updateFrustum(projectionMatrix, new Matrix4f(viewMatrix).translate((float) -camera.getX(), (float) -camera.getY(), (float) -camera.getZ()));
             shaderProgram.setUniform("projection", projectionMatrix);
-            shaderProgram.setUniform("view", viewMatrix);
+            shaderProgram.setUniform("view", cameraViewMatrix);
             shaderProgram.setUniform("cameraView", cameraViewMatrix);
 
             zppShaderProgram.bind();
@@ -319,7 +319,7 @@ public class OpenGLRenderer implements Renderer {
 
     private void openGLStateReset() {
         GL11C.glEnable(GL11C.GL_DEPTH_TEST);
-//        GL11C.glEnable(GL11C.GL_CULL_FACE);
+        GL11C.glEnable(GL11C.GL_CULL_FACE);
         GL11C.glDepthMask(true);
         GL11C.glDepthFunc(GL11C.GL_LESS);
         GL11C.glClearDepth(1.0f);
@@ -330,10 +330,11 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, TEMP_texture);
         shaderProgram.setUniform("meshType", 1);
         Map<String, ClientEntity> entityMeshes = world.getEntities();
+
         entityMeshes.forEach((id, clientEntity) -> {
-            if (camera.getFrustum().isEntityInFrustum(clientEntity, camera)) {
+//            if (camera.getFrustum().isEntityInFrustum(clientEntity, camera)) {
                 renderEntityMesh(clientEntity.getMesh(), IDENTITY_MATRIX);
-            }
+//            }
         });
     }
 
