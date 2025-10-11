@@ -128,13 +128,13 @@ public final class ServerWorldDataService {
         blockFunction = getBlockFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("surface"), ObjectGameNode.class), seed);
         heightFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("heights"), ObjectGameNode.class), seed);
 
-        long start = System.nanoTime();
-        for (int i = 0; i < 100; i++) {
-            System.out.println(i);
-            getBlockAt(0, 0, 0, 0, 0, 0, false, getChunkInfo(new Position3D(0, 0, 0)));
-        }
-
-        System.out.println(System.nanoTime() - start);
+//        long start = System.nanoTime();
+//        for (int i = 0; i < 100; i++) {
+//            System.out.println(i);
+//            getBlockAt(0, 0, 0, 0, 0, 0, false, getChunkInfo(new Position3D(0, 0, 0)));
+//        }
+//
+//        System.out.println(System.nanoTime() - start);
     }
 
     private static void addDensityFunction(Class<? extends DensityFunction> densityFunctionClass) {
