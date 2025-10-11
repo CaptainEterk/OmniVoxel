@@ -1,9 +1,9 @@
 package omnivoxel.client.game.player;
 
 import omnivoxel.client.game.camera.Camera;
-import omnivoxel.client.game.graphics.opengl.input.KeyInput;
-import omnivoxel.client.game.graphics.opengl.input.MouseButtonInput;
-import omnivoxel.client.game.graphics.opengl.input.MouseInput;
+import omnivoxel.client.game.input.KeyInput;
+import omnivoxel.client.game.input.MouseButtonInput;
+import omnivoxel.client.game.input.MouseInput;
 import omnivoxel.client.game.graphics.opengl.window.Window;
 import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.client.game.settings.ConstantGameSettings;
@@ -21,8 +21,6 @@ import omnivoxel.world.block.hitbox.FullBlockHitbox;
 import omnivoxel.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWVidMode;
-import org.lwjgl.system.MemoryUtil;
 
 import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
@@ -31,9 +29,8 @@ import java.util.function.Consumer;
 public class PlayerController {
     private static final double GRAVITY = 0.8f;
     private static final double JUMP_VELOCITY = 12f * ConstantGameSettings.TARGET_TPS;
-    private static final double SPRINT_SPEED = 2.6f * ConstantGameSettings.TARGET_TPS; // Optional
-    private static final double AIR_RESISTANCE = 0.91f * ConstantGameSettings.TARGET_TPS; // Multiplied every frame
-    private static final double GROUND_FRICTION = 0.546f * ConstantGameSettings.TARGET_TPS; // Like stone in Minecraft
+    private static final double AIR_RESISTANCE = 0.91f * ConstantGameSettings.TARGET_TPS;
+    private static final double GROUND_FRICTION = 0.546f * ConstantGameSettings.TARGET_TPS;
     private static final byte COLLISION_X = 0b001;
     private static final byte COLLISION_Y = 2;
     private static final byte COLLISION_Z = 4;
@@ -48,7 +45,7 @@ public class PlayerController {
     private final IDCache<String, String> blockHitbox;
     private final IDCache<String, BlockHitbox> blockHitboxCache;
     private final Hitbox hitbox;
-    private final double speed = 4.317f * ConstantGameSettings.TARGET_TPS;
+    private final Window window;
 
     @NotNull
     private MovementMode movementMode = MovementMode.FLY_COLLIDE;
@@ -68,22 +65,18 @@ public class PlayerController {
     private boolean togglingFullscreen;
     private boolean togglingDebug;
     private boolean togglingMovementMode;
-    // TODO: Move to Window
-    private int oldWindowWidth;
-    private int oldWindowHeight;
-    private int oldWindowX;
-    private int oldWindowY;
     private Position3D cachedChunkPos = new Position3D(0, 0, 0);
     private Chunk<Block> cachedChunk;
     private boolean onGround = false;
 
-    public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world) {
+    public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, Window window) {
         this.client = client;
         this.camera = camera;
         this.settings = settings;
         this.contextTasks = contextTasks;
         this.state = state;
         this.world = world;
+        this.window = window;
         blockHitbox = new IDCache<>(new HashMap<>());
         blockHitboxCache = new IDCache<>(new HashMap<>());
         hitbox = new Hitbox(-0.4f, -0.5f, -0.4f, 0.4f, 1.4f, 0.4f, 2, 2, 3);
@@ -155,7 +148,7 @@ public class PlayerController {
 
         BooleanRef changeRot = new BooleanRef(false);
         if (mouseButtonInput.isMouseLocked()) {
-            handleInput(deltaTime, deltaTime * ConstantGameSettings.TARGET_TPS, changeRot, movementMode != MovementMode.FALL_COLLIDE);
+            handleInput(deltaTime, changeRot, movementMode != MovementMode.FALL_COLLIDE);
 
             if (keyInput.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
                 contextTasks.add(mouseButtonInput::unlockMouse);
@@ -174,9 +167,7 @@ public class PlayerController {
             frictionFactor = (float) ((onGround ? GROUND_FRICTION : AIR_RESISTANCE) * deltaTime);
             velocityX *= frictionFactor;
             velocityZ *= frictionFactor;
-            if (!onGround) {
-                velocityY *= 0.98f;
-            }
+            velocityY *= 0.98f;
         } else {
             frictionFactor = (float) (AIR_RESISTANCE * deltaTime);
             velocityX *= frictionFactor;
@@ -295,7 +286,7 @@ public class PlayerController {
         }
     }
 
-    private void handleInput(double deltaTime, double tickDelta, BooleanRef changeRot, boolean fly) {
+    private void handleInput(double deltaTime, BooleanRef changeRot, boolean fly) {
         double deltaX = mouseInput.getDeltaX();
         double deltaY = mouseInput.getDeltaY();
 
@@ -310,13 +301,14 @@ public class PlayerController {
             this.yaw = camera.getYaw();
         }
 
+        double speed = 4.317f * ConstantGameSettings.TARGET_TPS;
         if (!fly) {
             if (onGround && keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE)) {
                 velocityY = (float) (JUMP_VELOCITY * deltaTime);
                 onGround = false;
             }
         } else {
-            velocityY += (float) (((keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_LEFT_SHIFT) ? 1 : 0)) * (JUMP_VELOCITY * deltaTime));
+            velocityY += (float) (((keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_LEFT_SHIFT) ? 1 : 0)) * (speed * deltaTime));
         }
         double moveRelativeX = (keyInput.isKeyPressed(GLFW.GLFW_KEY_D) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_A) ? 1 : 0);
         double moveRelativeZ = (keyInput.isKeyPressed(GLFW.GLFW_KEY_W) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_S) ? 1 : 0);
@@ -368,7 +360,7 @@ public class PlayerController {
         }
         if (keyInput.isKeyPressed(GLFW.GLFW_KEY_F4)) {
             if (!togglingMovementMode) {
-                movementMode = MovementMode.values()[(movementMode.ordinal()+1)%MovementMode.values().length];
+                movementMode = MovementMode.values()[(movementMode.ordinal() + 1) % MovementMode.values().length];
             }
             togglingMovementMode = true;
         } else {
@@ -376,34 +368,9 @@ public class PlayerController {
         }
         if (keyInput.isKeyPressed(GLFW.GLFW_KEY_F11)) {
             if (!togglingFullscreen) {
-                contextTasks.add(window -> {
-                    long currentWindow = GLFW.glfwGetCurrentContext();
-                    long monitor = GLFW.glfwGetPrimaryMonitor();
-                    GLFWVidMode vidMode = GLFW.glfwGetVideoMode(monitor);
+                window.toggleFullscreen();
 
-                    boolean isFullscreen = GLFW.glfwGetWindowMonitor(currentWindow) != MemoryUtil.NULL;
-
-                    if (isFullscreen) {
-                        GLFW.glfwSetWindowMonitor(currentWindow, MemoryUtil.NULL, oldWindowX, oldWindowY, oldWindowWidth, oldWindowHeight, GLFW.GLFW_DONT_CARE);
-                    } else {
-                        int[] width = new int[1];
-                        int[] height = new int[1];
-                        GLFW.glfwGetWindowSize(currentWindow, width, height);
-                        oldWindowWidth = width[0];
-                        oldWindowHeight = height[0];
-
-                        int[] x = new int[1];
-                        int[] y = new int[1];
-                        GLFW.glfwGetWindowPos(window.window(), x, y);
-                        oldWindowX = x[0];
-                        oldWindowY = y[0];
-
-                        assert vidMode != null;
-                        GLFW.glfwSetWindowMonitor(currentWindow, monitor, 0, 0, vidMode.width(), vidMode.height(), vidMode.refreshRate());
-                    }
-
-                    mouseInput.clearDelta();
-                });
+                mouseInput.clearDelta();
             }
             togglingFullscreen = true;
         } else {

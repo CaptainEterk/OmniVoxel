@@ -9,9 +9,9 @@ import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.ChunkGenerator;
 import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
-import omnivoxel.server.client.chunk.result.ChunkCacheItem;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
 import omnivoxel.server.games.Game;
+import omnivoxel.server.world.ChunkCacheHandler;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
 import omnivoxel.util.boundingBox.WorldBoundingBox;
@@ -23,17 +23,12 @@ import omnivoxel.util.game.nodes.ObjectGameNode;
 import omnivoxel.util.thread.WorkerThreadPool;
 
 import java.io.IOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 
 public class Server {
     private static final int HANDSHAKE_ID = 0;
@@ -44,7 +39,6 @@ public class Server {
     private final Map<String, String> blockIDMap;
     private final Map<String, BlockShape> blockShapeCache;
     private final ServerBlockService blockService;
-    private final BlockingQueue<ChunkCacheItem> chunkCacheQueue = new LinkedBlockingDeque<>();
     private final ServerWorldHandler worldHandler;
 
     public Server(long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, Map<String, String> blockIDMap, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
@@ -58,9 +52,8 @@ public class Server {
         GameNode gameNode = GameParser.parseNode(Files.readString(Path.of("game/main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of("game/constants.json")), null), ArrayGameNode.class));
 
         if (gameNode instanceof ObjectGameNode objectGameNode) {
-            ServerWorldDataService serverWorldDataService = new ServerWorldDataService(blockService, blockShapeCache, objectGameNode.object().get("world_generator"), seed);
             Set<WorldBoundingBox> worldBoundingBoxes = ConcurrentHashMap.newKeySet();
-            workerThreadPool = new WorkerThreadPool<>(ConstantServerSettings.CHUNK_GENERATOR_THREAD_LIMIT, new ChunkGenerator(serverWorldDataService, blockService, world, worldBoundingBoxes, chunkCacheQueue)::generateChunk, true);
+            workerThreadPool = new WorkerThreadPool<>(ConstantServerSettings.CHUNK_GENERATOR_THREAD_LIMIT, new ChunkGenerator(new ServerWorldDataService(blockService, blockShapeCache, objectGameNode.object().get("world_generator"), seed), blockService, world, worldBoundingBoxes)::generateChunk, true);
         } else {
             throw new IllegalArgumentException("gameNode must be an ObjectGameNode, not " + gameNode.getClass());
         }
@@ -155,17 +148,13 @@ public class Server {
             ServerClient serverClient = new ServerClient(clientID, ctx);
             byte[] encodedServerPlayer = serverClient.getBytes();
 
-            byte[] playerList = new byte[32 * clients.size()];
-
             final int[] i = {0};
 
             clients.values().forEach(player -> {
-                sendBytes(player.getCTX(), PackageID.NEW_PLAYER, encodedServerPlayer);
-                byte[] playerBytes = player.getBytes();
-                System.arraycopy(playerBytes, 0, playerList, i[0] * 32, 32);
+                sendBytes(player.getCTX(), PackageID.NEW_ENTITY, encodedServerPlayer);
+                sendBytes(ctx, PackageID.NEW_ENTITY, player.getBytes());
                 i[0]++;
             });
-            sendBytes(ctx, PackageID.REGISTER_PLAYERS, playerList);
 
             blockShapeCache.forEach((id, blockShape) -> sendBlockShape(serverClient.getCTX(), blockShape));
 
@@ -194,32 +183,7 @@ public class Server {
             while (true) {
                 long startNano = System.nanoTime();
 
-                while (!chunkCacheQueue.isEmpty()) {
-                    ChunkCacheItem item = chunkCacheQueue.poll(100, TimeUnit.MILLISECONDS);
-                    if (item != null) {
-                        try {
-                            Path finalPath = Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION + item.chunkPosition().getPath());
-                            Files.createDirectories(finalPath.getParent());
-
-                            Path tempPath = finalPath.resolveSibling(
-                                    finalPath.getFileName() + ".tmp"
-                            );
-
-                            Files.write(tempPath, item.bytes());
-
-                            try {
-                                Files.move(tempPath, finalPath,
-                                        StandardCopyOption.REPLACE_EXISTING,
-                                        StandardCopyOption.ATOMIC_MOVE);
-                            } catch (AtomicMoveNotSupportedException e) {
-                                Files.move(tempPath, finalPath,
-                                        StandardCopyOption.REPLACE_EXISTING);
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
+                ChunkCacheHandler.cacheAll();
 
                 worldHandler.removeBlock((int) Math.floor(Math.random() * 32), (int) Math.floor(Math.random() * 32)+100, (int) Math.floor(Math.random() * 32), null);
 

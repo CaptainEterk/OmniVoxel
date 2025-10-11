@@ -1,4 +1,4 @@
-package omnivoxel.client.game.graphics.opengl.input;
+package omnivoxel.client.game.input;
 
 import omnivoxel.client.game.graphics.opengl.window.Window;
 
@@ -21,7 +21,7 @@ public class MouseButtonInput {
         glfwSetMouseButtonCallback(window.window(), this::mouseButtonCallback);
     }
 
-    public void mouseButtonCallback(long window, int button, int action, int mods) {
+    private void mouseButtonCallback(long window, int button, int action, int mods) {
         if (action == GLFW_PRESS) {
             mouseButtons.put(button, true);
         } else if (action == GLFW_RELEASE) {

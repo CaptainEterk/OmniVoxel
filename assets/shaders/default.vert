@@ -81,11 +81,11 @@ void main() {
 
         position = xyz;
 
-        gl_Position = projection * view * vec4(position - cameraPosition, 1.0);
+        gl_Position = projection * view * vec4(position, 1.0);
     } else if (meshType == 1u) {
         position = vPosition;
         TexCoord = vUV;
 
-        gl_Position = projection * cameraView * model * vec4(position - cameraPosition, 1.0);
+        gl_Position = projection * cameraView * model * vec4(position, 1.0);
     }
 }

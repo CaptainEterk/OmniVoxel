@@ -1,6 +1,9 @@
 package omnivoxel.client.game.graphics.opengl.window;
 
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
+import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.system.MemoryUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,17 +16,22 @@ import static org.lwjgl.opengl.GL11C.glViewport;
 public final class Window {
     private final long window;
     private final String version;
-    private final List<Consumer<Window>> matrixUsers;
+    private final List<Consumer<Window>> resizingCallbacks;
     private final Queue<Consumer<Window>> contextTasks;
     private int width;
     private int height;
     private float aspectRatio;
 
+    private int oldWindowWidth;
+    private int oldWindowHeight;
+    private int oldWindowX;
+    private int oldWindowY;
+
     public Window(long window, String version, Queue<Consumer<Window>> contextTasks) {
         this.window = window;
         this.version = version;
         this.contextTasks = contextTasks;
-        this.matrixUsers = new ArrayList<>();
+        this.resizingCallbacks = new ArrayList<>();
     }
 
     public void init(int width, int height) {
@@ -43,15 +51,15 @@ public final class Window {
 
         glViewport(0, 0, width, height);
 
-        updateMatrices();
+        updateResizingCallbacks();
     }
 
-    public void addMatrixListener(Consumer<Window> matrixUser) {
-        matrixUsers.add(matrixUser);
+    public void addResizingCallback(Consumer<Window> resizingCallback) {
+        resizingCallbacks.add(resizingCallback);
     }
 
-    public void updateMatrices() {
-        for (Consumer<Window> matrixUser : matrixUsers) {
+    public void updateResizingCallbacks() {
+        for (Consumer<Window> matrixUser : resizingCallbacks) {
             matrixUser.accept(this);
         }
     }
@@ -60,13 +68,13 @@ public final class Window {
         this.aspectRatio = aspectRatio;
     }
 
-    public float aspectRatio() {
+    public float getAspectRatio() {
         return aspectRatio;
     }
 
     public void show() {
         glfwShowWindow(window);
-        updateMatrices();
+        updateResizingCallbacks();
     }
 
     public boolean shouldClose() {
@@ -95,5 +103,34 @@ public final class Window {
 
     public String getVersion() {
         return version;
+    }
+
+    public void toggleFullscreen() {
+        contextTasks.add(window -> {
+            long currentWindow = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+            long monitor = GLFW.glfwGetPrimaryMonitor();
+            GLFWVidMode vidMode = GLFW.glfwGetVideoMode(monitor);
+
+            boolean isFullscreen = GLFW.glfwGetWindowMonitor(currentWindow) != MemoryUtil.NULL;
+
+            if (isFullscreen) {
+                GLFW.glfwSetWindowMonitor(currentWindow, MemoryUtil.NULL, oldWindowX, oldWindowY, oldWindowWidth, oldWindowHeight, GLFW.GLFW_DONT_CARE);
+            } else {
+                int[] width = new int[1];
+                int[] height = new int[1];
+                GLFW.glfwGetWindowSize(currentWindow, width, height);
+                oldWindowWidth = width[0];
+                oldWindowHeight = height[0];
+
+                int[] x = new int[1];
+                int[] y = new int[1];
+                GLFW.glfwGetWindowPos(window.window(), x, y);
+                oldWindowX = x[0];
+                oldWindowY = y[0];
+
+                assert vidMode != null;
+                GLFW.glfwSetWindowMonitor(currentWindow, monitor, 0, 0, vidMode.width(), vidMode.height(), vidMode.refreshRate());
+            }
+        });
     }
 }

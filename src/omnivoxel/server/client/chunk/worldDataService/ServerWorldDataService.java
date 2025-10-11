@@ -14,6 +14,7 @@ import omnivoxel.server.client.chunk.worldDataService.density.DensityFunction;
 import omnivoxel.server.client.chunk.worldDataService.density.functions.*;
 import omnivoxel.server.games.Game;
 import omnivoxel.util.IndexCalculator;
+import omnivoxel.util.cache.NoiseCache;
 import omnivoxel.util.config.Config;
 import omnivoxel.util.game.nodes.*;
 import omnivoxel.util.math.Position3D;
@@ -126,6 +127,14 @@ public final class ServerWorldDataService {
         densityFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("density"), ObjectGameNode.class), seed);
         blockFunction = getBlockFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("surface"), ObjectGameNode.class), seed);
         heightFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("heights"), ObjectGameNode.class), seed);
+
+//        long start = System.nanoTime();
+//        for (int i = 0; i < 100; i++) {
+//            System.out.println(i);
+//            getBlockAt(0, 0, 0, 0, 0, 0, false, getChunkInfo(new Position3D(0, 0, 0)));
+//        }
+//
+//        System.out.println(System.nanoTime() - start);
     }
 
     private static void addDensityFunction(Class<? extends DensityFunction> densityFunctionClass) {
@@ -203,22 +212,39 @@ public final class ServerWorldDataService {
         return withinX && withinY && withinZ;
     }
 
+    private final NoiseCache noiseCache = new NoiseCache();
+
     @NotNull
-    public ServerBlock getBlockAt(Position3D chunkPosition, int x, int y, int z, int worldX, int worldY, int worldZ, boolean border, ChunkInfo chunkInfo) {
+    public ServerBlock getBlockAt(int x, int y, int z,
+                                  int worldX, int worldY, int worldZ,
+                                  boolean border, ChunkInfo chunkInfo) {
         if (border && !shouldGenerateBlock(worldX, worldY, worldZ)) {
             return EmptyGeneratedChunk.air;
         }
-        double density = densityFunction.evaluate(worldX, worldY, worldZ);
-        String result = blockFunction.evaluate(density, null, isFloor(worldX, worldY, worldZ), isCeiling(worldX, worldY, worldZ), chunkInfo.heights()[IndexCalculator.calculateBlockIndexPadded2D(x, z)] - worldY, worldX, worldY, worldZ);
+
+        Double ncDensity = noiseCache.getCached(worldX, worldY, worldZ);
+        Double ncFloor = noiseCache.getCached(worldX, worldY-1, worldZ);
+        Double ncCeiling = noiseCache.getCached(worldX, worldY+1, worldZ);
+
+        double density;
+        if (ncDensity == null) {
+            density = densityFunction.evaluate(worldX, worldY, worldZ);
+            noiseCache.cache(worldX, worldY, worldZ, density);
+        } else {
+            density = ncDensity;
+        }
+
+        boolean isFloor = (ncFloor == null ? densityFunction.evaluate(worldX, worldY - 1, worldZ) : ncFloor) > 0;
+        boolean isCeiling = (ncCeiling == null ? densityFunction.evaluate(worldX, worldY + 1, worldZ) : ncCeiling) > 0;
+
+        String result = blockFunction.evaluate(
+                density, null,
+                isFloor, isCeiling,
+                chunkInfo.heights()[IndexCalculator.calculateBlockIndexPadded2D(x, z)] - worldY,
+                worldX, worldY, worldZ
+        );
+
         return blockService.getBlock(result);
-    }
-
-    private boolean isFloor(int worldX, int worldY, int worldZ) {
-        return heightFunction.evaluate(worldX, worldY + 1, worldZ) < 0;
-    }
-
-    private boolean isCeiling(int worldX, int worldY, int worldZ) {
-        return heightFunction.evaluate(worldX, worldY - 1, worldZ) < 0;
     }
 
     public ChunkInfo getChunkInfo(Position3D position3D) {

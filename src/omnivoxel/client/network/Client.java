@@ -30,10 +30,7 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
 import org.joml.Matrix4f;
 
-import java.util.ArrayDeque;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -105,6 +102,7 @@ public final class Client {
             return;
         }
         if (!channel.isActive()) {
+            close();
             logger.error("Channel is closed. Cannot send data.");
             return;
         }
@@ -121,14 +119,6 @@ public final class Client {
     void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) throws InterruptedException {
         try {
             switch (packageID) {
-                case REGISTER_PLAYERS:
-                    registerPlayers(byteBuf);
-                    byteBuf.release();
-                    break;
-                case NEW_PLAYER:
-                    newPlayer(byteBuf);
-                    byteBuf.release();
-                    break;
                 case CHUNK:
                     receiveChunk(byteBuf);
                     break;
@@ -169,31 +159,44 @@ public final class Client {
     }
 
     private void updateEntity(ByteBuf byteBuf) {
-        String entityID = ByteUtils.bytesToHex(ByteUtils.getBytes(byteBuf, 8, 32));
+        int offset = 8;
+
+        int idLength = byteBuf.getInt(offset);
+        offset += Integer.BYTES;
+
+        byte[] entityIDBytes = new byte[idLength];
+        byteBuf.getBytes(offset, entityIDBytes);
+        offset += idLength;
+
+        String entityID = ByteUtils.bytesToHex(entityIDBytes);
         ClientEntity entity = entities.get(entityID);
         if (entity == null) {
-            System.err.println("Received update for unknown player: " + entityID);
-        } else {
-            double x = byteBuf.getDouble(44);
-            double y = byteBuf.getDouble(52);
-            double z = byteBuf.getDouble(60);
-            double pitch = byteBuf.getDouble(68);
-            double yaw = byteBuf.getDouble(76);
+            System.err.println("Received update for unknown entity: " + entityID);
+            return;
+        }
 
-            entity.set(x, y, z, pitch, yaw);
+        offset += Integer.BYTES;
 
-            if (entity.getMesh() != null) {
-                entity.getMeshData().setModel(new Matrix4f().identity()
-                        .translate((float) x, (float) (y - 0.75f / 2), (float) z)
-                        .scale(0.5f)
-                        .rotateY((float) -yaw));
-                if (!entity.getMesh().getChildren().isEmpty()) {
-                    entity.getMesh().getChildren().getFirst().getMeshData().setModel(new Matrix4f().translate(0, 0.75f, 0).rotateX((float) -pitch));
-                    entity.getMesh().getChildren().get(1).getMeshData().setModel(new Matrix4f().translate(-0.5f, 0.75f, 0));
-                    entity.getMesh().getChildren().get(2).getMeshData().setModel(new Matrix4f().translate(0.5f, 0.75f, 0));
-                    entity.getMesh().getChildren().get(3).getMeshData().setModel(new Matrix4f().translate(-0.25f, -0.75f, 0));
-                    entity.getMesh().getChildren().get(4).getMeshData().setModel(new Matrix4f().translate(0.25f, -0.75f, 0));
-                }
+        double x = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double y = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double z = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double pitch = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double yaw = byteBuf.getDouble(offset);
+
+        entity.set(x, y, z, pitch, yaw);
+
+        if (entity.getMesh() != null) {
+            entity.getMeshData().setModel(new Matrix4f().identity()
+                    .translate((float) x, (float) (y - 0.75f / 2), (float) z)
+                    .scale(0.5f)
+                    .rotateY((float) -yaw));
+
+            if (!entity.getMesh().getChildren().isEmpty()) {
+                entity.getMesh().getChildren().getFirst().getMeshData().setModel(new Matrix4f().translate(0, 0.75f, 0).rotateX((float) -pitch));
+                entity.getMesh().getChildren().get(1).getMeshData().setModel(new Matrix4f().translate(-0.5f, 0.75f, 0));
+                entity.getMesh().getChildren().get(2).getMeshData().setModel(new Matrix4f().translate(0.5f, 0.75f, 0));
+                entity.getMesh().getChildren().get(3).getMeshData().setModel(new Matrix4f().translate(-0.25f, -0.75f, 0));
+                entity.getMesh().getChildren().get(4).getMeshData().setModel(new Matrix4f().translate(0.25f, -0.75f, 0));
             }
         }
     }
@@ -228,7 +231,11 @@ public final class Client {
         byte[] entityID = new byte[entityIDLength];
         byteBuf.getBytes(12, entityID);
 
-        int doubleStart = 12 + entityIDLength;
+        int typeStart = 12 + entityIDLength;
+        int typeOrdinal = byteBuf.getInt(typeStart);
+        EntityType.Type type = EntityType.Type.values()[typeOrdinal];
+
+        int doubleStart = typeStart + Integer.BYTES;
         double x = byteBuf.getDouble(doubleStart);
         double y = byteBuf.getDouble(doubleStart + Double.BYTES);
         double z = byteBuf.getDouble(doubleStart + Double.BYTES * 2);
@@ -236,28 +243,20 @@ public final class Client {
         double yaw = byteBuf.getDouble(doubleStart + Double.BYTES * 4);
 
         int nameLength = byteBuf.getInt(doubleStart + Double.BYTES * 5);
-        int nameStart = doubleStart + Double.BYTES * 5;
+        int nameStart = doubleStart + Double.BYTES * 5 + Integer.BYTES;
+
         byte[] nameBytes = new byte[nameLength];
         byteBuf.getBytes(nameStart, nameBytes);
         String name = new String(nameBytes);
 
-        int typeOrdinal = byteBuf.getInt(nameStart + nameLength);
-        EntityType.Type type = EntityType.Type.values()[typeOrdinal];
-
         String id = ByteUtils.bytesToHex(entityID);
         ClientEntity entity = new ClientEntity(name, id, new EntityType(type, name));
         entity.set(x, y, z, pitch, yaw);
-        entity.setMeshData(new ModelEntityMeshData(entity).setModel(new Matrix4f().translate((float) x, (float) y, (float) z)));
+        entity.setMeshData(new ModelEntityMeshData(entity)
+                .setModel(new Matrix4f().translate((float) x, (float) y, (float) z)));
+
         entities.put(id, entity);
-
         meshDataGenerators.submit(new EntityMeshDataTask(entity));
-    }
-
-    private void registerPlayers(ByteBuf byteBuf) throws InterruptedException {
-        int playerCount = Math.floorDiv(byteBuf.readableBytes(), 32);
-        for (int i = 0; i < playerCount; i++) {
-            loadPlayer(ByteUtils.getBytes(byteBuf, i * 32 + 8, 32), "Other client that was already here!!");
-        }
     }
 
     public Map<String, ClientEntity> getEntities() {

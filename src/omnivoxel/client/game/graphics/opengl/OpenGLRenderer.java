@@ -84,24 +84,20 @@ public class OpenGLRenderer implements Renderer {
 
         try {
             // Creates an OpenGL window
-            this.window = WindowFactory.createWindow(settings.getIntSetting("width", 500), settings.getIntSetting("heights", 500), ConstantGameSettings.DEFAULT_WINDOW_TITLE, logger, contextTasks);
+            this.window = WindowFactory.createWindow(settings.getIntSetting("width", 500), settings.getIntSetting("height", 500), ConstantGameSettings.DEFAULT_WINDOW_TITLE, logger, contextTasks);
 
             // Create renderers
             this.textRenderer = new TextRenderer();
 
             initShader();
 
-            window.addMatrixListener(w -> {
-                // Update the viewport immediately
+            window.addResizingCallback(w -> {
                 GL11C.glViewport(0, 0, w.getWidth(), w.getHeight());
                 textShaderProgram.bind();
                 textShaderProgram.setUniform("projection", new Matrix4f().ortho(0.0f, w.getWidth(), w.getHeight(), 0.0f, -1.0f, 1.0f));
                 shaderProgram.bind();
 
                 state.setItem("shouldUpdateView", true);
-
-                // Clear depth buffer immediately
-                GL11C.glClear(GL11C.GL_DEPTH_BUFFER_BIT);
             });
 
             initState();
@@ -110,7 +106,7 @@ public class OpenGLRenderer implements Renderer {
 
             initResources();
 
-            this.window.init(settings.getIntSetting("width", 500), settings.getIntSetting("heights", 500));
+            this.window.init(settings.getIntSetting("width", 500), settings.getIntSetting("height", 500));
             this.window.show();
 
             initOpenGL();
@@ -265,13 +261,13 @@ public class OpenGLRenderer implements Renderer {
         shaderProgram.setUniform("cameraPosition", camera.getX(), camera.getY(), camera.getZ());
 
         if (state.getItem("shouldUpdateView", Boolean.class)) {
-            Matrix4f projectionMatrix = new Matrix4f().setPerspective((float) Math.toRadians(camera.getFOV()), window.aspectRatio(), camera.getNear(), camera.getFar());
+            Matrix4f projectionMatrix = new Matrix4f().setPerspective((float) Math.toRadians(camera.getFOV()), window.getAspectRatio(), camera.getNear(), camera.getFar());
             Matrix4f viewMatrix = new Matrix4f().rotate((float) camera.getPitch(), 1, 0, 0).rotate((float) camera.getYaw(), 0, 1, 0);
             Matrix4f cameraViewMatrix = new Matrix4f(viewMatrix).translate((float) -camera.getX(), (float) -camera.getY(), (float) -camera.getZ());
 
             camera.updateFrustum(projectionMatrix, new Matrix4f(viewMatrix).translate((float) -camera.getX(), (float) -camera.getY(), (float) -camera.getZ()));
             shaderProgram.setUniform("projection", projectionMatrix);
-            shaderProgram.setUniform("view", viewMatrix);
+            shaderProgram.setUniform("view", cameraViewMatrix);
             shaderProgram.setUniform("cameraView", cameraViewMatrix);
 
             zppShaderProgram.bind();
@@ -323,7 +319,7 @@ public class OpenGLRenderer implements Renderer {
 
     private void openGLStateReset() {
         GL11C.glEnable(GL11C.GL_DEPTH_TEST);
-//        GL11C.glEnable(GL11C.GL_CULL_FACE);
+        GL11C.glEnable(GL11C.GL_CULL_FACE);
         GL11C.glDepthMask(true);
         GL11C.glDepthFunc(GL11C.GL_LESS);
         GL11C.glClearDepth(1.0f);
@@ -334,10 +330,11 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, TEMP_texture);
         shaderProgram.setUniform("meshType", 1);
         Map<String, ClientEntity> entityMeshes = world.getEntities();
+
         entityMeshes.forEach((id, clientEntity) -> {
-            if (camera.getFrustum().isEntityInFrustum(clientEntity, camera)) {
+//            if (camera.getFrustum().isEntityInFrustum(clientEntity, camera)) {
                 renderEntityMesh(clientEntity.getMesh(), IDENTITY_MATRIX);
-            }
+//            }
         });
     }
 
@@ -622,5 +619,10 @@ public class OpenGLRenderer implements Renderer {
         GLFW.glfwDestroyWindow(window.window());
 
         GLFW.glfwTerminate();
+    }
+
+    @Override
+    public Window getWindow() {
+        return window;
     }
 }

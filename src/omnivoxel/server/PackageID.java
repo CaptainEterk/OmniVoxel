@@ -11,8 +11,6 @@ public enum PackageID {
 
     // SERVER -> CLIENT
 
-    NEW_PLAYER,
-    REGISTER_PLAYERS,
     CHUNK,
     NEW_ENTITY,
     SERVER_INFO,

@@ -63,9 +63,13 @@ public class Launcher {
             AtomicBoolean gameRunning = new AtomicBoolean(true);
             BlockingQueue<Consumer<Window>> contextTasks = new LinkedBlockingDeque<>();
 
-            PlayerController playerController = new PlayerController(client, new Camera(new Frustum(), state), settings, contextTasks, state, world);
+            Camera camera = new Camera(new Frustum(), state);
 
-            GameLoop gameLoop = new GameLoop(playerController.getCamera(), world, gameRunning, contextTasks, client, state, settings);
+            GameLoop gameLoop = new GameLoop(camera, world, gameRunning, contextTasks, client, state, settings);
+
+            gameLoop.init();
+
+            PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, gameLoop.getRenderer().getWindow());
 
             Thread tickLoopThread = new Thread(new TickLoop(playerController, gameRunning, contextTasks, client), "Tick Loop");
             tickLoopThread.start();

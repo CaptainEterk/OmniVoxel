@@ -19,8 +19,8 @@ import java.util.concurrent.CountDownLatch;
 
 public class ClientLauncher implements Runnable {
     private static final int VERSION_ID = 0;
-    private static final String HOST = "50.116.42.183";
-    private static final int PORT = 443;
+    private static final String HOST = "192.168.14.162";
+    private static final int PORT = 1515;
     private final Logger logger;
 
     private final CountDownLatch connected;

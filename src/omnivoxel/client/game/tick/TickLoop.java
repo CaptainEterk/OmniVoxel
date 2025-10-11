@@ -1,8 +1,8 @@
 package omnivoxel.client.game.tick;
 
-import omnivoxel.client.game.graphics.opengl.input.KeyInput;
-import omnivoxel.client.game.graphics.opengl.input.MouseButtonInput;
-import omnivoxel.client.game.graphics.opengl.input.MouseInput;
+import omnivoxel.client.game.input.KeyInput;
+import omnivoxel.client.game.input.MouseButtonInput;
+import omnivoxel.client.game.input.MouseInput;
 import omnivoxel.client.game.graphics.opengl.mesh.util.PriorityUtils;
 import omnivoxel.client.game.graphics.opengl.window.Window;
 import omnivoxel.client.game.player.PlayerController;

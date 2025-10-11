@@ -1,4 +1,4 @@
-package omnivoxel.client.game.graphics.opengl.input;
+package omnivoxel.client.game.input;
 
 import omnivoxel.client.game.graphics.opengl.window.Window;
 import org.lwjgl.glfw.GLFW;
