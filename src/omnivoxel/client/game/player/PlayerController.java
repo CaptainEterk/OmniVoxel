@@ -309,7 +309,7 @@ public class PlayerController {
                 onGround = false;
             }
         } else {
-            velocityY += (float) (((keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_LEFT_SHIFT) ? 1 : 0)) * (JUMP_VELOCITY * deltaTime));
+            velocityY += (float) (((keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_LEFT_SHIFT) ? 1 : 0)) * (speed * deltaTime));
         }
         double moveRelativeX = (keyInput.isKeyPressed(GLFW.GLFW_KEY_D) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_A) ? 1 : 0);
         double moveRelativeZ = (keyInput.isKeyPressed(GLFW.GLFW_KEY_W) ? 1 : 0) - (keyInput.isKeyPressed(GLFW.GLFW_KEY_S) ? 1 : 0);
