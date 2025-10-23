@@ -333,7 +333,7 @@ public final class Client {
     public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData) {
         meshDataGenerators = new WorkerThreadPool<>(
                 ConstantGameSettings.MAX_MESH_GENERATOR_THREADS,
-                new MeshDataGenerator(
+                () -> new MeshDataGenerator(
                         worldDataService,
                         entityMeshDefinitionCache,
                         queuedEntityMeshData,

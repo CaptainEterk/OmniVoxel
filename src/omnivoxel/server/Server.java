@@ -53,7 +53,7 @@ public class Server {
 
         if (gameNode instanceof ObjectGameNode objectGameNode) {
             Set<WorldBoundingBox> worldBoundingBoxes = ConcurrentHashMap.newKeySet();
-            workerThreadPool = new WorkerThreadPool<>(ConstantServerSettings.CHUNK_GENERATOR_THREAD_LIMIT, new ChunkGenerator(new ServerWorldDataService(blockService, blockShapeCache, objectGameNode.object().get("world_generator"), seed), blockService, world, worldBoundingBoxes)::generateChunk, true);
+            workerThreadPool = new WorkerThreadPool<>(ConstantServerSettings.CHUNK_GENERATOR_THREAD_LIMIT, () -> new ChunkGenerator(new ServerWorldDataService(blockService, blockShapeCache, objectGameNode.object().get("world_generator"), seed), blockService, world, worldBoundingBoxes)::generateChunk, true);
         } else {
             throw new IllegalArgumentException("gameNode must be an ObjectGameNode, not " + gameNode.getClass());
         }
@@ -185,7 +185,7 @@ public class Server {
 
                 ChunkCacheHandler.cacheAll();
 
-                worldHandler.removeBlock((int) Math.floor(Math.random() * 32), (int) Math.floor(Math.random() * 32)+100, (int) Math.floor(Math.random() * 32), null);
+                worldHandler.removeBlock((int) Math.floor(Math.random() * 32), (int) Math.floor(Math.random() * 32) + 100, (int) Math.floor(Math.random() * 32), null);
 
                 world.tick();
 
