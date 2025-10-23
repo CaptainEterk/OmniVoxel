@@ -127,14 +127,6 @@ public final class ServerWorldDataService {
         densityFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("density"), ObjectGameNode.class), seed);
         blockFunction = getBlockFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("surface"), ObjectGameNode.class), seed);
         heightFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("heights"), ObjectGameNode.class), seed);
-
-//        long start = System.nanoTime();
-//        for (int i = 0; i < 100; i++) {
-//            System.out.println(i);
-//            getBlockAt(0, 0, 0, 0, 0, 0, false, getChunkInfo(new Position3D(0, 0, 0)));
-//        }
-//
-//        System.out.println(System.nanoTime() - start);
     }
 
     private static void addDensityFunction(Class<? extends DensityFunction> densityFunctionClass) {
@@ -257,7 +249,8 @@ public final class ServerWorldDataService {
                     int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
                     heights[IndexCalculator.calculateBlockIndexPadded2D(x, z)] = 0;
                     for (int worldY = blockMaxY; worldY > blockMinY; worldY--) {
-                        if (heightFunction.evaluate(worldX, worldY, worldZ) > 0) {
+                        Double height = noiseCache.getCached(worldX, worldY, worldZ);
+                        if ((height == null ? heightFunction.evaluate(worldX, worldY, worldZ) : height) > 0) {
                             heights[IndexCalculator.calculateBlockIndexPadded2D(x, z)] = worldY;
                             break;
                         }
