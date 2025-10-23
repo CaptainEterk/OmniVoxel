@@ -25,7 +25,8 @@ public class ConstantGameSettings {
             width=750
             height=750
             render_distance=128
-            sensitivity=2f""";
+            sensitivity=2f
+            frustum_bias=10""";
 
     public static final String DATA_LOCATION = "";
     public static final String LOG_LOCATION = FILE_LOCATION + ".logs/";

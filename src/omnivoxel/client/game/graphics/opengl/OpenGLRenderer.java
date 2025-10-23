@@ -449,6 +449,7 @@ public class OpenGLRenderer implements Renderer {
                             \t- Velocity Z: %.2f
                             \t- On Ground: %b
                             \t- Friction Factor: %.2f
+                            \t- Movement Mode: %s
                             """,
                     state.getItem("fps", Integer.class),
                     camera.getX(),
@@ -470,7 +471,8 @@ public class OpenGLRenderer implements Renderer {
                     state.getItem("velocity_y", Double.class),
                     state.getItem("velocity_z", Double.class),
                     state.getItem("on_ground", Boolean.class),
-                    state.getItem("friction_factor", Double.class)
+                    state.getItem("friction_factor", Double.class),
+                    state.getItem("movement_mode", String.class)
             );
 
             GL11C.glPolygonMode(GL11C.GL_FRONT_AND_BACK, GL11C.GL_FILL);
@@ -512,7 +514,6 @@ public class OpenGLRenderer implements Renderer {
         int rdChunks = renderDistance / ConstantGameSettings.CHUNK_SIZE + 1;
         int squaredRenderDistance = rdChunks * rdChunks;
         Map<Integer, Set<DistanceChunk>> positionedChunks = new HashMap<>();
-        Map<Integer, Set<DistanceChunk>> positionedInFrustumChunks = new HashMap<>();
         int highestBucketDistance = 0;
 
         int ccx = (int) -Math.floor(camera.getX() / ConstantGameSettings.CHUNK_WIDTH);
@@ -535,8 +536,8 @@ public class OpenGLRenderer implements Renderer {
 
                         Position3D position3D = new Position3D(dx, dy, dz);
 
-                        if (camera.getFrustum().isChunkInFrustum(position3D)) {
-                            distance /= 10;
+                        if (!camera.getFrustum().isChunkInFrustum(position3D)) {
+                            distance *= settings.getIntSetting("frustum_bias", 10);
                         }
 
                         positionedChunks.computeIfAbsent(distance, i -> new HashSet<>()).add(new DistanceChunk(distance, position3D));
