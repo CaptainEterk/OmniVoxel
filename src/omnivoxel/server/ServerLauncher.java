@@ -15,9 +15,6 @@ import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,34 +27,8 @@ public class ServerLauncher {
         new ServerLauncher().run(100L);
     }
 
-    private static void createDirectories() throws IOException {
-        Files.createDirectories(Path.of(ConstantServerSettings.WORLD_SAVE_LOCATION));
-        Path chunkSaveLocation = Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION);
-        clearDirectory(chunkSaveLocation);
-        Files.createDirectories(chunkSaveLocation);
-    }
-
-    public static void clearDirectory(Path dir) throws IOException {
-        if (!Files.exists(dir) || !Files.isDirectory(dir)) {
-            return;
-        }
-
-        try (var paths = Files.walk(dir)) {
-            paths
-                    .sorted(Comparator.reverseOrder())
-                    .filter(path -> !path.equals(dir))
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException e) {
-                            throw new RuntimeException("Failed to delete: " + path, e);
-                        }
-                    });
-        }
-    }
-
     public void run(long seed) throws IOException {
-        createDirectories();
+        ServerInitializer.init();
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();

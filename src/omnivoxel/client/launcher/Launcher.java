@@ -31,8 +31,8 @@ public class Launcher {
     public static void main(String[] a) throws IOException, InterruptedException {
         Set<String> args = new HashSet<>(Arrays.asList(a));
 
-        OmniVoxel.SHOW_LOGS = !args.contains("--no-logs");
-        OmniVoxel.init();
+        ClientInitializer.SHOW_LOGS = !args.contains("--no-logs");
+        ClientInitializer.init();
 
         SecureRandom secureRandom = new SecureRandom();
         byte[] clientID = new byte[32];
@@ -48,7 +48,7 @@ public class Launcher {
 
         ClientWorld world = new ClientWorld(state);
 
-        Logger logger = new Logger("Client", OmniVoxel.SHOW_LOGS);
+        Logger logger = new Logger("Client", ClientInitializer.SHOW_LOGS);
 
         Client client = new Client(clientID, clientWorldDataService, logger, world);
         ClientLauncher clientLauncher = new ClientLauncher(logger, connected, client);

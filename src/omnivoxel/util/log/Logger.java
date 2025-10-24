@@ -6,10 +6,10 @@ import omnivoxel.util.time.Timer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class Logger {
     private final String logName;
@@ -21,9 +21,20 @@ public class Logger {
     public Logger(String logName, boolean showLogs) {
         this.logName = logName;
         this.showLogs = showLogs;
-        this.logs = new ConcurrentLinkedDeque<>();
-        this.debugLogs = new ConcurrentLinkedDeque<>();
+        this.logs = new ArrayDeque<>();
+        this.debugLogs = new ArrayDeque<>();
         timers = new HashMap<>();
+    }
+
+    public void init() {
+        Path path = Path.of(ConstantGameSettings.LOG_LOCATION + logName() + ".log");
+        Path debugPath = Path.of(ConstantGameSettings.LOG_LOCATION + logName() + "_debug.log");
+        try {
+            Files.createFile(path);
+            Files.createFile(debugPath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void error(String error) {
