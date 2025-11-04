@@ -59,10 +59,10 @@ public class PerlinNoise {
         double v = fade(y);
         double w = fade(z);
 
-        int A  = permutations[X] + Y;
+        int A = permutations[X] + Y;
         int AA = permutations[A] + Z;
         int AB = permutations[A + 1] + Z;
-        int B  = permutations[X + 1] + Y;
+        int B = permutations[X + 1] + Y;
         int BA = permutations[B] + Z;
         int BB = permutations[B + 1] + Z;
 

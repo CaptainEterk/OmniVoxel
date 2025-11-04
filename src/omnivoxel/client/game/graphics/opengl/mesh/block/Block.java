@@ -1,7 +1,7 @@
 package omnivoxel.client.game.graphics.opengl.mesh.block;
 
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.face.BlockFace;
 
 public abstract class Block {
     protected String state;

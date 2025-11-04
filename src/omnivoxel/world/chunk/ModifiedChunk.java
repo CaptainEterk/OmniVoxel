@@ -10,7 +10,7 @@ public class ModifiedChunk<B> implements Chunk<B> {
     private final Chunk<B> chunk;
     private final int modificationCount;
 
-    public ModifiedChunk(int x, int y, int z, B block, Chunk<B> chunk, int modificationCount) {
+    private ModifiedChunk(int x, int y, int z, B block, Chunk<B> chunk, int modificationCount) {
         this.x = x;
         this.y = y;
         this.z = z;

@@ -1,10 +1,10 @@
 package omnivoxel.client.game.graphics.opengl.mesh.generators.meshShape;
 
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.client.game.graphics.opengl.mesh.generators.textureShape.BoxTextureShape;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.TextureVertex;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.common.face.BlockFace;
 
 import java.util.List;
 import java.util.Map;

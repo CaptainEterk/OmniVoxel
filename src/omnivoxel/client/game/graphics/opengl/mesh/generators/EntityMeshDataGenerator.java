@@ -2,7 +2,6 @@ package omnivoxel.client.game.graphics.opengl.mesh.generators;
 
 import omnivoxel.client.game.entity.ClientEntity;
 import omnivoxel.client.game.graphics.opengl.mesh.EntityMesh;
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.client.game.graphics.opengl.mesh.definition.EntityMeshDataDefinition;
 import omnivoxel.client.game.graphics.opengl.mesh.definition.EntityMeshDataNoDefinition;
 import omnivoxel.client.game.graphics.opengl.mesh.generators.meshShape.BoxMeshShape;
@@ -14,6 +13,7 @@ import omnivoxel.client.game.graphics.opengl.mesh.meshData.ModelEntityMeshData;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.TextureVertex;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.common.face.BlockFace;
 import omnivoxel.server.entity.EntityType;
 import omnivoxel.util.cache.IDCache;
 import org.lwjgl.system.MemoryUtil;

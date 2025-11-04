@@ -7,7 +7,6 @@ import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.EmptyGeneratedChunk;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
 
@@ -44,7 +43,7 @@ public class ServerWorldHandler {
             Position3D position3D = new Position3D(chunkX, chunkY, chunkZ);
             Chunk<ServerBlock> chunk = world.get(position3D);
             if (chunk != null) {
-                chunk.setBlock(x, y, z, EmptyGeneratedChunk.air);
+                chunk.setBlock(x, y, z, ServerBlock.AIR);
                 success = true;
             } else {
 //                ServerLogger.logger.debug("Unable to set block (%d, %d, %d)".formatted(worldX, worldY, worldZ));

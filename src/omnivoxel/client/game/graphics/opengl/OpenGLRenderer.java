@@ -21,13 +21,13 @@ import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.Client;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.util.executor.ExecutorCollection;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.time.PeriodicTimeExecutor;
 import omnivoxel.util.time.Timer;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
@@ -333,7 +333,7 @@ public class OpenGLRenderer implements Renderer {
 
         entityMeshes.forEach((id, clientEntity) -> {
 //            if (camera.getFrustum().isEntityInFrustum(clientEntity, camera)) {
-                renderEntityMesh(clientEntity.getMesh(), IDENTITY_MATRIX);
+            renderEntityMesh(clientEntity.getMesh(), IDENTITY_MATRIX);
 //            }
         });
     }

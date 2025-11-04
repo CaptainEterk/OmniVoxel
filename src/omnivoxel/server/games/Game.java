@@ -4,7 +4,6 @@ import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
 import omnivoxel.common.BlockShape;
 import omnivoxel.server.ServerLogger;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.EmptyGeneratedChunk;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3D;
 import omnivoxel.server.client.chunk.worldDataService.noise.NoiseCache;
@@ -121,6 +120,7 @@ public final class Game {
 
         blockShapeCache.put(BlockShape.EMPTY_BLOCK_SHAPE_STRING, BlockShape.EMPTY_BLOCK_SHAPE);
 
-        blockService.registerServerBlock(EmptyGeneratedChunk.air);
+        blockService.registerServerBlock(ServerBlock.AIR);
+        blockService.registerServerBlock(ServerBlock.VOID);
     }
 }

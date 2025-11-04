@@ -11,10 +11,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class ServerClient extends MobEntity implements ServerItem {
+    public final Set<String> registeredIDs;
     private final String clientID;
     private final ChannelHandlerContext ctx;
     private final byte[] playerID;
-    public final Set<String> registeredIDs;
 
     public ServerClient(String clientID, ChannelHandlerContext ctx) {
         super(clientID, new Hitbox(0, 0, 0, 1, 2, 1, 2, 3, 2));

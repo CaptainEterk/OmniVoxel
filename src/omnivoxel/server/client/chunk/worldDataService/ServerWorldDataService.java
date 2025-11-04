@@ -2,9 +2,9 @@ package omnivoxel.server.client.chunk.worldDataService;
 
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.EmptyGeneratedChunk;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.block.BlockFunction;
 import omnivoxel.server.client.chunk.worldDataService.block.functions.ConditionBlockFunction;
@@ -18,7 +18,6 @@ import omnivoxel.util.cache.NoiseCache;
 import omnivoxel.util.config.Config;
 import omnivoxel.util.game.nodes.*;
 import omnivoxel.util.math.Position3D;
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -46,6 +45,7 @@ public final class ServerWorldDataService {
     private final Integer blockMaxY;
     private final Integer blockMaxZ;
     private final Integer depthSections;
+    private final NoiseCache noiseCache = new NoiseCache();
 
     public ServerWorldDataService(ServerBlockService blockService, Map<String, BlockShape> blockShapeCache, GameNode gameNode, long seed) {
         this.blockService = blockService;
@@ -204,19 +204,17 @@ public final class ServerWorldDataService {
         return withinX && withinY && withinZ;
     }
 
-    private final NoiseCache noiseCache = new NoiseCache();
-
     @NotNull
     public ServerBlock getBlockAt(int x, int y, int z,
                                   int worldX, int worldY, int worldZ,
-                                  boolean border, ChunkInfo chunkInfo) {
-        if (border && !shouldGenerateBlock(worldX, worldY, worldZ)) {
-            return EmptyGeneratedChunk.air;
+                                  ChunkInfo chunkInfo) {
+        if (!shouldGenerateBlock(worldX, worldY, worldZ)) {
+            return ServerBlock.VOID;
         }
 
         Double ncDensity = noiseCache.getCached(worldX, worldY, worldZ);
-        Double ncFloor = noiseCache.getCached(worldX, worldY-1, worldZ);
-        Double ncCeiling = noiseCache.getCached(worldX, worldY+1, worldZ);
+        Double ncFloor = noiseCache.getCached(worldX, worldY - 1, worldZ);
+        Double ncCeiling = noiseCache.getCached(worldX, worldY + 1, worldZ);
 
         double density;
         if (ncDensity == null) {
@@ -241,7 +239,6 @@ public final class ServerWorldDataService {
 
     public ChunkInfo getChunkInfo(Position3D position3D) {
         int[] heights = new int[ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_LENGTH];
-        // TODO: Check if heights is actually used, if it isn't don't calculate it
         if (chunkMaxY != null && chunkMinY != null) {
             for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
                 int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;

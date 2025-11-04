@@ -8,7 +8,7 @@ public class IndexCalculator {
     }
 
     public static int calculateBlockIndexPadded(int x, int y, int z) {
-        return (x + 1) * (ConstantGameSettings.CHUNK_WIDTH + 2) * (ConstantGameSettings.CHUNK_LENGTH + 2) + (z + 1) * (ConstantGameSettings.CHUNK_LENGTH + 2) + (y + 1);
+        return (x + 1) * ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_HEIGHT + (z + 1) * ConstantGameSettings.PADDED_LENGTH + (y + 1);
     }
 
     public static int calculateBlockIndexPadded2D(int x, int z) {

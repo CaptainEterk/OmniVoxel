@@ -88,7 +88,7 @@ public class ClientWorld {
     public Position3D[] getKeys() {
         if (chunksChanged.get()) {
             chunksChanged.set(false);
-            cachedKeys = chunks.keySet().toArray(new Position3D[0]);;
+            cachedKeys = chunks.keySet().toArray(new Position3D[0]);
         }
         return cachedKeys;
     }

@@ -3,7 +3,6 @@ package omnivoxel.client.game.graphics.opengl.mesh.generators;
 import io.netty.buffer.ByteBuf;
 import omnivoxel.client.game.graphics.opengl.mesh.ShapeHelper;
 import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.client.game.graphics.opengl.mesh.meshData.ChunkMeshData;
 import omnivoxel.client.game.graphics.opengl.mesh.meshData.MeshData;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.TextureVertex;
@@ -13,11 +12,12 @@ import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.face.BlockFace;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.BlockService;
-import omnivoxel.world.chunk.BiBlockChunk;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk.SingleBlockChunk;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -208,7 +208,7 @@ public class ChunkMeshDataGenerator {
             index += j;
         }
 
-        Chunk<omnivoxel.world.block.Block> chunk = new BiBlockChunk<>(air);
+        Chunk<omnivoxel.world.block.Block> chunk = new SingleBlockChunk<>(air);
         Block[] blocks = new Block[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
         int x = 0, y = 0, z = 0;
 

@@ -3,12 +3,12 @@ package omnivoxel.common.face;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 
 public enum BlockFace {
-    TOP(1),                                        // +Y
-    BOTTOM(-1),                                    // -Y
-    NORTH(ConstantGameSettings.PADDED_HEIGHT), // -Z
-    SOUTH(-ConstantGameSettings.PADDED_HEIGHT),    // +Z
-    EAST(ConstantGameSettings.PADDED_LENGTH * ConstantGameSettings.PADDED_HEIGHT), // +X
-    WEST(-ConstantGameSettings.PADDED_LENGTH * ConstantGameSettings.PADDED_HEIGHT), // -X
+    TOP(1),
+    BOTTOM(-1),
+    NORTH(ConstantGameSettings.PADDED_HEIGHT),
+    SOUTH(-ConstantGameSettings.PADDED_HEIGHT),
+    EAST(ConstantGameSettings.PADDED_LENGTH * ConstantGameSettings.PADDED_HEIGHT),
+    WEST(-ConstantGameSettings.PADDED_LENGTH * ConstantGameSettings.PADDED_HEIGHT),
     NONE(0);
 
     private final int paddedNeighborOffset;
@@ -20,7 +20,6 @@ public enum BlockFace {
     public int getPaddedNeighborOffset() {
         return paddedNeighborOffset;
     }
-
 
     public BlockFace opposite() {
         return switch (this) {

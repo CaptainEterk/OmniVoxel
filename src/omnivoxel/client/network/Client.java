@@ -30,7 +30,10 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
 import org.joml.Matrix4f;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -177,10 +180,14 @@ public final class Client {
 
         offset += Integer.BYTES;
 
-        double x = byteBuf.getDouble(offset); offset += Double.BYTES;
-        double y = byteBuf.getDouble(offset); offset += Double.BYTES;
-        double z = byteBuf.getDouble(offset); offset += Double.BYTES;
-        double pitch = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double x = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
+        double y = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
+        double z = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
+        double pitch = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
         double yaw = byteBuf.getDouble(offset);
 
         entity.set(x, y, z, pitch, yaw);

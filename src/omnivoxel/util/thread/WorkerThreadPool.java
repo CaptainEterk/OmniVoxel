@@ -80,7 +80,7 @@ public class WorkerThreadPool<T> {
             thread = Thread.currentThread();
             try {
                 while (!Thread.currentThread().isInterrupted() && running.get()) {
-                    int taskCount = taskQueue.drainTo(localQueue, 10);
+                    int taskCount = taskQueue.drainTo(localQueue);
                     if (taskCount > 0) {
                         while (!localQueue.isEmpty()) {
                             taskHandler.accept(localQueue.remove());

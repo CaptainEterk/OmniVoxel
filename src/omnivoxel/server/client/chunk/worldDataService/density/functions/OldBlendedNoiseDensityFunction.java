@@ -3,9 +3,9 @@ package omnivoxel.server.client.chunk.worldDataService.density.functions;
 import omnivoxel.server.client.chunk.worldDataService.Function;
 import omnivoxel.server.client.chunk.worldDataService.density.DensityFunction;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3D;
+import omnivoxel.util.game.nodes.DoubleGameNode;
 import omnivoxel.util.game.nodes.GameNode;
 import omnivoxel.util.game.nodes.ObjectGameNode;
-import omnivoxel.util.game.nodes.DoubleGameNode;
 
 import java.util.Random;
 
@@ -50,6 +50,10 @@ public class OldBlendedNoiseDensityFunction extends DensityFunction {
         throw new IllegalArgumentException("Expected double for key " + key);
     }
 
+    private static double lerp(double t, double a, double b) {
+        return a + t * (b - a);
+    }
+
     @Override
     public double evaluate(double x, double y, double z) {
         double nx = x * xzScale;
@@ -64,9 +68,5 @@ public class OldBlendedNoiseDensityFunction extends DensityFunction {
         double blended = lerp(blend, minLimit, maxLimit);
 
         return blended * yFactor + smearScaleMultiplier * xzFactor;
-    }
-
-    private static double lerp(double t, double a, double b) {
-        return a + t * (b - a);
     }
 }

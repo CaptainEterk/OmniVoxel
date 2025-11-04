@@ -64,12 +64,12 @@ public final class Window {
         }
     }
 
-    private void setAspectRatio(float aspectRatio) {
-        this.aspectRatio = aspectRatio;
-    }
-
     public float getAspectRatio() {
         return aspectRatio;
+    }
+
+    private void setAspectRatio(float aspectRatio) {
+        this.aspectRatio = aspectRatio;
     }
 
     public void show() {

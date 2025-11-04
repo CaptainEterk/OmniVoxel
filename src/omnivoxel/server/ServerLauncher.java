@@ -10,7 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import omnivoxel.common.BlockShape;
-import omnivoxel.server.client.chunk.blockService.ServerBlockService;
+import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
 
@@ -36,12 +36,10 @@ public class ServerLauncher {
         Map<String, String> blockIDMap = new HashMap<>();
         Map<String, BlockShape> blockShapeCache = new HashMap<>();
 
-        ServerBlockService blockService = new ServerBlockService();
-
         ServerWorld world = new ServerWorld();
 
         try {
-            Server server = new Server(seed, world, blockShapeCache, blockService, blockIDMap, new ServerWorldHandler(world));
+            Server server = new Server(seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, blockIDMap, new ServerWorldHandler(world));
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
             ServerHandler serverHandler = new ServerHandler(server);

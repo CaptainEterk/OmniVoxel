@@ -1,7 +1,8 @@
 package omnivoxel.client.game.graphics.opengl.mesh.vertex;
 
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.common.face.BlockFace;
-import org.jetbrains.annotations.NotNull;
+
 
 public final class UniqueVertex {
     private final @NotNull Vertex vertex;
