@@ -163,9 +163,9 @@ public final class Client {
                         int chunkX = worldX / ConstantGameSettings.CHUNK_WIDTH;
                         int chunkY = worldY / ConstantGameSettings.CHUNK_HEIGHT;
                         int chunkZ = worldZ / ConstantGameSettings.CHUNK_LENGTH;
-                        int x = worldX % ConstantGameSettings.CHUNK_WIDTH;
-                        int y = worldY % ConstantGameSettings.CHUNK_HEIGHT;
-                        int z = worldZ % ConstantGameSettings.CHUNK_LENGTH;
+                        int x = Math.floorMod(worldX, ConstantGameSettings.CHUNK_WIDTH);
+                        int y = Math.floorMod(worldY, ConstantGameSettings.CHUNK_HEIGHT);
+                        int z = Math.floorMod(worldZ, ConstantGameSettings.CHUNK_LENGTH);
 
                         StringBuilder blockID = new StringBuilder();
                         short paletteLength = byteBuf.getShort(index + 12);
@@ -187,8 +187,9 @@ public final class Client {
                                 clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, blockService.getBlock(blockID.toString())));
 
                                 sendRequest(new ChunkRequest(chunkPosition));
+
+//                                meshDataGenerators.submit(new ChunkRemeshDataTask(ChunkBlockData.fromChunk(clientWorldChunk.getChunkData(), worldDataService), chunkPosition));
                             }
-//                        meshDataGenerators.submit(new ChunkRemeshDataTask(ChunkBlockData.fromChunk(clientWorldChunk.getChunkData(), worldDataService), chunkPosition));
                         }
                     }
 

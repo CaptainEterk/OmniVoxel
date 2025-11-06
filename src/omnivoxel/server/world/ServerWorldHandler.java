@@ -24,9 +24,9 @@ public class ServerWorldHandler {
             int chunkX = worldX / ConstantGameSettings.CHUNK_WIDTH;
             int chunkY = worldY / ConstantGameSettings.CHUNK_HEIGHT;
             int chunkZ = worldZ / ConstantGameSettings.CHUNK_LENGTH;
-            int x = worldX % ConstantGameSettings.CHUNK_WIDTH;
-            int y = worldY % ConstantGameSettings.CHUNK_HEIGHT;
-            int z = worldZ % ConstantGameSettings.CHUNK_LENGTH;
+            int x = Math.floorMod(worldX, ConstantGameSettings.CHUNK_WIDTH);
+            int y = Math.floorMod(worldY, ConstantGameSettings.CHUNK_HEIGHT);
+            int z = Math.floorMod(worldZ, ConstantGameSettings.CHUNK_LENGTH);
             Position3D position3D = new Position3D(chunkX, chunkY, chunkZ);
             Chunk<ServerBlock> chunk = world.get(position3D);
             if (chunk != null) {

@@ -254,7 +254,6 @@ public class ChunkMeshDataGenerator {
     }
 
     public MeshData generateMeshData(ChunkBlockData chunk, Position3D position3D, ClientWorld world) {
-        world.addChunkData(position3D, chunk.chunk());
         return generateChunkMeshData(chunk.blocks(), position3D);
     }
 }
