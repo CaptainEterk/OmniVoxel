@@ -151,7 +151,7 @@ public class OpenGLRenderer implements Renderer {
 
         state.setItem("shouldRenderWireframe", false);
         state.setItem("seeDebug", true);
-        state.setItem("bufferizingQueueSize", 0);
+        state.setItem("bufferizing_queue_size", 0);
         state.setItem("missing_chunks", 0);
 
         state.setItem("z-prepass", false);
@@ -462,7 +462,7 @@ public class OpenGLRenderer implements Renderer {
                     world.size(),
                     state.getItem("total_rendered_chunks", Integer.class),
                     state.getItem("bufferizing_chunk_count", Integer.class),
-                    state.getItem("bufferizingQueueSize", Integer.class),
+                    state.getItem("bufferizing_queue_size", Integer.class),
                     state.getItem("missing_chunks", Integer.class),
                     state.getItem("inflight_requests", Integer.class),
                     state.getItem("chunk_requests_sent", Integer.class),

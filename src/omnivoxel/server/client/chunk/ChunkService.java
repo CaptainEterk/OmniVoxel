@@ -68,11 +68,11 @@ public class ChunkService {
                     Chunk<ServerBlock> chunk = world.get(newChunkPosition);
                     if (chunk == null) {
                         chunk = ChunkIO.decode(ChunkIO.get(newChunkPosition));
-                        world.add(newChunkPosition, chunk);
+                        world.put(newChunkPosition, chunk);
                     }
                     if (chunk == null) {
                         chunk = chunkGenerator.generateChunk(newChunkPosition.x(), newChunkPosition.y(), newChunkPosition.z());
-                        world.add(newChunkPosition, chunk);
+                        world.put(newChunkPosition, chunk);
                     }
                     chunks[i] = chunk;
                     i++;

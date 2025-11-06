@@ -1,6 +1,7 @@
 package omnivoxel.world.chunk;
 
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.server.client.block.ServerBlock;
 
 import java.util.Objects;
 

@@ -33,8 +33,9 @@ public class ServerWorld {
         }
     }
 
-    public void add(Position3D position3D, Chunk<ServerBlock> chunk) {
+    public void put(Position3D position3D, Chunk<ServerBlock> chunk) {
         this.chunks.put(position3D, new ChunkValue(chunk, request));
+        this.chunkBytes.remove(position3D);
     }
 
     public Chunk<ServerBlock> get(Position3D position3D) {
@@ -66,7 +67,7 @@ public class ServerWorld {
         return chunkBytes.get(chunkPosition);
     }
 
-    public void add(Position3D chunkPosition, byte[] chunkBytes) {
+    public void put(Position3D chunkPosition, byte[] chunkBytes) {
         this.chunkBytes.put(chunkPosition, chunkBytes);
     }
 

@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import omnivoxel.common.BlockShape;
+import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
@@ -17,6 +18,7 @@ import omnivoxel.server.world.ServerWorldHandler;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerLauncher {
     // TODO: Use a config file
@@ -39,7 +41,9 @@ public class ServerLauncher {
         ServerWorld world = new ServerWorld();
 
         try {
-            Server server = new Server(seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, blockIDMap, new ServerWorldHandler(world));
+            // TODO: Make a wrapper class around clients
+            Map<String, ServerClient> clients = new ConcurrentHashMap<>();
+            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, blockIDMap, new ServerWorldHandler(world, clients));
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
             ServerHandler serverHandler = new ServerHandler(server);

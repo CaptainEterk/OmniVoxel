@@ -106,13 +106,13 @@ public class ClientWorld {
                 count++;
             }
         } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME);
-        state.setItem("bufferizingQueueSize", nonBufferizedChunks.size());
+        state.setItem("bufferizing_queue_size", nonBufferizedChunks.size());
         return count;
     }
 
     public boolean bufferize(MeshGenerator meshGenerator) {
         if (!nonBufferizedChunks.isEmpty()) {
-            MeshData meshData = nonBufferizedChunks.remove();
+            MeshData meshData = nonBufferizedChunks.poll();
             if (meshData instanceof GeneralEntityMeshData entityMeshData) {
                 entityMeshData.entity().setMesh(meshGenerator.bufferizeEntityMesh(entityMeshData));
                 entityMeshDefinitionCache.put(entityMeshData.entity().getType().toString(), entityMeshData.entity().getMesh().getDefinition());
@@ -123,6 +123,9 @@ public class ClientWorld {
                     chunks.put(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMesh));
                     chunksChanged.set(true);
                 } else {
+                    if (clientWorldChunk.getMesh() != null) {
+                        freeChunk(clientWorldChunk.getMesh());
+                    }
                     clientWorldChunk.setMesh(chunkMesh);
                 }
                 queuedChunks.remove(chunkMeshData.chunkPosition());
@@ -144,6 +147,16 @@ public class ClientWorld {
         chunkResponseGotten.incrementAndGet();
         newChunks.add(position3D);
         state.setItem("shouldCheckNewChunks", true);
+    }
+
+    public void addChunkData(Position3D position3D, Chunk<Block> chunk) {
+        ClientWorldChunk clientWorldChunk = chunks.get(position3D);
+        if (clientWorldChunk == null) {
+            chunks.put(position3D, new ClientWorldChunk(chunk));
+            chunksChanged.set(true);
+        } else {
+            clientWorldChunk.setChunkData(chunk);
+        }
     }
 
     public void cleanup() {
@@ -184,6 +197,9 @@ public class ClientWorld {
             GL30C.glDeleteBuffers(mesh.transparentEBO());
 
             mesh.meshData().cleanup();
+        } else {
+            // TODO: Use Logger instead of System.err or System.out
+            System.err.println("mesh should never be null");
         }
     }
 
@@ -206,15 +222,5 @@ public class ClientWorld {
 
     public void removeEntity(String entityID) {
         entities.remove(entityID);
-    }
-
-    public void addChunkData(Position3D position3D, Chunk<Block> chunk) {
-        ClientWorldChunk clientWorldChunk = chunks.get(position3D);
-        if (clientWorldChunk == null) {
-            chunks.put(position3D, new ClientWorldChunk(chunk));
-            chunksChanged.set(true);
-        } else {
-            clientWorldChunk.setChunkData(chunk);
-        }
     }
 }

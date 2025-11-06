@@ -28,9 +28,9 @@ public class ChunkMeshDataGenerator {
     private final ClientWorldDataService worldDataService;
     private final BlockService blockService;
 
-    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService) {
+    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService blockService) {
         this.worldDataService = worldDataService;
-        blockService = new BlockService();
+        this.blockService = blockService;
     }
 
     private void addPoint(List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, Vertex position, int tx, int ty, BlockFace normal, float r, float g, float b, int type) {
@@ -249,6 +249,11 @@ public class ChunkMeshDataGenerator {
 
     public MeshData generateMeshData(ByteBuf blocks, Position3D position3D, ClientWorld world) {
         ChunkBlockData chunk = unpackChunk(blocks);
+        world.addChunkData(position3D, chunk.chunk());
+        return generateChunkMeshData(chunk.blocks(), position3D);
+    }
+
+    public MeshData generateMeshData(ChunkBlockData chunk, Position3D position3D, ClientWorld world) {
         world.addChunkData(position3D, chunk.chunk());
         return generateChunkMeshData(chunk.blocks(), position3D);
     }

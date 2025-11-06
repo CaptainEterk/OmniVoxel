@@ -6,6 +6,7 @@ import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.common.BlockShape;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
+import omnivoxel.server.client.block.ServerBlockAndPosition;
 import omnivoxel.server.client.chunk.ChunkService;
 import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
@@ -27,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,13 +43,13 @@ public class Server {
     private final ServerBlockService blockService;
     private final ServerWorldHandler worldHandler;
 
-    public Server(long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, Map<String, String> blockIDMap, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
+    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, Map<String, String> blockIDMap, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
+        this.clients = clients;
         this.world = world;
         this.blockShapeCache = blockShapeCache;
         this.blockIDMap = blockIDMap;
         this.blockService = blockService;
         this.worldHandler = worldHandler;
-        this.clients = new ConcurrentHashMap<>();
 
         GameNode gameNode = GameParser.parseNode(Files.readString(Path.of("game/main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of("game/constants.json")), null), ArrayGameNode.class));
 
@@ -198,9 +200,11 @@ public class Server {
 
                 ChunkCacheHandler.cacheAll();
 
-                worldHandler.removeBlock((int) Math.floor(Math.random() * 32), (int) Math.floor(Math.random() * 32) + 100, (int) Math.floor(Math.random() * 32), null);
+                worldHandler.replaceBlock((int) Math.floor(Math.random() * 8), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 8), ServerBlock.AIR, null);
 
                 world.tick();
+
+                sendQueuedClientPackets();
 
                 long elapsed = System.nanoTime() - startNano;
                 long sleepNanos = tickIntervalNanos - elapsed;
@@ -221,5 +225,41 @@ public class Server {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void sendQueuedClientPackets() {
+        clients.forEach((id, serverClient) -> {
+            // Replaced blocks
+            Queue<ServerBlockAndPosition> queuedReplacedBlocks = serverClient.getReplacedBlocks();
+
+            int size = queuedReplacedBlocks.size();
+            byte[][] outBytes = new byte[size][];
+            int byteCount = 4;
+            for (int i = 0; i < size; i++) {
+                ServerBlockAndPosition block = queuedReplacedBlocks.poll();
+                if (block == null) {
+                    break;
+                }
+                byte[] blockBytes = block.serverBlock().getBlockBytes();
+                byte[] out = new byte[12 + blockBytes.length];
+                ByteUtils.addInt(out, block.x(), 0);
+                ByteUtils.addInt(out, block.y(), 4);
+                ByteUtils.addInt(out, block.z(), 8);
+                System.arraycopy(blockBytes, 0, out, 12, blockBytes.length);
+                outBytes[i] = out;
+                byteCount += out.length;
+            }
+
+            byte[] out = new byte[byteCount];
+            ByteUtils.addInt(out, size, 0);
+
+            int index = 4;
+            for (int i = 0; i < size; i++) {
+                System.arraycopy(outBytes[i], 0, out, index, outBytes[i].length);
+                index += outBytes[i].length;
+            }
+
+            sendBytes(serverClient.getCTX(), PackageID.REPLACE_BLOCK, out);
+        });
     }
 }

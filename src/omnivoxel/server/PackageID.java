@@ -16,8 +16,7 @@ public enum PackageID {
     SERVER_INFO,
     REGISTER_BLOCK,
     REGISTER_BLOCK_SHAPE,
-    REMOVE_BLOCK_SUCCESS,
-    REMOVE_BLOCK_FAILURE,
+    REPLACE_BLOCK,
 
     // TODO: Implement UDP Client/Server (using TCP for now)
     // UDP
