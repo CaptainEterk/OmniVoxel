@@ -93,10 +93,6 @@ public class ClientWorld {
         return cachedKeys;
     }
 
-    public ClientWorldChunk[] getValues() {
-        return chunks.values().toArray(new ClientWorldChunk[0]);
-    }
-
     public int bufferizeQueued(MeshGenerator meshGenerator, long endTime) {
         int count = 0;
         boolean bufferizing;
@@ -105,7 +101,7 @@ public class ClientWorld {
             if (bufferizing) {
                 count++;
             }
-        } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME);
+        } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME && System.nanoTime() < endTime);
         state.setItem("bufferizing_queue_size", nonBufferizedChunks.size());
         return count;
     }

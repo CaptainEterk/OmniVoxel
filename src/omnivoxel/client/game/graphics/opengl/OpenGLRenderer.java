@@ -409,8 +409,7 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void bufferizeChunks() {
-        // TODO: Make the bufferizer actually use the endTime
-        state.setItem("bufferizing_chunk_count", world.bufferizeQueued(meshGenerator, System.nanoTime()));
+        state.setItem("bufferizing_chunk_count", world.bufferizeQueued(meshGenerator, System.nanoTime() + ConstantGameSettings.BUFFERIZE_END_TIME_LIMIT_MS * 1_000_000));
     }
 
     private void cleanupOpenGL() {
