@@ -197,9 +197,6 @@ public class ClientWorld {
             GL30C.glDeleteBuffers(mesh.transparentEBO());
 
             mesh.meshData().cleanup();
-        } else {
-            // TODO: Use Logger instead of System.err or System.out
-            System.err.println("mesh should never be null");
         }
     }
 
