@@ -21,13 +21,13 @@ import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.Client;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.util.executor.ExecutorCollection;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.time.PeriodicTimeExecutor;
 import omnivoxel.util.time.Timer;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
@@ -151,7 +151,7 @@ public class OpenGLRenderer implements Renderer {
 
         state.setItem("shouldRenderWireframe", false);
         state.setItem("seeDebug", true);
-        state.setItem("bufferizingQueueSize", 0);
+        state.setItem("bufferizing_queue_size", 0);
         state.setItem("missing_chunks", 0);
 
         state.setItem("z-prepass", false);
@@ -333,7 +333,7 @@ public class OpenGLRenderer implements Renderer {
 
         entityMeshes.forEach((id, clientEntity) -> {
 //            if (camera.getFrustum().isEntityInFrustum(clientEntity, camera)) {
-                renderEntityMesh(clientEntity.getMesh(), IDENTITY_MATRIX);
+            renderEntityMesh(clientEntity.getMesh(), IDENTITY_MATRIX);
 //            }
         });
     }
@@ -409,8 +409,7 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void bufferizeChunks() {
-        // TODO: Make the bufferizer actually use the endTime
-        state.setItem("bufferizing_chunk_count", world.bufferizeQueued(meshGenerator, System.nanoTime()));
+        state.setItem("bufferizing_chunk_count", world.bufferizeQueued(meshGenerator, System.nanoTime() + ConstantGameSettings.BUFFERIZE_END_TIME_LIMIT_MS * 1_000_000));
     }
 
     private void cleanupOpenGL() {
@@ -449,6 +448,7 @@ public class OpenGLRenderer implements Renderer {
                             \t- Velocity Z: %.2f
                             \t- On Ground: %b
                             \t- Friction Factor: %.2f
+                            \t- Movement Mode: %s
                             """,
                     state.getItem("fps", Integer.class),
                     camera.getX(),
@@ -461,7 +461,7 @@ public class OpenGLRenderer implements Renderer {
                     world.size(),
                     state.getItem("total_rendered_chunks", Integer.class),
                     state.getItem("bufferizing_chunk_count", Integer.class),
-                    state.getItem("bufferizingQueueSize", Integer.class),
+                    state.getItem("bufferizing_queue_size", Integer.class),
                     state.getItem("missing_chunks", Integer.class),
                     state.getItem("inflight_requests", Integer.class),
                     state.getItem("chunk_requests_sent", Integer.class),
@@ -470,7 +470,8 @@ public class OpenGLRenderer implements Renderer {
                     state.getItem("velocity_y", Double.class),
                     state.getItem("velocity_z", Double.class),
                     state.getItem("on_ground", Boolean.class),
-                    state.getItem("friction_factor", Double.class)
+                    state.getItem("friction_factor", Double.class),
+                    state.getItem("movement_mode", String.class)
             );
 
             GL11C.glPolygonMode(GL11C.GL_FRONT_AND_BACK, GL11C.GL_FILL);
@@ -512,7 +513,6 @@ public class OpenGLRenderer implements Renderer {
         int rdChunks = renderDistance / ConstantGameSettings.CHUNK_SIZE + 1;
         int squaredRenderDistance = rdChunks * rdChunks;
         Map<Integer, Set<DistanceChunk>> positionedChunks = new HashMap<>();
-        Map<Integer, Set<DistanceChunk>> positionedInFrustumChunks = new HashMap<>();
         int highestBucketDistance = 0;
 
         int ccx = (int) -Math.floor(camera.getX() / ConstantGameSettings.CHUNK_WIDTH);
@@ -535,8 +535,8 @@ public class OpenGLRenderer implements Renderer {
 
                         Position3D position3D = new Position3D(dx, dy, dz);
 
-                        if (camera.getFrustum().isChunkInFrustum(position3D)) {
-                            distance /= 10;
+                        if (!camera.getFrustum().isChunkInFrustum(position3D)) {
+                            distance *= settings.getIntSetting("frustum_bias", 10);
                         }
 
                         positionedChunks.computeIfAbsent(distance, i -> new HashSet<>()).add(new DistanceChunk(distance, position3D));

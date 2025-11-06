@@ -88,11 +88,11 @@ public final class IDCache<K, V> {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof ConstructorKey other)) return false;
-            if (!clazz.equals(other.clazz)) return false;
-            if (params.length != other.params.length) return false;
+            if (!(o instanceof ConstructorKey(Class<?> clazz1, Class<?>[] params1))) return false;
+            if (!clazz.equals(clazz1)) return false;
+            if (params.length != params1.length) return false;
             for (int i = 0; i < params.length; i++) {
-                if (!params[i].equals(other.params[i])) return false;
+                if (!params[i].equals(params1[i])) return false;
             }
             return true;
         }

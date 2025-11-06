@@ -13,7 +13,6 @@ public class PerlinNoise {
         int[] p = new int[256];
         for (int i = 0; i < 256; i++) p[i] = i;
 
-        // Fisher–Yates shuffle
         for (int i = 0; i < 256; i++) {
             int j = i + random.nextInt(256 - i);
             int tmp = p[i];
@@ -60,10 +59,10 @@ public class PerlinNoise {
         double v = fade(y);
         double w = fade(z);
 
-        int A  = permutations[X] + Y;
+        int A = permutations[X] + Y;
         int AA = permutations[A] + Z;
         int AB = permutations[A + 1] + Z;
-        int B  = permutations[X + 1] + Y;
+        int B = permutations[X + 1] + Y;
         int BA = permutations[B] + Z;
         int BB = permutations[B + 1] + Z;
 

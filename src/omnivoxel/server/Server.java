@@ -6,7 +6,8 @@ import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.common.BlockShape;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.ChunkGenerator;
+import omnivoxel.server.client.block.ServerBlockAndPosition;
+import omnivoxel.server.client.chunk.ChunkService;
 import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
@@ -27,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,22 +43,37 @@ public class Server {
     private final ServerBlockService blockService;
     private final ServerWorldHandler worldHandler;
 
-    public Server(long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, Map<String, String> blockIDMap, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
+    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, Map<String, String> blockIDMap, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
+        this.clients = clients;
         this.world = world;
         this.blockShapeCache = blockShapeCache;
         this.blockIDMap = blockIDMap;
         this.blockService = blockService;
         this.worldHandler = worldHandler;
-        this.clients = new ConcurrentHashMap<>();
 
         GameNode gameNode = GameParser.parseNode(Files.readString(Path.of("game/main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of("game/constants.json")), null), ArrayGameNode.class));
 
         if (gameNode instanceof ObjectGameNode objectGameNode) {
             Set<WorldBoundingBox> worldBoundingBoxes = ConcurrentHashMap.newKeySet();
-            workerThreadPool = new WorkerThreadPool<>(ConstantServerSettings.CHUNK_GENERATOR_THREAD_LIMIT, new ChunkGenerator(new ServerWorldDataService(blockService, blockShapeCache, objectGameNode.object().get("world_generator"), seed), blockService, world, worldBoundingBoxes)::generateChunk, true);
+            workerThreadPool = new WorkerThreadPool<>(ConstantServerSettings.CHUNK_GENERATOR_THREAD_LIMIT, () ->
+                    new ChunkService(
+                            new ServerWorldDataService(
+                                    blockService,
+                                    blockShapeCache,
+                                    objectGameNode.object().get("world_generator"),
+                                    seed
+                            ),
+                            blockService,
+                            world,
+                            worldBoundingBoxes
+                    )::serve,
+                    true);
         } else {
             throw new IllegalArgumentException("gameNode must be an ObjectGameNode, not " + gameNode.getClass());
         }
+
+        workerThreadPool.submit(new ChunkTask(null, 0, 0, 0, null));
+        workerThreadPool.submit(new ChunkTask(null, 0, 0, 0, null));
     }
 
     // TODO: Cleanup the server
@@ -114,6 +131,7 @@ public class Server {
                 ServerClient client = clients.get(clientID);
                 clients.remove(clientID);
                 clients.values().forEach(player -> sendBytes(player.getCTX(), PackageID.CLOSE, client.getPlayerID()));
+                ServerLogger.logger.debug("Client Disconnected: " + clientID + " playerID: " + ByteUtils.bytesToHex(client.getPlayerID()));
                 byteBuf.release();
                 break;
             case PLAYER_UPDATE:
@@ -148,12 +166,9 @@ public class Server {
             ServerClient serverClient = new ServerClient(clientID, ctx);
             byte[] encodedServerPlayer = serverClient.getBytes();
 
-            final int[] i = {0};
-
             clients.values().forEach(player -> {
                 sendBytes(player.getCTX(), PackageID.NEW_ENTITY, encodedServerPlayer);
                 sendBytes(ctx, PackageID.NEW_ENTITY, player.getBytes());
-                i[0]++;
             });
 
             blockShapeCache.forEach((id, blockShape) -> sendBlockShape(serverClient.getCTX(), blockShape));
@@ -166,9 +181,9 @@ public class Server {
 
             clients.put(clientID, serverClient);
 
-            ServerLogger.logger.debug("Registered Client: " + clientID + " with playerID: " + ByteUtils.bytesToHex(serverClient.getPlayerID()));
+            ServerLogger.logger.debug("Client Connected: " + clientID + " playerID: " + ByteUtils.bytesToHex(serverClient.getPlayerID()));
         } else {
-            System.err.println("Client has different version, disconnecting...");
+            System.err.println("Client has an incompatible version, disconnecting...");
             System.err.println("\tClient: " + Arrays.toString(versionID));
             System.err.println("\tServer: " + Arrays.toString(String.format("%-8s", HANDSHAKE_ID).getBytes()));
             ctx.close();
@@ -185,9 +200,11 @@ public class Server {
 
                 ChunkCacheHandler.cacheAll();
 
-                worldHandler.removeBlock((int) Math.floor(Math.random() * 32), (int) Math.floor(Math.random() * 32)+100, (int) Math.floor(Math.random() * 32), null);
+                worldHandler.replaceBlock((int) Math.floor(Math.random() * 8), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 8), ServerBlock.AIR, null);
 
                 world.tick();
+
+                sendQueuedClientPackets();
 
                 long elapsed = System.nanoTime() - startNano;
                 long sleepNanos = tickIntervalNanos - elapsed;
@@ -208,5 +225,41 @@ public class Server {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void sendQueuedClientPackets() {
+        clients.forEach((id, serverClient) -> {
+            // Replaced blocks
+            Queue<ServerBlockAndPosition> queuedReplacedBlocks = serverClient.getReplacedBlocks();
+
+            int size = queuedReplacedBlocks.size();
+            byte[][] outBytes = new byte[size][];
+            int byteCount = 4;
+            for (int i = 0; i < size; i++) {
+                ServerBlockAndPosition block = queuedReplacedBlocks.poll();
+                if (block == null) {
+                    break;
+                }
+                byte[] blockBytes = block.serverBlock().getBlockBytes();
+                byte[] out = new byte[12 + blockBytes.length];
+                ByteUtils.addInt(out, block.x(), 0);
+                ByteUtils.addInt(out, block.y(), 4);
+                ByteUtils.addInt(out, block.z(), 8);
+                System.arraycopy(blockBytes, 0, out, 12, blockBytes.length);
+                outBytes[i] = out;
+                byteCount += out.length;
+            }
+
+            byte[] out = new byte[byteCount];
+            ByteUtils.addInt(out, size, 0);
+
+            int index = 4;
+            for (int i = 0; i < size; i++) {
+                System.arraycopy(outBytes[i], 0, out, index, outBytes[i].length);
+                index += outBytes[i].length;
+            }
+
+            sendBytes(serverClient.getCTX(), PackageID.REPLACE_BLOCK, out);
+        });
     }
 }

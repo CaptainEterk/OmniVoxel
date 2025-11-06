@@ -2,19 +2,23 @@ package omnivoxel.server.client;
 
 import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.client.game.hitbox.Hitbox;
+import omnivoxel.server.client.block.ServerBlockAndPosition;
 import omnivoxel.server.entity.EntityType;
 import omnivoxel.server.entity.mob.MobEntity;
 import omnivoxel.util.bytes.ByteUtils;
 
 import java.security.SecureRandom;
+import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.Queue;
 import java.util.Set;
 
 public class ServerClient extends MobEntity implements ServerItem {
+    public final Set<String> registeredIDs;
     private final String clientID;
     private final ChannelHandlerContext ctx;
     private final byte[] playerID;
-    public final Set<String> registeredIDs;
+    private Queue<ServerBlockAndPosition> replacedBlocks = new ArrayDeque<>();
 
     public ServerClient(String clientID, ChannelHandlerContext ctx) {
         super(clientID, new Hitbox(0, 0, 0, 1, 2, 1, 2, 3, 2));
@@ -80,5 +84,13 @@ public class ServerClient extends MobEntity implements ServerItem {
 
     public boolean registerBlockID(String id) {
         return registeredIDs.add(id);
+    }
+
+    public void queueReplacedBlocks(ServerBlockAndPosition serverBlockAndPosition) {
+        replacedBlocks.add(serverBlockAndPosition);
+    }
+
+    public Queue<ServerBlockAndPosition> getReplacedBlocks() {
+        return replacedBlocks;
     }
 }

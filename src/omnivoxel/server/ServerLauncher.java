@@ -10,16 +10,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import omnivoxel.common.BlockShape;
-import omnivoxel.server.client.chunk.blockService.ServerBlockService;
+import omnivoxel.server.client.ServerClient;
+import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerLauncher {
     // TODO: Use a config file
@@ -30,34 +29,8 @@ public class ServerLauncher {
         new ServerLauncher().run(100L);
     }
 
-    private static void createDirectories() throws IOException {
-        Files.createDirectories(Path.of(ConstantServerSettings.WORLD_SAVE_LOCATION));
-        Path chunkSaveLocation = Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION);
-        clearDirectory(chunkSaveLocation);
-        Files.createDirectories(chunkSaveLocation);
-    }
-
-    public static void clearDirectory(Path dir) throws IOException {
-        if (!Files.exists(dir) || !Files.isDirectory(dir)) {
-            return;
-        }
-
-        try (var paths = Files.walk(dir)) {
-            paths
-                    .sorted(Comparator.reverseOrder())
-                    .filter(path -> !path.equals(dir))
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException e) {
-                            throw new RuntimeException("Failed to delete: " + path, e);
-                        }
-                    });
-        }
-    }
-
     public void run(long seed) throws IOException {
-        createDirectories();
+        ServerInitializer.init();
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -65,12 +38,12 @@ public class ServerLauncher {
         Map<String, String> blockIDMap = new HashMap<>();
         Map<String, BlockShape> blockShapeCache = new HashMap<>();
 
-        ServerBlockService blockService = new ServerBlockService();
-
         ServerWorld world = new ServerWorld();
 
         try {
-            Server server = new Server(seed, world, blockShapeCache, blockService, blockIDMap, new ServerWorldHandler(world));
+            // TODO: Make a wrapper class around clients
+            Map<String, ServerClient> clients = new ConcurrentHashMap<>();
+            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, blockIDMap, new ServerWorldHandler(world, clients));
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
             ServerHandler serverHandler = new ServerHandler(server);

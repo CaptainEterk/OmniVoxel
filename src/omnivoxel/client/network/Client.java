@@ -6,14 +6,15 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import omnivoxel.client.game.entity.ClientEntity;
-import omnivoxel.client.game.graphics.opengl.mesh.ChunkMeshDataTask;
-import omnivoxel.client.game.graphics.opengl.mesh.EntityMeshDataTask;
 import omnivoxel.client.game.graphics.opengl.mesh.MeshDataTask;
 import omnivoxel.client.game.graphics.opengl.mesh.definition.EntityMeshDataDefinition;
 import omnivoxel.client.game.graphics.opengl.mesh.generators.MeshDataGenerator;
 import omnivoxel.client.game.graphics.opengl.mesh.meshData.ModelEntityMeshData;
+import omnivoxel.client.game.graphics.opengl.mesh.tasks.ChunkMeshDataTask;
+import omnivoxel.client.game.graphics.opengl.mesh.tasks.EntityMeshDataTask;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
+import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.client.network.request.ChunkRequest;
 import omnivoxel.client.network.request.CloseRequest;
@@ -28,10 +29,14 @@ import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
+import omnivoxel.world.block.Block;
+import omnivoxel.world.block.BlockService;
+import omnivoxel.world.chunk.Chunk;
 import org.joml.Matrix4f;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class Client {
@@ -40,12 +45,13 @@ public final class Client {
     private final ClientWorldDataService worldDataService;
     private final Logger logger;
     private final AtomicBoolean clientRunning = new AtomicBoolean(true);
-    private final Queue<Position3D> queuedChunkTasks = new ArrayDeque<>();
+    private final Queue<Position3D> queuedChunkTasks = new LinkedBlockingDeque<>();
     private final ClientWorld world;
     private WorkerThreadPool<MeshDataTask> meshDataGenerators;
     private EventLoopGroup group;
     private Channel channel;
     private long lastFlushedTime = System.currentTimeMillis();
+    private BlockService blockService = new BlockService();
 
     public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world) {
         this.clientID = clientID;
@@ -143,10 +149,51 @@ public final class Client {
                     break;
                 case REGISTER_BLOCK: {
                     worldDataService.addBlock(ByteBufUtils.registerBlockFromByteBuf(byteBuf));
-
                     byteBuf.release();
                     break;
                 }
+                case REPLACE_BLOCK:
+                    int replacedBlocks = byteBuf.getInt(8);
+                    int index = 12;
+                    for (int i = 0; i < replacedBlocks; i++) {
+                        int worldX = byteBuf.getInt(index);
+                        int worldY = byteBuf.getInt(index + 4);
+                        int worldZ = byteBuf.getInt(index + 8);
+
+                        int chunkX = worldX / ConstantGameSettings.CHUNK_WIDTH;
+                        int chunkY = worldY / ConstantGameSettings.CHUNK_HEIGHT;
+                        int chunkZ = worldZ / ConstantGameSettings.CHUNK_LENGTH;
+                        int x = worldX % ConstantGameSettings.CHUNK_WIDTH;
+                        int y = worldY % ConstantGameSettings.CHUNK_HEIGHT;
+                        int z = worldZ % ConstantGameSettings.CHUNK_LENGTH;
+
+                        StringBuilder blockID = new StringBuilder();
+                        short paletteLength = byteBuf.getShort(index + 12);
+                        index += 14;
+
+                        for (int j = 0; j < paletteLength; j++) {
+                            byte b = byteBuf.getByte(j + index);
+                            blockID.append((char) b);
+                        }
+                        index += paletteLength;
+
+                        Position3D chunkPosition = new Position3D(chunkX, chunkY, chunkZ);
+
+                        ClientWorldChunk clientWorldChunk = world.get(chunkPosition, false);
+                        if (clientWorldChunk != null) {
+                            Chunk<Block> chunkData = clientWorldChunk.getChunkData();
+
+                            if (chunkData != null) {
+                                clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, blockService.getBlock(blockID.toString())));
+
+                                sendRequest(new ChunkRequest(chunkPosition));
+                            }
+//                        meshDataGenerators.submit(new ChunkRemeshDataTask(ChunkBlockData.fromChunk(clientWorldChunk.getChunkData(), worldDataService), chunkPosition));
+                        }
+                    }
+
+                    byteBuf.release();
+                    break;
                 default:
                     System.err.println("Unexpected package key: " + packageID);
                     byteBuf.release();
@@ -177,10 +224,14 @@ public final class Client {
 
         offset += Integer.BYTES;
 
-        double x = byteBuf.getDouble(offset); offset += Double.BYTES;
-        double y = byteBuf.getDouble(offset); offset += Double.BYTES;
-        double z = byteBuf.getDouble(offset); offset += Double.BYTES;
-        double pitch = byteBuf.getDouble(offset); offset += Double.BYTES;
+        double x = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
+        double y = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
+        double z = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
+        double pitch = byteBuf.getDouble(offset);
+        offset += Double.BYTES;
         double yaw = byteBuf.getDouble(offset);
 
         entity.set(x, y, z, pitch, yaw);
@@ -266,15 +317,26 @@ public final class Client {
     public void tick() {
         long time = System.currentTimeMillis();
         if (time - lastFlushedTime > ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME || queuedChunkTasks.size() > ConstantServerSettings.CHUNK_REQUEST_BATCHING_LIMIT) {
-            int[] data = new int[queuedChunkTasks.size() * 3 + 1];
-            data[0] = queuedChunkTasks.size();
-            for (int i = 0; !queuedChunkTasks.isEmpty(); i++) {
-                Position3D req = queuedChunkTasks.remove();
-                data[i * 3 + 1] = req.x();
-                data[i * 3 + 2] = req.y();
-                data[i * 3 + 3] = req.z();
+            List<Position3D> queuedChunkTasksBatch = new ArrayList<>();
+            while (!queuedChunkTasks.isEmpty()) {
+                queuedChunkTasksBatch.add(queuedChunkTasks.remove());
+                if (queuedChunkTasksBatch.getLast() == null) {
+                    queuedChunkTasksBatch.removeLast();
+                    break;
+                }
             }
-            sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
+            if (!queuedChunkTasksBatch.isEmpty()) {
+                int[] data = new int[queuedChunkTasksBatch.size() * 3 + 1];
+                data[0] = queuedChunkTasksBatch.size();
+                for (int i = 0; !queuedChunkTasksBatch.isEmpty(); i++) {
+                    Position3D req = queuedChunkTasksBatch.removeLast();
+
+                    data[i * 3 + 1] = req.x();
+                    data[i * 3 + 2] = req.y();
+                    data[i * 3 + 3] = req.z();
+                }
+                sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
+            }
             lastFlushedTime += ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME;
         }
     }
@@ -333,11 +395,12 @@ public final class Client {
     public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData) {
         meshDataGenerators = new WorkerThreadPool<>(
                 ConstantGameSettings.MAX_MESH_GENERATOR_THREADS,
-                new MeshDataGenerator(
+                () -> new MeshDataGenerator(
                         worldDataService,
                         entityMeshDefinitionCache,
                         queuedEntityMeshData,
-                        world
+                        world,
+                        blockService
                 )::generateMeshData,
                 true
         );

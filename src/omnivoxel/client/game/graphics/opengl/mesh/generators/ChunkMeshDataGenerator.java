@@ -3,7 +3,6 @@ package omnivoxel.client.game.graphics.opengl.mesh.generators;
 import io.netty.buffer.ByteBuf;
 import omnivoxel.client.game.graphics.opengl.mesh.ShapeHelper;
 import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.client.game.graphics.opengl.mesh.meshData.ChunkMeshData;
 import omnivoxel.client.game.graphics.opengl.mesh.meshData.MeshData;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.TextureVertex;
@@ -13,11 +12,12 @@ import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.face.BlockFace;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.BlockService;
-import omnivoxel.world.chunk.BiBlockChunk;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk.SingleBlockChunk;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -28,9 +28,9 @@ public class ChunkMeshDataGenerator {
     private final ClientWorldDataService worldDataService;
     private final BlockService blockService;
 
-    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService) {
+    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService blockService) {
         this.worldDataService = worldDataService;
-        blockService = new BlockService();
+        this.blockService = blockService;
     }
 
     private void addPoint(List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, Vertex position, int tx, int ty, BlockFace normal, float r, float g, float b, int type) {
@@ -208,7 +208,7 @@ public class ChunkMeshDataGenerator {
             index += j;
         }
 
-        Chunk<omnivoxel.world.block.Block> chunk = new BiBlockChunk<>(air);
+        Chunk<omnivoxel.world.block.Block> chunk = new SingleBlockChunk<>(air);
         Block[] blocks = new Block[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
         int x = 0, y = 0, z = 0;
 
@@ -249,6 +249,11 @@ public class ChunkMeshDataGenerator {
 
     public MeshData generateMeshData(ByteBuf blocks, Position3D position3D, ClientWorld world) {
         ChunkBlockData chunk = unpackChunk(blocks);
+        world.addChunkData(position3D, chunk.chunk());
+        return generateChunkMeshData(chunk.blocks(), position3D);
+    }
+
+    public MeshData generateMeshData(ChunkBlockData chunk, Position3D position3D, ClientWorld world) {
         world.addChunkData(position3D, chunk.chunk());
         return generateChunkMeshData(chunk.blocks(), position3D);
     }

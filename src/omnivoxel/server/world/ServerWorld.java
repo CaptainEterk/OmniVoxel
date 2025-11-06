@@ -6,18 +6,17 @@ import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerWorld {
     private final Map<Position3D, ChunkValue> chunks;
+    private final Map<Position3D, byte[]> chunkBytes;
     private int request = 0;
 
     public ServerWorld() {
         chunks = new ConcurrentHashMap<>();
+        chunkBytes = new ConcurrentHashMap<>();
     }
 
     public void tick() {
@@ -34,18 +33,14 @@ public class ServerWorld {
         }
     }
 
-    public void add(Position3D position3D, Chunk<ServerBlock> chunk) {
+    public void put(Position3D position3D, Chunk<ServerBlock> chunk) {
         this.chunks.put(position3D, new ChunkValue(chunk, request));
+        this.chunkBytes.remove(position3D);
     }
 
     public Chunk<ServerBlock> get(Position3D position3D) {
         ChunkValue chunkValue = chunks.get(position3D);
         return chunkValue == null ? null : chunkValue.get(request);
-    }
-
-    public byte[] getBytes(Position3D position3D) throws IOException {
-        Path path = Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION + position3D.getPath());
-        return Files.exists(path) ? Files.readAllBytes(Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION + position3D.getPath())) : null;
     }
 
     public ServerBlock getBlock(Position3D chunkPosition, int x, int y, int z) {
@@ -66,6 +61,14 @@ public class ServerWorld {
         int lz = Math.floorMod(z, CL);
 
         return chunk.getBlock(lx, ly, lz);
+    }
+
+    public byte[] getBytes(Position3D chunkPosition) {
+        return chunkBytes.get(chunkPosition);
+    }
+
+    public void put(Position3D chunkPosition, byte[] chunkBytes) {
+        this.chunkBytes.put(chunkPosition, chunkBytes);
     }
 
     private static class ChunkValue {

@@ -1,6 +1,6 @@
 package omnivoxel.util.game.nodes;
 
-import org.jetbrains.annotations.NotNull;
+import omnivoxel.common.annotations.NotNull;
 
 import java.util.Arrays;
 

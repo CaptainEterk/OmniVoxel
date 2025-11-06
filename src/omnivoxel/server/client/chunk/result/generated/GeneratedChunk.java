@@ -1,35 +1,22 @@
-package omnivoxel.server.client.chunk.result;
+package omnivoxel.server.client.chunk.result.generated;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.BlockIDCount;
-import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.EmptyGeneratedChunk;
-import omnivoxel.world.chunk.BiBlockChunk;
+import omnivoxel.server.client.chunk.ChunkIO;
+import omnivoxel.server.client.chunk.result.ChunkResult;
 import omnivoxel.world.chunk.Chunk;
-import omnivoxel.world.chunk.GeneralChunk;
 import omnivoxel.world.chunk.SingleBlockChunk;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class GeneratedChunk {
-    private static ChunkResult emptyChunk = null;
+    public static ChunkResult emptyChunk = null;
 
-    private static void sendBlock(ChannelHandlerContext ctx, ServerBlock block) {
-        ByteBuf buffer = Unpooled.buffer();
-        byte[] bytes = block.getBytes();
-        buffer.writeInt(4 + bytes.length);
-        buffer.writeInt(PackageID.REGISTER_BLOCK.ordinal());
-        buffer.writeBytes(bytes);
-        ctx.channel().writeAndFlush(buffer);
-    }
-
+    // TODO: Move this to something similar to ChunkIO
     public static ChunkResult getResult(GeneratedChunk generatedChunk, ServerClient client) {
         if (generatedChunk instanceof EmptyGeneratedChunk && client != null) {
             if (emptyChunk == null) {
@@ -38,6 +25,7 @@ public abstract class GeneratedChunk {
             return emptyChunk;
         }
 
+        Chunk<ServerBlock> chunkOut = new SingleBlockChunk<>(ServerBlock.VOID);
         List<ServerBlock> palette = new ArrayList<>();
         int[] chunk = new int[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
         int chunkByteOffset = 0;
@@ -47,6 +35,11 @@ public abstract class GeneratedChunk {
                     ServerBlock block = generatedChunk.getBlock(x, y, z);
                     if (!palette.contains(block)) {
                         palette.add(block);
+                    }
+                    if (x > 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                            y > 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                            z > 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                        chunkOut = chunkOut.setBlock(x, y, z, block);
                     }
                     chunk[chunkByteOffset] = palette.indexOf(block);
                     chunkByteOffset++;
@@ -58,24 +51,9 @@ public abstract class GeneratedChunk {
             // TODO: This shouldn't handle anything server/client related
             palette.forEach(serverBlock -> {
                 if (client.registerBlockID(serverBlock.id())) {
-                    sendBlock(client.getCTX(), serverBlock);
+                    ChunkIO.sendBlock(client.getCTX(), serverBlock);
                 }
             });
-        }
-
-        Chunk<ServerBlock> chunkOut;
-        if (palette.size() == 1) {
-            chunkOut = new SingleBlockChunk<>(palette.getFirst());
-        } else {
-            chunkOut = palette.size() == 2 ? new BiBlockChunk<>(palette.getFirst()) : new GeneralChunk<>();
-            for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-                for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
-                    for (int y = 0; y < ConstantGameSettings.CHUNK_HEIGHT; y++) {
-                        ServerBlock block = generatedChunk.getBlock(x, y, z);
-                        chunkOut = chunkOut.setBlock(x, y, z, block);
-                    }
-                }
-            }
         }
 
         List<BlockIDCount> chunkData = new ArrayList<>();
@@ -131,7 +109,7 @@ public abstract class GeneratedChunk {
         return new ChunkResult(out, chunkOut);
     }
 
-    protected abstract ServerBlock getBlock(int x, int y, int z);
+    abstract public ServerBlock getBlock(int x, int y, int z);
 
     abstract public GeneratedChunk setBlock(int x, int y, int z, @NotNull ServerBlock block);
 }

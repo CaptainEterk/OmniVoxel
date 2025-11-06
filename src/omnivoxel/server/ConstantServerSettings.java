@@ -8,7 +8,7 @@ public final class ConstantServerSettings {
     public static final int CHUNK_MODIFICATION_GENERALIZATION_LIMIT = 10;
     public static final long CHUNK_REQUEST_BATCHING_TIME = 50;
     public static final int CHUNK_REQUEST_BATCHING_LIMIT = 1000;
-    public static final int CHUNK_TIME_LIMIT = 10000;
+    public static final int CHUNK_TIME_LIMIT = 1000000;
 
     public static final String WORLD_SAVE_LOCATION = "./world/";
     public static final String CHUNK_SAVE_LOCATION = WORLD_SAVE_LOCATION + "chunks/";

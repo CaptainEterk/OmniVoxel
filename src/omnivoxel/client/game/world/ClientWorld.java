@@ -88,13 +88,9 @@ public class ClientWorld {
     public Position3D[] getKeys() {
         if (chunksChanged.get()) {
             chunksChanged.set(false);
-            cachedKeys = chunks.keySet().toArray(new Position3D[0]);;
+            cachedKeys = chunks.keySet().toArray(new Position3D[0]);
         }
         return cachedKeys;
-    }
-
-    public ClientWorldChunk[] getValues() {
-        return chunks.values().toArray(new ClientWorldChunk[0]);
     }
 
     public int bufferizeQueued(MeshGenerator meshGenerator, long endTime) {
@@ -105,14 +101,14 @@ public class ClientWorld {
             if (bufferizing) {
                 count++;
             }
-        } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME);
-        state.setItem("bufferizingQueueSize", nonBufferizedChunks.size());
+        } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME && System.nanoTime() < endTime);
+        state.setItem("bufferizing_queue_size", nonBufferizedChunks.size());
         return count;
     }
 
     public boolean bufferize(MeshGenerator meshGenerator) {
         if (!nonBufferizedChunks.isEmpty()) {
-            MeshData meshData = nonBufferizedChunks.remove();
+            MeshData meshData = nonBufferizedChunks.poll();
             if (meshData instanceof GeneralEntityMeshData entityMeshData) {
                 entityMeshData.entity().setMesh(meshGenerator.bufferizeEntityMesh(entityMeshData));
                 entityMeshDefinitionCache.put(entityMeshData.entity().getType().toString(), entityMeshData.entity().getMesh().getDefinition());
@@ -123,6 +119,9 @@ public class ClientWorld {
                     chunks.put(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMesh));
                     chunksChanged.set(true);
                 } else {
+                    if (clientWorldChunk.getMesh() != null) {
+                        freeChunk(clientWorldChunk.getMesh());
+                    }
                     clientWorldChunk.setMesh(chunkMesh);
                 }
                 queuedChunks.remove(chunkMeshData.chunkPosition());
@@ -144,6 +143,16 @@ public class ClientWorld {
         chunkResponseGotten.incrementAndGet();
         newChunks.add(position3D);
         state.setItem("shouldCheckNewChunks", true);
+    }
+
+    public void addChunkData(Position3D position3D, Chunk<Block> chunk) {
+        ClientWorldChunk clientWorldChunk = chunks.get(position3D);
+        if (clientWorldChunk == null) {
+            chunks.put(position3D, new ClientWorldChunk(chunk));
+            chunksChanged.set(true);
+        } else {
+            clientWorldChunk.setChunkData(chunk);
+        }
     }
 
     public void cleanup() {
@@ -206,15 +215,5 @@ public class ClientWorld {
 
     public void removeEntity(String entityID) {
         entities.remove(entityID);
-    }
-
-    public void addChunkData(Position3D position3D, Chunk<Block> chunk) {
-        ClientWorldChunk clientWorldChunk = chunks.get(position3D);
-        if (clientWorldChunk == null) {
-            chunks.put(position3D, new ClientWorldChunk(chunk));
-            chunksChanged.set(true);
-        } else {
-            clientWorldChunk.setChunkData(chunk);
-        }
     }
 }

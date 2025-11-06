@@ -1,7 +1,7 @@
 package omnivoxel.util.bytes;
 
 import io.netty.buffer.ByteBuf;
-import org.jetbrains.annotations.NotNull;
+import omnivoxel.common.annotations.NotNull;
 
 public class ByteUtils {
     public static String bytesToHex(ByteBuf byteBuf, int start, int length) {

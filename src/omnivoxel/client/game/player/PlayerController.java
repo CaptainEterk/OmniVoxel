@@ -1,11 +1,11 @@
 package omnivoxel.client.game.player;
 
 import omnivoxel.client.game.camera.Camera;
+import omnivoxel.client.game.graphics.opengl.window.Window;
+import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.client.game.input.KeyInput;
 import omnivoxel.client.game.input.MouseButtonInput;
 import omnivoxel.client.game.input.MouseInput;
-import omnivoxel.client.game.graphics.opengl.window.Window;
-import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.settings.Settings;
 import omnivoxel.client.game.state.State;
@@ -13,13 +13,13 @@ import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.PlayerUpdateRequest;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.hitbox.BlockHitbox;
 import omnivoxel.world.block.hitbox.FullBlockHitbox;
 import omnivoxel.world.chunk.Chunk;
-import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
@@ -48,7 +48,7 @@ public class PlayerController {
     private final Window window;
 
     @NotNull
-    private MovementMode movementMode = MovementMode.FLY_COLLIDE;
+    private MovementMode movementMode = MovementMode.FALL_COLLIDE;
 
     private double x;
     private double y = 128;
@@ -72,6 +72,7 @@ public class PlayerController {
     public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, Window window) {
         this.client = client;
         this.camera = camera;
+        camera.setPosition(x, y, z);
         this.settings = settings;
         this.contextTasks = contextTasks;
         this.state = state;
@@ -182,6 +183,7 @@ public class PlayerController {
         state.setItem("velocity_y", velocityY);
         state.setItem("velocity_z", velocityZ);
         state.setItem("on_ground", onGround);
+        state.setItem("movement_mode", movementMode.toString());
 
         if (velocityX != 0 || velocityY != 0 || velocityZ != 0 || changeRot.get()) {
             state.setItem("shouldUpdateView", true);

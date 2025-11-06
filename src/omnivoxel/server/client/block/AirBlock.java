@@ -1,8 +1,8 @@
 package omnivoxel.server.client.block;
 
 import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.face.BlockFace;
 
 public final class AirBlock extends Block {
     private final static int[][] emptyUVCoords = new int[6][0];

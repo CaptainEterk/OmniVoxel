@@ -3,9 +3,9 @@ package omnivoxel.server.client.chunk.worldDataService.density.functions;
 import omnivoxel.server.client.chunk.worldDataService.Function;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
 import omnivoxel.server.client.chunk.worldDataService.density.DensityFunction;
+import omnivoxel.util.game.nodes.DoubleGameNode;
 import omnivoxel.util.game.nodes.GameNode;
 import omnivoxel.util.game.nodes.ObjectGameNode;
-import omnivoxel.util.game.nodes.DoubleGameNode;
 
 @Function(id = "clamp")
 public class ClampDensityFunction extends DensityFunction {

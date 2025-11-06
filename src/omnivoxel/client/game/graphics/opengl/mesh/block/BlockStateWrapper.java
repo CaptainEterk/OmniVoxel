@@ -1,7 +1,7 @@
 package omnivoxel.client.game.graphics.opengl.mesh.block;
 
-import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.face.BlockFace;
 
 public class BlockStateWrapper extends Block {
     private final Block wrappedBlock;

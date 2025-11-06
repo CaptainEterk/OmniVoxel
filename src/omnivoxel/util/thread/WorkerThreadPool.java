@@ -6,18 +6,19 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class WorkerThreadPool<T> {
     private final WorkerThread<T>[] workers;
     private final AtomicBoolean running;
 
     @SuppressWarnings("unchecked")
-    public WorkerThreadPool(int threadCount, Consumer<T> taskHandler, boolean daemon) {
+    public WorkerThreadPool(int threadCount, Supplier<Consumer<T>> taskHandlerSupplier, boolean daemon) {
         this.workers = new WorkerThread[threadCount];
         running = new AtomicBoolean(true);
 
         for (int i = 0; i < threadCount; i++) {
-            WorkerThread<T> workerThread = new WorkerThread<>(new LinkedBlockingDeque<T>(), taskHandler, running);
+            WorkerThread<T> workerThread = new WorkerThread<>(new LinkedBlockingDeque<>(), taskHandlerSupplier.get(), running);
             Thread thread = new Thread(workerThread, "Worker-" + i);
             thread.setDaemon(daemon);
             workers[i] = workerThread;
@@ -79,7 +80,7 @@ public class WorkerThreadPool<T> {
             thread = Thread.currentThread();
             try {
                 while (!Thread.currentThread().isInterrupted() && running.get()) {
-                    int taskCount = taskQueue.drainTo(localQueue, 10);
+                    int taskCount = taskQueue.drainTo(localQueue);
                     if (taskCount > 0) {
                         while (!localQueue.isEmpty()) {
                             taskHandler.accept(localQueue.remove());

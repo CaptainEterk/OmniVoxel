@@ -1,7 +1,8 @@
 package omnivoxel.server.client.block;
 
+import omnivoxel.common.BlockShape;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.client.ServerItem;
-import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
 
@@ -12,6 +13,12 @@ public record ServerBlock(
         boolean transparent,
         boolean transparentMesh
 ) implements ServerItem {
+    public static final double[][] emptyUVCoords = new double[6][0];
+
+    public static final ServerBlock VOID = new ServerBlock("omnivoxel:void/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false);
+    // TODO: Don't hardcore omnivoxel:air/default
+    public static final ServerBlock AIR = new ServerBlock("omnivoxel:air/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false);
+
     public ServerBlock {
         if (uvCoords.length != 6) {
             throw new IllegalArgumentException("uvCoords must have 6 faces");

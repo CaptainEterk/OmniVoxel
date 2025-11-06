@@ -7,7 +7,7 @@ import omnivoxel.client.game.graphics.opengl.window.Window;
 import omnivoxel.client.game.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
-import omnivoxel.client.launcher.OmniVoxel;
+import omnivoxel.client.launcher.ClientInitializer;
 import omnivoxel.client.network.Client;
 import omnivoxel.util.log.Logger;
 
@@ -38,7 +38,7 @@ public final class GameLoop {
 
     public void init() {
         this.renderer.init(
-                new Logger("Game Loop", OmniVoxel.SHOW_LOGS),
+                new Logger("Game Loop", ClientInitializer.SHOW_LOGS),
                 state,
                 settings,
                 world,
