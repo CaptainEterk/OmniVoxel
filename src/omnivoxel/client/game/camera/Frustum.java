@@ -1,6 +1,5 @@
 package omnivoxel.client.game.camera;
 
-import omnivoxel.client.game.entity.ClientEntity;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.util.math.Position3D;
 import org.joml.FrustumIntersection;
@@ -27,9 +26,5 @@ public class Frustum {
                 y + ConstantGameSettings.CHUNK_HEIGHT,
                 z + ConstantGameSettings.CHUNK_LENGTH
         );
-    }
-
-    public boolean isEntityInFrustum(ClientEntity clientEntity, Camera camera) {
-        return frustumIntersection.testPoint((float) clientEntity.getX(), (float) clientEntity.getY(), (float) clientEntity.getZ());
     }
 }

@@ -363,6 +363,7 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glDepthMask(true);
 
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, texture);
+        int occuluded = 0;
 
         if (state.getItem("z-prepass", Boolean.class)) {
             System.out.println("z-prepass");
@@ -390,8 +391,12 @@ public class OpenGLRenderer implements Renderer {
             if (positionedChunk.chunk().getMesh().solidVAO() > 0 && positionedChunk.chunk().getMesh().solidIndexCount() > 0) {
                 shaderProgram.setUniform("chunkPosition", position3D.x(), position3D.y(), position3D.z());
                 renderVAO(positionedChunk.chunk().getMesh().solidVAO(), positionedChunk.chunk().getMesh().solidIndexCount());
+            } else {
+                occuluded++;
             }
         }
+
+        state.setItem("geometry_culled_chunks", occuluded);
     }
 
     private void renderTransparentChunks() {
@@ -400,12 +405,18 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glDepthMask(false);
         GL11C.glEnable(GL11C.GL_BLEND);
         GL11C.glBlendFunc(GL11C.GL_SRC_ALPHA, GL11C.GL_ONE_MINUS_SRC_ALPHA);
+        int occuluded = 0;
         for (int i = transparentRenderedChunksInFrustum.size() - 1; i >= 0; i--) {
             PositionedChunk positionedChunk = transparentRenderedChunksInFrustum.get(i);
             Position3D position3D = positionedChunk.pos();
             shaderProgram.setUniform("chunkPosition", position3D.x(), position3D.y(), position3D.z());
-            renderVAO(positionedChunk.chunk().getMesh().transparentVAO(), positionedChunk.chunk().getMesh().transparentIndexCount());
+            if (positionedChunk.chunk().getMesh().transparentVAO() > 0 && positionedChunk.chunk().getMesh().transparentIndexCount() > 0) {
+                renderVAO(positionedChunk.chunk().getMesh().transparentVAO(), positionedChunk.chunk().getMesh().transparentIndexCount());
+            } else {
+                occuluded++;
+            }
         }
+        state.setItem("geometry_culled_chunks", state.getItem("geometry_culled_chunks", Integer.class) + occuluded);
     }
 
     private void bufferizeChunks() {
@@ -438,6 +449,10 @@ public class OpenGLRenderer implements Renderer {
                             \t- Bufferized Chunks: %d
                             \t- Non-Bufferized Chunks: %d
                             \t- Missing Chunks: %d
+                            Culling:
+                            \t- Total: %d,
+                            \t- Frustum: %d,
+                            \t- Geometry: %d,
                             Network:
                             \t- Inflight Requests: %d
                             \t- Chunk Requests Sent: %d
@@ -463,6 +478,9 @@ public class OpenGLRenderer implements Renderer {
                     state.getItem("bufferizing_chunk_count", Integer.class),
                     state.getItem("bufferizing_queue_size", Integer.class),
                     state.getItem("missing_chunks", Integer.class),
+                    world.size() - solidRenderedChunks.size() + transparentRenderedChunks.size(),
+                    (solidRenderedChunks.size() - solidRenderedChunksInFrustum.size()) + (transparentRenderedChunks.size() - transparentRenderedChunksInFrustum.size()),
+                    state.getItem("geometry_culled_chunks", Integer.class),
                     state.getItem("inflight_requests", Integer.class),
                     state.getItem("chunk_requests_sent", Integer.class),
                     state.getItem("chunk_requests_received", Integer.class),

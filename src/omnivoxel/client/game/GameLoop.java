@@ -54,7 +54,7 @@ public final class GameLoop {
     }
 
     public void run() {
-        while (!renderer.shouldClose()) {
+        while (!renderer.shouldClose() && gameRunning.get() && client.isClientRunning()) {
             renderer.renderFrame();
         }
         renderer.cleanup();

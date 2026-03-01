@@ -38,7 +38,7 @@ public class ConstantGameSettings {
     public static final int TARGET_TPS = 60;
     public static final long TICK_LENGTH_NS = 1_000_000_000L / TARGET_TPS;
     public static final String GAME_LOCATION = FILE_LOCATION + "games/";
-    public static long BUFFERIZE_END_TIME_LIMIT_MS  = 1;
+    public static long BUFFERIZE_END_TIME_LIMIT_MS = 1;
 
     private static String getRootFolder() {
         return System.getProperty("user.dir") + "/.omnivoxel/";

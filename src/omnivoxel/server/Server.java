@@ -200,7 +200,9 @@ public class Server {
 
                 ChunkCacheHandler.cacheAll();
 
-                worldHandler.replaceBlock((int) Math.floor(Math.random() * 8), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 16), ServerBlock.AIR, null);
+                for (int i = 0; i < 10; i++) {
+                    worldHandler.replaceBlock((int) Math.floor(Math.random() * 8), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 16), ServerBlock.AIR, null);
+                }
 
                 world.tick();
 

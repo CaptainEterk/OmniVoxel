@@ -2,8 +2,8 @@ package omnivoxel.server.client.chunk;
 
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.result.generated.GeneratedChunk;
 import omnivoxel.server.client.chunk.result.generated.EmptyGeneratedChunk;
+import omnivoxel.server.client.chunk.result.generated.GeneratedChunk;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
@@ -16,7 +16,8 @@ import omnivoxel.world.chunk.Chunk;
  * can access neighboring block data without extra chunk lookups.
  */
 public final class ChunkPacker {
-    private ChunkPacker() {}
+    private ChunkPacker() {
+    }
 
     /**
      * Builds a padded chunk using a preloaded 3x3x3 array of chunks.
