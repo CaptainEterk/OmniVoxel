@@ -53,7 +53,7 @@ public final class ChunkGenerator {
         total += end-start;
         count++;
 
-        if (count % 10 == 0 && Objects.equals(Thread.currentThread().getName(), "Worker-1")) {
+        if (count % 100 == 0 && Objects.equals(Thread.currentThread().getName(), "Worker-1")) {
             System.out.println("time: " + (total/count) + "ms per chunk " + total + " " + count + " " + (end-start));
             total = 0;
             count = 0;
