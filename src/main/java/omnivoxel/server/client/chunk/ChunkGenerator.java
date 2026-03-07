@@ -11,7 +11,6 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk.SingleBlockChunk;
 
-import java.util.Objects;
 import java.util.Set;
 
 public final class ChunkGenerator {
@@ -25,13 +24,8 @@ public final class ChunkGenerator {
         this.worldBoundingBoxes = worldBoundingBoxes;
     }
 
-    private long total = 0;
-    private int count;
-
     public Chunk<ServerBlock> generateChunk(int cx, int cy, int cz) {
         Position3D position3D = new Position3D(cx, cy, cz);
-
-        long start = System.currentTimeMillis();
 
         Chunk<ServerBlock> chunk = new SingleBlockChunk<>(ServerBlock.VOID);
         if (worldDataService.shouldGenerateChunk(position3D)) {
@@ -46,17 +40,6 @@ public final class ChunkGenerator {
                     }
                 }
             }
-        }
-
-        long end = System.currentTimeMillis();
-
-        total += end-start;
-        count++;
-
-        if (count % 100 == 0 && Objects.equals(Thread.currentThread().getName(), "Worker-1")) {
-            System.out.println("time: " + (total/count) + "ms per chunk " + total + " " + count + " " + (end-start));
-            total = 0;
-            count = 0;
         }
 
         return chunk;
