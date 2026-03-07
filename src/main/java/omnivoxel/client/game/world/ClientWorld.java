@@ -25,13 +25,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 public class ClientWorld {
     private final Set<Position3D> queuedChunks;
-    private final AtomicInteger chunkRequestsSent;
-    private final AtomicInteger chunkResponseGotten;
     private final Queue<MeshData> nonBufferizedChunks;
     private final Set<Position3D> newChunks;
     private final State state;
@@ -44,6 +41,7 @@ public class ClientWorld {
     private Position3D[] cachedKeys = null;
     private Client client;
     private boolean requesting = true;
+    private int tick = 0;
 
     public ClientWorld(State state) {
         this.state = state;
@@ -52,16 +50,10 @@ public class ClientWorld {
         this.chunks = new ConcurrentHashMap<>();
         this.entityMeshDefinitionCache = new IDCache<>();
 
-        chunkRequestsSent = new AtomicInteger();
-        chunkResponseGotten = new AtomicInteger();
         newChunks = ConcurrentHashMap.newKeySet();
         entities = new ConcurrentHashMap<>();
         queuedEntityMeshData = ConcurrentHashMap.newKeySet();
         chunkRequests = ConcurrentHashMap.newKeySet();
-    }
-
-    public int inflightRequests() {
-        return chunkRequestsSent.get() - chunkResponseGotten.get();
     }
 
     public void setClient(Client client) {
@@ -75,16 +67,20 @@ public class ClientWorld {
     public ClientWorldChunk get(Position3D position3D, boolean request, boolean shell) {
         ClientWorldChunk clientWorldChunk = chunks.get(position3D);
         if (clientWorldChunk != null) {
-            if (!(clientWorldChunk.getChunkData() instanceof ChunkShell<Block>) || shell) {
+            if (!shell) {
+                clientWorldChunk.touch(tick);
+            }
+            boolean isShell = clientWorldChunk.getChunkData() instanceof ChunkShell<Block>;
+            boolean expired = tick - clientWorldChunk.getLastFetchedTick() > ConstantGameSettings.CHUNK_TICK_TIMEOUT;
+
+            if (shell || (!isShell && !expired)) {
                 return clientWorldChunk;
             }
         }
         if (requesting && request) {
-            int inflightRequests = inflightRequests();
-            if (inflightRequests < ConstantServerSettings.CHUNK_REQUEST_LIMIT) {
+            if (queuedChunks.size() < ConstantServerSettings.CHUNK_QUEUED_LIMIT) {
                 if (chunkRequests.add(position3D)) {
                     client.sendRequest(new ChunkRequest(position3D));
-                    chunkRequestsSent.incrementAndGet();
                 }
             } else {
                 requesting = false;
@@ -149,7 +145,6 @@ public class ClientWorld {
             clientWorldChunk.setMeshData(meshData);
         }
         nonBufferizedChunks.add(meshData);
-        chunkResponseGotten.incrementAndGet();
         newChunks.add(position3D);
         state.setItem("shouldCheckNewChunks", true);
     }
@@ -166,13 +161,11 @@ public class ClientWorld {
 
         Chunk<Block> existingData = existing.getChunkData();
 
-        // Real chunk always replaces
         if (!shell) {
             existing.setChunkData(chunk);
             return;
         }
 
-        // Shell merging
         if (existingData instanceof ChunkShell<Block> existingShell &&
                 chunk instanceof ChunkShell<Block> newShell) {
 
@@ -188,24 +181,55 @@ public class ClientWorld {
     }
 
     public void tick() {
-        int crs = chunkRequestsSent.get();
-        int crg = chunkResponseGotten.get();
-        int inflightRequests = crs - crg;
-        state.setItem("inflight_requests", inflightRequests);
-        state.setItem("chunk_requests_sent", crs);
-        state.setItem("chunk_requests_received", crg);
         requesting = true;
+        tick++;
     }
 
-    public void freeAllChunksNotIn(Predicate<Position3D> predicate) {
+    public void freeAllChunksNotInAndNotRecentlyAccessed(Predicate<Position3D> predicate) {
         Position3D[] positions = getKeys();
-        for (Position3D position : positions) {
-            if (!predicate.test(position)) {
-                freeChunk(chunks.remove(position).getMesh());
-                chunkRequests.remove(position);
-                chunksChanged.set(true);
-            }
+        boolean changed = false;
+
+        for (Position3D pos : positions) {
+
+            ClientWorldChunk chunk = chunks.get(pos);
+            if (chunk == null) continue;
+
+            // Only consider chunks OUTSIDE the predicate
+            if (predicate.test(pos)) continue;
+
+            // Skip chunks still queued for mesh generation
+            if (queuedChunks.contains(pos)) continue;
+
+            // Skip if recently accessed
+            if (tick - chunk.getLastFetchedTick() < ConstantGameSettings.CHUNK_TICK_TIMEOUT) continue;
+
+            // Skip if any neighbor was recently accessed
+            if (neighborRecentlyFetched(pos, ConstantGameSettings.CHUNK_TICK_TIMEOUT)) continue;
+
+            freeChunk(chunk.getMesh());
+            chunks.remove(pos);
+            chunkRequests.remove(pos);
+
+            changed = true;
         }
+
+        if (changed) {
+            chunksChanged.set(true);
+        }
+    }
+
+    private boolean neighborRecentlyFetched(Position3D pos, long maxTicks) {
+        return recentlyFetched(pos.add(-1, 0, 0), maxTicks) ||
+                recentlyFetched(pos.add(1, 0, 0), maxTicks) ||
+                recentlyFetched(pos.add(0, -1, 0), maxTicks) ||
+                recentlyFetched(pos.add(0, 1, 0), maxTicks) ||
+                recentlyFetched(pos.add(0, 0, -1), maxTicks) ||
+                recentlyFetched(pos.add(0, 0, 1), maxTicks);
+    }
+
+    private boolean recentlyFetched(Position3D pos, long maxTicks) {
+        ClientWorldChunk neighbor = chunks.get(pos);
+        return neighbor != null && tick - neighbor.getLastFetchedTick() < maxTicks;
     }
 
     private void freeChunk(ChunkMesh mesh) {
@@ -241,5 +265,13 @@ public class ClientWorld {
 
     public void removeEntity(String entityID) {
         entities.remove(entityID);
+    }
+
+    public int queuedChunkCount() {
+        return queuedChunks.size();
+    }
+
+    public boolean isShell(ClientWorldChunk clientWorldChunk) {
+        return clientWorldChunk.getChunkData() instanceof ChunkShell<Block> || tick - clientWorldChunk.getLastFetchedTick() > ConstantGameSettings.CHUNK_TICK_TIMEOUT;
     }
 }

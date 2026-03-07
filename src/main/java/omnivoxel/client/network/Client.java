@@ -32,7 +32,6 @@ import omnivoxel.util.thread.WorkerThreadPool;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
 import omnivoxel.world.chunk.Chunk;
-import omnivoxel.world.chunk.ChunkShell;
 import org.joml.Matrix4f;
 
 import java.util.*;
@@ -186,22 +185,25 @@ public final class Client {
 
                         Position3D chunkPosition = new Position3D(chunkX, chunkY, chunkZ);
 
-                        ClientWorldChunk clientWorldChunk = world.get(chunkPosition, false, true);
+                        ClientWorldChunk clientWorldChunk = world.get(chunkPosition, false, false);
                         if (clientWorldChunk != null) {
                             Chunk<Block> chunkData = clientWorldChunk.getChunkData();
 
-                            if (chunkData != null && !(chunkData instanceof ChunkShell<Block>)) {
-                                clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, blockService.getBlock(blockID.toString())));
-                                meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition));
+                            if (chunkData != null) {
+                                Block block = blockService.getBlock(blockID.toString());
+                                if (chunkData.getBlock(x, y, z) != block) {
+                                    clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, block));
+                                    meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition));
 
-                                if (x == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
-                                if (x == ConstantGameSettings.CHUNK_WIDTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
+                                    if (x == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
+                                    if (x == ConstantGameSettings.CHUNK_WIDTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
 
-                                if (y == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
-                                if (y == ConstantGameSettings.CHUNK_HEIGHT - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
+                                    if (y == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
+                                    if (y == ConstantGameSettings.CHUNK_HEIGHT - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
 
-                                if (z == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
-                                if (z == ConstantGameSettings.CHUNK_LENGTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
+                                    if (z == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
+                                    if (z == ConstantGameSettings.CHUNK_LENGTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
+                                }
                             }
                         }
                     }
