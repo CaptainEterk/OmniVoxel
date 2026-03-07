@@ -11,7 +11,7 @@ public class ConstantGameSettings {
     public static final int BLOCKS_IN_CHUNK_PADDED = PADDED_WIDTH * PADDED_HEIGHT * PADDED_LENGTH;
     public static final int BLOCKS_IN_CHUNK = ((ConstantGameSettings.CHUNK_WIDTH) * (ConstantGameSettings.CHUNK_LENGTH) * (ConstantGameSettings.CHUNK_HEIGHT));
 
-    public static final String DEFAULT_WINDOW_TITLE = "OmniVoxel v0.8-alpha";
+    public static final String DEFAULT_WINDOW_TITLE = "OmniVoxel v0.8.1-alpha";
 
     // TODO: Move this to settings
     public static final int MAX_MESH_GENERATOR_THREADS = Runtime.getRuntime().availableProcessors();
