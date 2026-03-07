@@ -5,6 +5,8 @@ import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+
+// TODO: Merge with BlockService
 public class ClientWorldDataService {
     private final Map<String, Block> blocks;
 

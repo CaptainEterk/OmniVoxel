@@ -9,8 +9,8 @@ public class BiBlockChunk<B> implements Chunk<B> {
     private final B block1;
     private B block2 = null;
 
-    public BiBlockChunk(B block2) {
-        this.block1 = block2;
+    public BiBlockChunk(B block) {
+        this.block1 = block;
         blocks = new int[ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH];
     }
 

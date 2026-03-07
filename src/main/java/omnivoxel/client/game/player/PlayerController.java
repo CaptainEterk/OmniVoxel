@@ -80,16 +80,16 @@ public class PlayerController {
         this.window = window;
         blockHitbox = new IDCache<>(new HashMap<>());
         blockHitboxCache = new IDCache<>(new HashMap<>());
-        hitbox = new Hitbox(-0.4f, -0.5f, -0.4f, 0.4f, 1.4f, 0.4f, 2, 2, 3);
+        hitbox = new Hitbox(-0.4f, -1.5f, -0.4f, 0.4f, 0.4f, 0.4f, 2, 2, 3);
     }
 
     private boolean isSolidAt(double wx, double wy, double wz) {
-        double minX = wx + hitbox.minX() + 1;
-        double maxX = wx + hitbox.maxX() + 1;
+        double minX = wx + hitbox.minX();
+        double maxX = wx + hitbox.maxX();
         double minY = wy + hitbox.minY();
         double maxY = wy + hitbox.maxY();
-        double minZ = wz + hitbox.minZ() + 1;
-        double maxZ = wz + hitbox.maxZ() + 1;
+        double minZ = wz + hitbox.minZ();
+        double maxZ = wz + hitbox.maxZ();
 
         int blockMinX = (int) Math.floor(minX);
         int blockMaxX = (int) Math.floor(maxX);
@@ -115,7 +115,7 @@ public class PlayerController {
                             cachedChunkPos.z() != chunkZ) {
 
                         cachedChunkPos = new Position3D(chunkX, chunkY, chunkZ);
-                        ClientWorldChunk clientWorldChunk = world.get(cachedChunkPos, false);
+                        ClientWorldChunk clientWorldChunk = world.get(cachedChunkPos, false, false);
                         if (clientWorldChunk == null) return true;
 
                         cachedChunk = clientWorldChunk.getChunkData();
@@ -123,6 +123,7 @@ public class PlayerController {
                     }
 
                     Block block = cachedChunk.getBlock(localX, localY, localZ);
+                    // TODO: Don't hardcode anything, use a hitbox for each block
                     if (block != null && !"omnivoxel:air/default".equals(block.id())) {
                         BlockHitbox blockHitboxImpl = blockHitboxCache.get(
                                 blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),

@@ -294,7 +294,7 @@ public class OpenGLRenderer implements Renderer {
             attemptFreeChunks();
 
             for (DistanceChunk chunk : chunks) {
-                ClientWorldChunk clientWorldChunk = world.get(chunk.pos(), true);
+                ClientWorldChunk clientWorldChunk = world.get(chunk.pos(), true, false);
                 if (clientWorldChunk != null && clientWorldChunk.getMesh() != null) {
                     if (clientWorldChunk.getMesh().solidIndexCount() > 0) {
                         solidRenderedChunks.add(chunk);
@@ -342,14 +342,14 @@ public class OpenGLRenderer implements Renderer {
         solidRenderedChunksInFrustum.clear();
         for (DistanceChunk solidRenderedChunk : solidRenderedChunks) {
             if (camera.getFrustum().isChunkInFrustum(solidRenderedChunk.pos())) {
-                solidRenderedChunksInFrustum.add(new PositionedChunk(solidRenderedChunk.pos(), world.get(solidRenderedChunk.pos(), false)));
+                solidRenderedChunksInFrustum.add(new PositionedChunk(solidRenderedChunk.pos(), world.get(solidRenderedChunk.pos(), false, false)));
             }
         }
 
         transparentRenderedChunksInFrustum.clear();
         for (DistanceChunk transparentRenderedChunk : transparentRenderedChunks) {
             if (camera.getFrustum().isChunkInFrustum(transparentRenderedChunk.pos())) {
-                transparentRenderedChunksInFrustum.add(new PositionedChunk(transparentRenderedChunk.pos(), world.get(transparentRenderedChunk.pos(), false)));
+                transparentRenderedChunksInFrustum.add(new PositionedChunk(transparentRenderedChunk.pos(), world.get(transparentRenderedChunk.pos(), false, false)));
             }
         }
     }

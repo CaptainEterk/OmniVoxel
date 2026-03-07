@@ -25,7 +25,7 @@ public abstract class GeneratedChunk {
             return emptyChunk;
         }
 
-        Chunk<ServerBlock> chunkOut = new SingleBlockChunk<>(ServerBlock.VOID);
+        Chunk<ServerBlock> chunkOut = new SingleBlockChunk<>(ServerBlock.AIR);
         List<ServerBlock> palette = new ArrayList<>();
         int[] chunk = new int[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
         int chunkByteOffset = 0;

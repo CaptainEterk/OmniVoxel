@@ -10,6 +10,7 @@ import omnivoxel.client.game.graphics.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
+import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
@@ -17,6 +18,7 @@ import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.BlockService;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk.ChunkShell;
 import omnivoxel.world.chunk.SingleBlockChunk;
 import org.lwjgl.system.MemoryUtil;
 
@@ -193,47 +195,112 @@ public class ChunkMeshDataGenerator {
         }
     }
 
-    private ChunkBlockData unpackChunk(ByteBuf byteBuf) {
+    private ChunkBlockData unpackChunk(ByteBuf byteBuf, Position3D pos, ClientWorld world) {
         omnivoxel.world.block.Block[] palette = new omnivoxel.world.block.Block[byteBuf.getShort(20)];
+
         int index = 22;
+
         for (int i = 0; i < palette.length; i++) {
-            StringBuilder blockID = new StringBuilder();
-            short paletteLength = byteBuf.getShort(index);
-            int j;
-            for (j = 2; j < paletteLength + 2; j++) {
-                byte b = byteBuf.getByte(index + j);
-                blockID.append((char) b);
+            short len = byteBuf.getShort(index);
+            StringBuilder id = new StringBuilder();
+
+            for (int j = 0; j < len; j++) {
+                id.append((char) byteBuf.getByte(index + 2 + j));
             }
-            palette[i] = new omnivoxel.world.block.Block(blockID.toString());
-            index += j;
+
+            palette[i] = new omnivoxel.world.block.Block(id.toString());
+            index += 2 + len;
         }
 
-        Chunk<omnivoxel.world.block.Block> chunk = new SingleBlockChunk<>(air);
+        Chunk<omnivoxel.world.block.Block> center = new SingleBlockChunk<>(air);
+        Chunk<omnivoxel.world.block.Block> negX = new ChunkShell<>();
+        Chunk<omnivoxel.world.block.Block> posX = new ChunkShell<>();
+        Chunk<omnivoxel.world.block.Block> negY = new ChunkShell<>();
+        Chunk<omnivoxel.world.block.Block> posY = new ChunkShell<>();
+        Chunk<omnivoxel.world.block.Block> negZ = new ChunkShell<>();
+        Chunk<omnivoxel.world.block.Block> posZ = new ChunkShell<>();
+
         Block[] blocks = new Block[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
-        int x = 0, y = 0, z = 0;
+
+        int x = -1, y = -1, z = -1;
 
         for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED; ) {
             int blockID = byteBuf.getInt(index);
             int blockCount = byteBuf.getInt(index + 4);
             index += 8;
 
-            for (int j = 0; j < blockCount && i + j < ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED; j++) {
-                int blockIndex = i + j;
+            Block block = worldDataService.getBlock(palette[blockID].id());
 
-                blocks[blockIndex] = worldDataService.getBlock(palette[blockID].id());
+            for (int j = 0; j < blockCount; j++) {
+                int paddedIndex = i + j;
+                blocks[paddedIndex] = block;
 
-                if (x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z < ConstantGameSettings.CHUNK_LENGTH) {
-                    chunk = chunk.setBlock(x, y, z, blockService.getBlock(palette[blockID].id()));
+                if (x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    center = center.setBlock(x, y, z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (x == -1 && y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    negX = negX.setBlock(
+                            ConstantGameSettings.CHUNK_WIDTH - 1,
+                            y,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (x == ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    posX = posX.setBlock(
+                            0,
+                            y,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (z == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
+
+                    negZ = negZ.setBlock(
+                            x,
+                            y,
+                            ConstantGameSettings.CHUNK_LENGTH - 1,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (z == ConstantGameSettings.CHUNK_LENGTH &&
+                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
+
+                    posZ = posZ.setBlock(
+                            x,
+                            y,
+                            0,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (y == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    negY = negY.setBlock(
+                            x,
+                            ConstantGameSettings.CHUNK_HEIGHT - 1,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (y == ConstantGameSettings.CHUNK_HEIGHT &&
+                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    posY = posY.setBlock(
+                            x,
+                            0,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
                 }
 
                 y++;
-                if (y >= ConstantGameSettings.PADDED_HEIGHT) {
-                    y = 0;
+                if (y > ConstantGameSettings.CHUNK_HEIGHT) {
+                    y = -1;
                     z++;
-                    if (z >= ConstantGameSettings.PADDED_LENGTH) {
-                        z = 0;
+
+                    if (z > ConstantGameSettings.CHUNK_LENGTH) {
+                        z = -1;
                         x++;
                     }
                 }
@@ -244,16 +311,104 @@ public class ChunkMeshDataGenerator {
 
         byteBuf.release();
 
-        return new ChunkBlockData(chunk, blocks);
+        world.addChunkData(pos, center, false);
+        world.addChunkData(pos.add(-1, 0, 0), negX, true);
+        world.addChunkData(pos.add(1, 0, 0), posX, true);
+        world.addChunkData(pos.add(0, -1, 0), negY, true);
+        world.addChunkData(pos.add(0, 1, 0), posY, true);
+        world.addChunkData(pos.add(0, 0, -1), negZ, true);
+        world.addChunkData(pos.add(0, 0, 1), posZ, true);
+
+        return new ChunkBlockData(center, blocks);
     }
 
     public MeshData generateMeshData(ByteBuf blocks, Position3D position3D, ClientWorld world) {
-        ChunkBlockData chunk = unpackChunk(blocks);
-        world.addChunkData(position3D, chunk.chunk());
+        if (blocks == null) {
+            return generateMeshData(position3D, world);
+        }
+        ChunkBlockData chunk = unpackChunk(blocks, position3D, world);
         return generateChunkMeshData(chunk.blocks(), position3D);
     }
 
-    public MeshData generateMeshData(ChunkBlockData chunk, Position3D position3D, ClientWorld world) {
-        return generateChunkMeshData(chunk.blocks(), position3D);
+    public MeshData generateMeshData(Position3D position3D, ClientWorld world) {
+        ClientWorldChunk centerChunk = world.get(position3D, false, false);
+        Chunk<omnivoxel.world.block.Block> center = centerChunk == null ? null : centerChunk.getChunkData();
+        if (center == null) {
+            System.out.println("Center is null");
+            return null;
+        }
+
+        Chunk<omnivoxel.world.block.Block> negX = world.get(position3D.add(-1, 0, 0), false, true).getChunkData();
+        Chunk<omnivoxel.world.block.Block> posX = world.get(position3D.add(1, 0, 0), false, true).getChunkData();
+
+        Chunk<omnivoxel.world.block.Block> negY = world.get(position3D.add(0, -1, 0), false, true).getChunkData();
+        Chunk<omnivoxel.world.block.Block> posY = world.get(position3D.add(0, 1, 0), false, true).getChunkData();
+
+        Chunk<omnivoxel.world.block.Block> negZ = world.get(position3D.add(0, 0, -1), false, true).getChunkData();
+        Chunk<omnivoxel.world.block.Block> posZ = world.get(position3D.add(0, 0, 1), false, true).getChunkData();
+
+        int W = ConstantGameSettings.CHUNK_WIDTH;
+        int H = ConstantGameSettings.CHUNK_HEIGHT;
+        int L = ConstantGameSettings.CHUNK_LENGTH;
+
+        Block[] blocks = new Block[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+
+        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
+            for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y++) {
+                for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
+                    int outOfBounds = 0;
+                    if (x < 0 || x == ConstantGameSettings.CHUNK_WIDTH) outOfBounds++;
+                    if (y < 0 || y == ConstantGameSettings.CHUNK_HEIGHT) outOfBounds++;
+                    if (z < 0 || z == ConstantGameSettings.CHUNK_LENGTH) outOfBounds++;
+
+                    if (outOfBounds > 1) {
+                        continue;
+                    }
+
+                    Chunk<omnivoxel.world.block.Block> chunk;
+                    int lx = x, ly = y, lz = z;
+
+                    if (x < 0) {
+                        chunk = negX;
+                        lx = W - 1;
+                    } else if (x == W) {
+                        chunk = posX;
+                        lx = 0;
+                    } else if (y < 0) {
+                        chunk = negY;
+                        ly = H - 1;
+                    } else if (y == H) {
+                        chunk = posY;
+                        ly = 0;
+                    } else if (z < 0) {
+                        chunk = negZ;
+                        lz = L - 1;
+                    } else if (z == L) {
+                        chunk = posZ;
+                        lz = 0;
+                    } else {
+                        chunk = center;
+                    }
+
+                    Block block;
+                    try {
+                        block = worldDataService.getBlock(
+                                chunk.getBlock(lx, ly, lz).id()
+                        );
+                    } catch (Exception e) {
+                        System.out.println(negX + " " + posX + " " + negY + " " + posY + " " + posZ + " " + negZ + " " + position3D);
+                        System.out.println(lx + " " + ly + " " + lz + " " + x + " " + y + " " + z);
+                        System.out.println(chunk.getBlock(lx, ly, lz) + " " + chunk);
+                        throw e;
+                    }
+
+                    int index = IndexCalculator.calculateBlockIndexPadded(x, y, z);
+
+                    blocks[index] = block;
+                }
+            }
+        }
+
+        return generateChunkMeshData(blocks, position3D);
     }
 }

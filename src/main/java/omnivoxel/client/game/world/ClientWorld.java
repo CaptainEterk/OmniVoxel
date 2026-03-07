@@ -16,7 +16,7 @@ import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.chunk.Chunk;
-import omnivoxel.world.chunk.IncompleteChunk;
+import omnivoxel.world.chunk.ChunkShell;
 import org.lwjgl.opengl.GL30C;
 
 import java.util.Map;
@@ -72,11 +72,14 @@ public class ClientWorld {
         return chunks.size();
     }
 
-    public ClientWorldChunk get(Position3D position3D, boolean request) {
+    public ClientWorldChunk get(Position3D position3D, boolean request, boolean shell) {
         ClientWorldChunk clientWorldChunk = chunks.get(position3D);
-        if (clientWorldChunk != null && !(clientWorldChunk.getChunkData() instanceof IncompleteChunk<?>)) {
-            return clientWorldChunk;
-        } else if (requesting && request) {
+        if (clientWorldChunk != null) {
+            if (!(clientWorldChunk.getChunkData() instanceof ChunkShell<Block>) || shell) {
+                return clientWorldChunk;
+            }
+        }
+        if (requesting && request) {
             int inflightRequests = inflightRequests();
             if (inflightRequests < ConstantServerSettings.CHUNK_REQUEST_LIMIT) {
                 if (chunkRequests.add(position3D)) {
@@ -119,9 +122,8 @@ public class ClientWorld {
                 entityMeshDefinitionCache.put(entityMeshData.entity().getType().toString(), entityMeshData.entity().getMesh().getDefinition());
             } else if (meshData instanceof ChunkMeshData chunkMeshData) {
                 ChunkMesh chunkMesh = meshGenerator.bufferizeChunkMesh(chunkMeshData);
-                ClientWorldChunk clientWorldChunk = chunks.get(chunkMeshData.chunkPosition());
+                ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMeshData));
                 if (clientWorldChunk == null) {
-                    chunks.put(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMesh));
                     chunksChanged.set(true);
                 } else {
                     if (clientWorldChunk.getMesh() != null) {
@@ -137,9 +139,11 @@ public class ClientWorld {
     }
 
     public void add(Position3D position3D, MeshData meshData) {
-        ClientWorldChunk clientWorldChunk = chunks.get(position3D);
+        if (meshData == null) {
+            return;
+        }
+        ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(position3D, new ClientWorldChunk(meshData));
         if (clientWorldChunk == null) {
-            chunks.put(position3D, new ClientWorldChunk(meshData));
             chunksChanged.set(true);
         } else {
             clientWorldChunk.setMeshData(meshData);
@@ -150,13 +154,29 @@ public class ClientWorld {
         state.setItem("shouldCheckNewChunks", true);
     }
 
-    public void addChunkData(Position3D position3D, Chunk<Block> chunk) {
-        ClientWorldChunk clientWorldChunk = chunks.get(position3D);
-        if (clientWorldChunk == null) {
-            chunks.put(position3D, new ClientWorldChunk(chunk));
-            chunksChanged.set(true);
-        } else {
-            clientWorldChunk.setChunkData(chunk);
+    public void addChunkData(Position3D position3D, Chunk<Block> chunk, boolean shell) {
+        ClientWorldChunk existing = chunks.putIfAbsent(position3D, new ClientWorldChunk(chunk));
+
+        if (existing == null) {
+            if (!shell) {
+                chunksChanged.set(true);
+            }
+            return;
+        }
+
+        Chunk<Block> existingData = existing.getChunkData();
+
+        // Real chunk always replaces
+        if (!shell) {
+            existing.setChunkData(chunk);
+            return;
+        }
+
+        // Shell merging
+        if (existingData instanceof ChunkShell<Block> existingShell &&
+                chunk instanceof ChunkShell<Block> newShell) {
+
+            existingShell.merge(newShell);
         }
     }
 
