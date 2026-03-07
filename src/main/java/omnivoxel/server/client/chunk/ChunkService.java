@@ -50,7 +50,6 @@ public class ChunkService {
             }
 
             if (chunkTask.serverClient() != null) {
-                System.out.println(chunkTask.x() + " " + chunkTask.y() + " " + chunkTask.z());
                 sendChunkBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.y(), chunkTask.z(), chunk);
             }
         } catch (IOException e) {
