@@ -14,6 +14,7 @@ import omnivoxel.client.network.Client;
 import omnivoxel.client.network.ClientLauncher;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.util.log.Logger;
+import omnivoxel.world.block.BlockService;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -50,7 +51,9 @@ public class Launcher {
 
         Logger logger = new Logger("Client", ClientInitializer.SHOW_LOGS);
 
-        Client client = new Client(clientID, clientWorldDataService, logger, world);
+        BlockService blockService = new BlockService();
+
+        Client client = new Client(clientID, clientWorldDataService, logger, world, blockService);
         ClientLauncher clientLauncher = new ClientLauncher(logger, connected, client);
         Thread clientThread = new Thread(clientLauncher, "Client");
         clientThread.start();
@@ -69,7 +72,7 @@ public class Launcher {
 
             gameLoop.init();
 
-            PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, gameLoop.getRenderer().getWindow());
+            PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, blockService, gameLoop.getRenderer().getWindow());
 
             Thread tickLoopThread = new Thread(new TickLoop(playerController, gameRunning, contextTasks, client), "Tick Loop");
             tickLoopThread.start();

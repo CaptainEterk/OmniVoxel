@@ -153,6 +153,20 @@ public class Server {
                 });
                 byteBuf.release();
                 break;
+            case REPLACE_BLOCK:
+                int bx = byteBuf.getInt(36);
+                int by = byteBuf.getInt(40);
+                int bz = byteBuf.getInt(44);
+                int length = byteBuf.getInt(48);
+                byte[] bytes = new byte[length];
+                byteBuf.getBytes(52, bytes);
+                StringBuilder blockID = new StringBuilder();
+                for (byte b : bytes) {
+                    blockID.append((char) b);
+                }
+                worldHandler.replaceBlock(bx, by, bz, blockService.getBlock(blockID.toString()), clients.get(clientID));
+
+                break;
             default:
                 System.err.println("Unknown package key: " + packageID);
         }

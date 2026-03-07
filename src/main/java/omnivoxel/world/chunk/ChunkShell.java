@@ -8,14 +8,14 @@ public class ChunkShell<B> implements Chunk<B> {
     private static final int HEIGHT = ConstantGameSettings.CHUNK_HEIGHT;
     private static final int LENGTH = ConstantGameSettings.CHUNK_LENGTH;
 
-    private Object[] minX = new Object[HEIGHT * LENGTH];
-    private Object[] maxX = new Object[HEIGHT * LENGTH];
+    private final Object[] minX = new Object[HEIGHT * LENGTH];
+    private final Object[] maxX = new Object[HEIGHT * LENGTH];
 
-    private Object[] minY = new Object[WIDTH * LENGTH];
-    private Object[] maxY = new Object[WIDTH * LENGTH];
+    private final Object[] minY = new Object[WIDTH * LENGTH];
+    private final Object[] maxY = new Object[WIDTH * LENGTH];
 
-    private Object[] minZ = new Object[WIDTH * HEIGHT];
-    private Object[] maxZ = new Object[WIDTH * HEIGHT];
+    private final Object[] minZ = new Object[WIDTH * HEIGHT];
+    private final Object[] maxZ = new Object[WIDTH * HEIGHT];
 
     @SuppressWarnings("unchecked")
     @Override

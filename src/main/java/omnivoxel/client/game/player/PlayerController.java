@@ -12,11 +12,13 @@ import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.Client;
+import omnivoxel.client.network.request.BlockReplaceRequest;
 import omnivoxel.client.network.request.PlayerUpdateRequest;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
+import omnivoxel.world.block.BlockService;
 import omnivoxel.world.block.hitbox.BlockHitbox;
 import omnivoxel.world.block.hitbox.FullBlockHitbox;
 import omnivoxel.world.chunk.Chunk;
@@ -44,6 +46,7 @@ public class PlayerController {
     private final ClientWorld world;
     private final IDCache<String, String> blockHitbox;
     private final IDCache<String, BlockHitbox> blockHitboxCache;
+    private final BlockService blockService;
     private final Hitbox hitbox;
     private final Window window;
 
@@ -69,9 +72,10 @@ public class PlayerController {
     private Chunk<Block> cachedChunk;
     private boolean onGround = false;
 
-    public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, Window window) {
+    public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, BlockService blockService, Window window) {
         this.client = client;
         this.camera = camera;
+        this.blockService = blockService;
         camera.setPosition(x, y, z);
         this.settings = settings;
         this.contextTasks = contextTasks;
@@ -152,6 +156,12 @@ public class PlayerController {
         if (mouseButtonInput.isMouseLocked()) {
             handleInput(deltaTime, changeRot, movementMode != MovementMode.FALL_COLLIDE);
 
+            if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
+                client.sendRequest(new BlockReplaceRequest(new Position3D((int) x, (int) y, (int) z), blockService.getBlock("omnivoxel:air/default")));
+            }
+            if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
+                client.sendRequest(new BlockReplaceRequest(new Position3D((int) x, (int) y, (int) z), blockService.getBlock("core:stone/default")));
+            }
             if (keyInput.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
                 contextTasks.add(mouseButtonInput::unlockMouse);
             }

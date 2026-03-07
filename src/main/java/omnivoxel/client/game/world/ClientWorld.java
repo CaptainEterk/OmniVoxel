@@ -118,7 +118,7 @@ public class ClientWorld {
                 entityMeshDefinitionCache.put(entityMeshData.entity().getType().toString(), entityMeshData.entity().getMesh().getDefinition());
             } else if (meshData instanceof ChunkMeshData chunkMeshData) {
                 ChunkMesh chunkMesh = meshGenerator.bufferizeChunkMesh(chunkMeshData);
-                ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMeshData));
+                ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMesh));
                 if (clientWorldChunk == null) {
                     chunksChanged.set(true);
                 } else {
@@ -204,7 +204,7 @@ public class ClientWorld {
             if (tick - chunk.getLastFetchedTick() < ConstantGameSettings.CHUNK_TICK_TIMEOUT) continue;
 
             // Skip if any neighbor was recently accessed
-            if (neighborRecentlyFetched(pos, ConstantGameSettings.CHUNK_TICK_TIMEOUT)) continue;
+            if (neighborRecentlyFetched(pos)) continue;
 
             freeChunk(chunk.getMesh());
             chunks.remove(pos);
@@ -218,18 +218,18 @@ public class ClientWorld {
         }
     }
 
-    private boolean neighborRecentlyFetched(Position3D pos, long maxTicks) {
-        return recentlyFetched(pos.add(-1, 0, 0), maxTicks) ||
-                recentlyFetched(pos.add(1, 0, 0), maxTicks) ||
-                recentlyFetched(pos.add(0, -1, 0), maxTicks) ||
-                recentlyFetched(pos.add(0, 1, 0), maxTicks) ||
-                recentlyFetched(pos.add(0, 0, -1), maxTicks) ||
-                recentlyFetched(pos.add(0, 0, 1), maxTicks);
+    private boolean neighborRecentlyFetched(Position3D pos) {
+        return recentlyFetched(pos.add(-1, 0, 0)) ||
+                recentlyFetched(pos.add(1, 0, 0)) ||
+                recentlyFetched(pos.add(0, -1, 0)) ||
+                recentlyFetched(pos.add(0, 1, 0)) ||
+                recentlyFetched(pos.add(0, 0, -1)) ||
+                recentlyFetched(pos.add(0, 0, 1));
     }
 
-    private boolean recentlyFetched(Position3D pos, long maxTicks) {
+    private boolean recentlyFetched(Position3D pos) {
         ClientWorldChunk neighbor = chunks.get(pos);
-        return neighbor != null && tick - neighbor.getLastFetchedTick() < maxTicks;
+        return neighbor != null && tick - neighbor.getLastFetchedTick() < (long) ConstantGameSettings.CHUNK_TICK_TIMEOUT;
     }
 
     private void freeChunk(ChunkMesh mesh) {
@@ -269,9 +269,5 @@ public class ClientWorld {
 
     public int queuedChunkCount() {
         return queuedChunks.size();
-    }
-
-    public boolean isShell(ClientWorldChunk clientWorldChunk) {
-        return clientWorldChunk.getChunkData() instanceof ChunkShell<Block> || tick - clientWorldChunk.getLastFetchedTick() > ConstantGameSettings.CHUNK_TICK_TIMEOUT;
     }
 }

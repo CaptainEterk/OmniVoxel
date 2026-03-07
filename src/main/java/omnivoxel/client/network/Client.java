@@ -16,10 +16,7 @@ import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
-import omnivoxel.client.network.request.ChunkRequest;
-import omnivoxel.client.network.request.CloseRequest;
-import omnivoxel.client.network.request.PlayerUpdateRequest;
-import omnivoxel.client.network.request.Request;
+import omnivoxel.client.network.request.*;
 import omnivoxel.client.network.util.ByteBufUtils;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.server.PackageID;
@@ -48,17 +45,18 @@ public final class Client {
     private final AtomicBoolean clientRunning = new AtomicBoolean(true);
     private final Queue<Position3D> queuedChunkTasks = new LinkedBlockingDeque<>();
     private final ClientWorld world;
-    private final BlockService blockService = new BlockService();
+    private final BlockService blockService;
     private WorkerThreadPool<MeshDataTask> meshDataGenerators;
     private EventLoopGroup group;
     private Channel channel;
     private long lastFlushedTime = System.currentTimeMillis();
 
-    public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world) {
+    public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world, BlockService blockService) {
         this.clientID = clientID;
         this.worldDataService = worldDataService;
         this.logger = logger;
         this.world = world;
+        this.blockService = blockService;
         entities = new ConcurrentHashMap<>();
     }
 
@@ -195,14 +193,20 @@ public final class Client {
                                     clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, block));
                                     meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition));
 
-                                    if (x == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
-                                    if (x == ConstantGameSettings.CHUNK_WIDTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
+                                    if (x == 0)
+                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
+                                    if (x == ConstantGameSettings.CHUNK_WIDTH - 1)
+                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
 
-                                    if (y == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
-                                    if (y == ConstantGameSettings.CHUNK_HEIGHT - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
+                                    if (y == 0)
+                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
+                                    if (y == ConstantGameSettings.CHUNK_HEIGHT - 1)
+                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
 
-                                    if (z == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
-                                    if (z == ConstantGameSettings.CHUNK_LENGTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
+                                    if (z == 0)
+                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
+                                    if (z == ConstantGameSettings.CHUNK_LENGTH - 1)
+                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
                                 }
                             }
                         }
@@ -370,8 +374,18 @@ public final class Client {
                 sendBytes(channel, PackageID.CLOSE, clientID);
                 break;
             case PLAYER_UPDATE:
-                PlayerUpdateRequest r = (PlayerUpdateRequest) request;
-                sendDoubles(channel, PackageID.PLAYER_UPDATE, clientID, r.x(), r.y(), r.z(), r.pitch(), r.yaw());
+                PlayerUpdateRequest playerUpdateRequest = (PlayerUpdateRequest) request;
+                sendDoubles(channel, PackageID.PLAYER_UPDATE, clientID, playerUpdateRequest.x(), playerUpdateRequest.y(), playerUpdateRequest.z(), playerUpdateRequest.pitch(), playerUpdateRequest.yaw());
+                break;
+            case BLOCK_REPLACE:
+                BlockReplaceRequest blockReplaceRequest = (BlockReplaceRequest) request;
+                byte[] bytes = new byte[Integer.BYTES * 4 + blockReplaceRequest.newBlock().id().length()];
+                ByteUtils.addInt(bytes, blockReplaceRequest.position3D().x(), 0);
+                ByteUtils.addInt(bytes, blockReplaceRequest.position3D().y(), Integer.BYTES);
+                ByteUtils.addInt(bytes, blockReplaceRequest.position3D().z(), Integer.BYTES * 2);
+                ByteUtils.addInt(bytes, blockReplaceRequest.newBlock().id().length(), Integer.BYTES * 3);
+                System.arraycopy(blockReplaceRequest.newBlock().id().getBytes(), 0, bytes, Integer.BYTES * 4, blockReplaceRequest.newBlock().id().length());
+                sendBytes(channel, PackageID.REPLACE_BLOCK, clientID, bytes);
                 break;
             default:
                 System.err.println("Unexpected request type: " + request.getType());
