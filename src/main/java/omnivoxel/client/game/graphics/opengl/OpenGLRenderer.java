@@ -278,7 +278,7 @@ public class OpenGLRenderer implements Renderer {
             state.setItem("shouldUpdateView", false);
         }
 
-        if (world.inflightRequests() < ConstantServerSettings.INFLIGHT_REQUESTS_MINIMUM) {
+        if (world.queuedChunkCount() < ConstantServerSettings.INFLIGHT_REQUESTS_MINIMUM) {
             state.setItem("shouldUpdateVisibleMeshes", true);
         }
 
@@ -575,7 +575,7 @@ public class OpenGLRenderer implements Renderer {
 
         List<DistanceChunk> out = new ArrayList<>(count);
 
-        for (int i = 0; i < highestBucketDistance; i++) {
+        for (int i = highestBucketDistance - 1; i >= 0; i--) {
             Set<DistanceChunk> posChunks = positionedChunks.get(i);
             if (posChunks != null) {
                 out.addAll(posChunks);
@@ -594,7 +594,7 @@ public class OpenGLRenderer implements Renderer {
         int rdChunks = renderDistance / ConstantGameSettings.CHUNK_SIZE + 1;
         int squaredRenderDistance = rdChunks * rdChunks;
 
-        world.freeAllChunksNotIn(position3D -> {
+        world.freeAllChunksNotInAndNotRecentlyAccessed(position3D -> {
             int dx = position3D.x() - ccx;
             int dy = position3D.y() - ccy;
             int dz = position3D.z() - ccz;

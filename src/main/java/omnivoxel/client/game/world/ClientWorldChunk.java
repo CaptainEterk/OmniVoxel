@@ -9,6 +9,7 @@ public class ClientWorldChunk {
     private MeshData meshData;
     private ChunkMesh mesh;
     private Chunk<Block> chunkData;
+    private int lastFetched;
 
     public ClientWorldChunk(MeshData meshData) {
         this.meshData = meshData;
@@ -44,5 +45,13 @@ public class ClientWorldChunk {
 
     public void setChunkData(Chunk<Block> chunkData) {
         this.chunkData = chunkData;
+    }
+
+    public void touch(int tick) {
+        this.lastFetched = tick;
+    }
+
+    public int getLastFetchedTick() {
+        return lastFetched;
     }
 }

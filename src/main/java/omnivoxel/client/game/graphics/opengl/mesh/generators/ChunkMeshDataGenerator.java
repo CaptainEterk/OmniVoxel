@@ -338,14 +338,29 @@ public class ChunkMeshDataGenerator {
             return null;
         }
 
-        Chunk<omnivoxel.world.block.Block> negX = world.get(position3D.add(-1, 0, 0), false, true).getChunkData();
-        Chunk<omnivoxel.world.block.Block> posX = world.get(position3D.add(1, 0, 0), false, true).getChunkData();
+        ClientWorldChunk negXChunk = world.get(position3D.add(-1, 0, 0), false, true);
+        ClientWorldChunk posXChunk = world.get(position3D.add(1, 0, 0), false, true);
+        ClientWorldChunk negYChunk = world.get(position3D.add(0, -1, 0), false, true);
+        ClientWorldChunk posYChunk = world.get(position3D.add(0, 1, 0), false, true);
+        ClientWorldChunk negZChunk = world.get(position3D.add(0, 0, -1), false, true);
+        ClientWorldChunk posZChunk = world.get(position3D.add(0, 0, 1), false, true);
 
-        Chunk<omnivoxel.world.block.Block> negY = world.get(position3D.add(0, -1, 0), false, true).getChunkData();
-        Chunk<omnivoxel.world.block.Block> posY = world.get(position3D.add(0, 1, 0), false, true).getChunkData();
+        if (negXChunk == null ||
+                posXChunk == null ||
+                negYChunk == null ||
+                posYChunk == null ||
+                negZChunk == null ||
+                posZChunk == null) {
+            System.out.println("Shells are null");
+            return null;
+        }
 
-        Chunk<omnivoxel.world.block.Block> negZ = world.get(position3D.add(0, 0, -1), false, true).getChunkData();
-        Chunk<omnivoxel.world.block.Block> posZ = world.get(position3D.add(0, 0, 1), false, true).getChunkData();
+        Chunk<omnivoxel.world.block.Block> negX = negXChunk.getChunkData();
+        Chunk<omnivoxel.world.block.Block> posX = posXChunk.getChunkData();
+        Chunk<omnivoxel.world.block.Block> negY = negYChunk.getChunkData();
+        Chunk<omnivoxel.world.block.Block> posY = posYChunk.getChunkData();
+        Chunk<omnivoxel.world.block.Block> negZ = negZChunk.getChunkData();
+        Chunk<omnivoxel.world.block.Block> posZ = posZChunk.getChunkData();
 
         int W = ConstantGameSettings.CHUNK_WIDTH;
         int H = ConstantGameSettings.CHUNK_HEIGHT;
