@@ -166,6 +166,7 @@ public class Server {
                 }
                 worldHandler.replaceBlock(bx, by, bz, blockService.getBlock(blockID.toString()), clients.get(clientID));
 
+                byteBuf.release();
                 break;
             default:
                 System.err.println("Unknown package key: " + packageID);

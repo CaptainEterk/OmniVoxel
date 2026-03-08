@@ -117,7 +117,6 @@ public class PlayerController {
                             cachedChunkPos.x() != chunkX ||
                             cachedChunkPos.y() != chunkY ||
                             cachedChunkPos.z() != chunkZ) {
-
                         cachedChunkPos = new Position3D(chunkX, chunkY, chunkZ);
                         ClientWorldChunk clientWorldChunk = world.get(cachedChunkPos, false, false);
                         if (clientWorldChunk == null) return true;
@@ -157,10 +156,37 @@ public class PlayerController {
             handleInput(deltaTime, changeRot, movementMode != MovementMode.FALL_COLLIDE);
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
-                client.sendRequest(new BlockReplaceRequest(new Position3D((int) x, (int) y, (int) z), blockService.getBlock("omnivoxel:air/default")));
+                Position3D observedBlock = findObservedBlock(false);
+                if (observedBlock != null) {
+                    client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("omnivoxel:air/default")));
+                }
             }
+
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
-                client.sendRequest(new BlockReplaceRequest(new Position3D((int) x, (int) y, (int) z), blockService.getBlock("core:stone/default")));
+                Position3D observedBlock = findObservedBlock(true);
+                if (observedBlock != null) {
+                    int chunkX = observedBlock.x() >> 5;
+                    int chunkY = observedBlock.y() >> 5;
+                    int chunkZ = observedBlock.z() >> 5;
+
+                    int localX = observedBlock.x() & 31;
+                    int localY = observedBlock.y() & 31;
+                    int localZ = observedBlock.z() & 31;
+
+                    Block block = world.get(new Position3D(chunkX, chunkY, chunkZ), false, false).getChunkData().getBlock(localX, localY, localZ);
+                    BlockHitbox blockHitbox = blockHitboxCache.get(
+                            this.blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
+                            FullBlockHitbox.class
+                    );
+
+                    // Check collision before placing
+                    if (!blockHitbox.isColliding(observedBlock.x(), observedBlock.y(), observedBlock.z(), hitbox)) {
+                        client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:stone/default")));
+                    } else {
+                        // Optionally: ignore placement or push block to nearby position
+                        System.out.println("Cannot place block inside player!");
+                    }
+                }
             }
             if (keyInput.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
                 contextTasks.add(mouseButtonInput::unlockMouse);
@@ -203,6 +229,100 @@ public class PlayerController {
             client.sendRequest(new PlayerUpdateRequest(x, y, z, pitch, yaw));
 
             camera.setPosition(x, y, z);
+        }
+    }
+
+    private Position3D findObservedBlock(boolean getBlockOn) {
+        int maxDistance = 6;
+        double originX = this.x;
+        double originY = this.y;
+        double originZ = this.z;
+
+        double cosPitch = Math.cos(pitch);
+        double dirX = Math.sin(yaw) * cosPitch;
+        double dirY = -Math.sin(pitch);
+        double dirZ = -Math.cos(yaw) * cosPitch;
+
+        int x = (int) Math.floor(originX);
+        int y = (int) Math.floor(originY);
+        int z = (int) Math.floor(originZ);
+
+        int stepX = dirX > 0 ? 1 : -1;
+        int stepY = dirY > 0 ? 1 : -1;
+        int stepZ = dirZ > 0 ? 1 : -1;
+
+        double tMaxX = intBound(originX, dirX);
+        double tMaxY = intBound(originY, dirY);
+        double tMaxZ = intBound(originZ, dirZ);
+
+        double tDeltaX = stepX / dirX;
+        double tDeltaY = stepY / dirY;
+        double tDeltaZ = stepZ / dirZ;
+
+        double dist = 0;
+
+        Position3D lastAir = null;
+
+        while (dist <= maxDistance) {
+            int chunkX = x >> 5;
+            int chunkY = y >> 5;
+            int chunkZ = z >> 5;
+
+            int localX = x & 31;
+            int localY = y & 31;
+            int localZ = z & 31;
+
+            ClientWorldChunk clientWorldChunk = world.get(new Position3D(chunkX, chunkY, chunkZ), false, false);
+            if (clientWorldChunk == null) return null;
+
+            Block block = clientWorldChunk.getChunkData().getBlock(localX, localY, localZ);
+
+            if (block == null || "omnivoxel:air/default".equals(block.id())) {
+                lastAir = new Position3D(x, y, z);
+            } else {
+                BlockHitbox blockHitboxImpl = blockHitboxCache.get(
+                        blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
+                        FullBlockHitbox.class
+                );
+
+                if (blockHitboxImpl != null && blockHitboxImpl.intersectsRay(originX, originY, originZ, dirX, dirY, dirZ, x, y, z)) {
+                    if (getBlockOn) {
+                        return lastAir;
+                    }
+                    return new Position3D(x, y, z);
+                }
+            }
+
+            if (tMaxX < tMaxY) {
+                if (tMaxX < tMaxZ) {
+                    x += stepX;
+                    dist = tMaxX;
+                    tMaxX += tDeltaX;
+                } else {
+                    z += stepZ;
+                    dist = tMaxZ;
+                    tMaxZ += tDeltaZ;
+                }
+            } else {
+                if (tMaxY < tMaxZ) {
+                    y += stepY;
+                    dist = tMaxY;
+                    tMaxY += tDeltaY;
+                } else {
+                    z += stepZ;
+                    dist = tMaxZ;
+                    tMaxZ += tDeltaZ;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static double intBound(double s, double ds) {
+        if (ds > 0) {
+            return (Math.floor(s + 1) - s) / ds;
+        } else {
+            return (s - Math.floor(s)) / -ds;
         }
     }
 
