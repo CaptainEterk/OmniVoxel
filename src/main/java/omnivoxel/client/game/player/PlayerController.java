@@ -68,6 +68,8 @@ public class PlayerController {
     private boolean togglingFullscreen;
     private boolean togglingDebug;
     private boolean togglingMovementMode;
+    private boolean leftMouseDown;
+    private boolean rightMouseDown;
     private Position3D cachedChunkPos = new Position3D(0, 0, 0);
     private Chunk<Block> cachedChunk;
     private boolean onGround = false;
@@ -156,37 +158,46 @@ public class PlayerController {
             handleInput(deltaTime, changeRot, movementMode != MovementMode.FALL_COLLIDE);
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
-                Position3D observedBlock = findObservedBlock(false);
-                if (observedBlock != null) {
-                    client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("omnivoxel:air/default")));
+                if (!leftMouseDown) {
+                    leftMouseDown = true;
+                    Position3D observedBlock = findObservedBlock(false);
+                    if (observedBlock != null) {
+                        client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("omnivoxel:air/default")));
+                    }
                 }
+            } else {
+                leftMouseDown = false;
             }
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
-                Position3D observedBlock = findObservedBlock(true);
-                if (observedBlock != null) {
-                    int chunkX = observedBlock.x() >> 5;
-                    int chunkY = observedBlock.y() >> 5;
-                    int chunkZ = observedBlock.z() >> 5;
+                if (!rightMouseDown) {
+                    rightMouseDown = true;
+                    Position3D observedBlock = findObservedBlock(true);
+                    if (observedBlock != null) {
+                        int chunkX = observedBlock.x() >> 5;
+                        int chunkY = observedBlock.y() >> 5;
+                        int chunkZ = observedBlock.z() >> 5;
 
-                    int localX = observedBlock.x() & 31;
-                    int localY = observedBlock.y() & 31;
-                    int localZ = observedBlock.z() & 31;
+                        int localX = observedBlock.x() & 31;
+                        int localY = observedBlock.y() & 31;
+                        int localZ = observedBlock.z() & 31;
 
-                    Block block = world.get(new Position3D(chunkX, chunkY, chunkZ), false, false).getChunkData().getBlock(localX, localY, localZ);
-                    BlockHitbox blockHitbox = blockHitboxCache.get(
-                            this.blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
-                            FullBlockHitbox.class
-                    );
+                        Block block = world.get(new Position3D(chunkX, chunkY, chunkZ), false, false).getChunkData().getBlock(localX, localY, localZ);
+                        BlockHitbox blockHitbox = blockHitboxCache.get(
+                                this.blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
+                                FullBlockHitbox.class
+                        );
 
-                    // Check collision before placing
-                    if (!blockHitbox.isColliding(observedBlock.x(), observedBlock.y(), observedBlock.z(), hitbox)) {
-                        client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:stone/default")));
-                    } else {
-                        // Optionally: ignore placement or push block to nearby position
-                        System.out.println("Cannot place block inside player!");
+                        assert blockHitbox != null;
+                        if (!blockHitbox.isColliding(observedBlock.x(), observedBlock.y(), observedBlock.z(), hitbox)) {
+                            client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:stone/default")));
+                        } else {
+                            System.out.println("Cannot place block inside player!");
+                        }
                     }
                 }
+            } else {
+                rightMouseDown = false;
             }
             if (keyInput.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
                 contextTasks.add(mouseButtonInput::unlockMouse);
