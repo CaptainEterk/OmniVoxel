@@ -1,8 +1,8 @@
 package omnivoxel.client.network.util;
 
 import io.netty.buffer.ByteBuf;
-import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
-import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.api.opengl.mesh.block.BlockMesh;
+import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 
@@ -50,7 +50,7 @@ public class ByteBufUtils {
         shapeCache.put(id, blockShape);
     }
 
-    public static Block registerBlockFromByteBuf(ByteBuf byteBuf) {
+    public static BlockMesh registerBlockFromByteBuf(ByteBuf byteBuf) {
         int readerIndex = 8;
 
         int idLength = byteBuf.getShort(readerIndex);
@@ -94,7 +94,7 @@ public class ByteBufUtils {
 
         shapeCache.put(blockShape.id(), blockShape);
 
-        return new Block(ids[1]) {
+        return new BlockMesh(ids[1]) {
             @Override
             public String getID() {
                 return blockID;
@@ -106,13 +106,13 @@ public class ByteBufUtils {
             }
 
             @Override
-            public BlockShape getShape(Block top, Block bottom, Block north, Block south, Block east, Block west) {
+            public BlockShape getShape(BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west) {
                 return blockShape;
             }
 
             @Override
-            public boolean shouldRenderFace(BlockFace face, Block adjacentBlock) {
-                return !modID.equals("omnivoxel:air") && !adjacentBlock.getModID().equals(modID) && adjacentBlock.isTransparent();
+            public boolean shouldRenderFace(BlockFace face, BlockMesh adjacentBlockMesh) {
+                return !modID.equals("omnivoxel:air") && !adjacentBlockMesh.getModID().equals(modID) && adjacentBlockMesh.isTransparent();
             }
 
             @Override

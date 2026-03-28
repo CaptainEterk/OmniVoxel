@@ -37,6 +37,7 @@ public class SplineDensityFunction extends DensityFunction {
             double der = (Game.checkGameNodeType(o.object().get("derivative"), DoubleGameNode.class)).value();
 
             if (o.object().get("value") instanceof ObjectGameNode objectGameNode1 && objectGameNode1.object().get("type") == null) {
+
                 System.out.println(objectGameNode1.object());
             }
 

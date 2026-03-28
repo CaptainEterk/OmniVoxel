@@ -2,9 +2,9 @@ package omnivoxel.client.launcher;
 
 import io.netty.util.ResourceLeakDetector;
 import omnivoxel.client.game.GameLoop;
-import omnivoxel.client.game.camera.Camera;
-import omnivoxel.client.game.camera.Frustum;
-import omnivoxel.client.game.graphics.opengl.window.Window;
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
+import omnivoxel.client.game.graphics.camera.Camera;
+import omnivoxel.client.game.graphics.camera.Frustum;
 import omnivoxel.client.game.player.PlayerController;
 import omnivoxel.client.game.settings.Settings;
 import omnivoxel.client.game.state.State;
@@ -70,14 +70,19 @@ public class Launcher {
 
             GameLoop gameLoop = new GameLoop(camera, world, gameRunning, contextTasks, client, state, settings);
 
-            gameLoop.init();
+            try {
+                gameLoop.init();
 
-            PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, blockService, gameLoop.getRenderer().getWindow());
+                PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, blockService, gameLoop.getRenderer().getWindow());
 
-            Thread tickLoopThread = new Thread(new TickLoop(playerController, gameRunning, contextTasks, client), "Tick Loop");
-            tickLoopThread.start();
+                Thread tickLoopThread = new Thread(new TickLoop(playerController, gameRunning, contextTasks, client), "Tick Loop");
+                tickLoopThread.start();
 
-            gameLoop.run();
+                gameLoop.run();
+            } catch (IOException e) {
+                client.close();
+                throw new RuntimeException(e);
+            }
         }
     }
 }

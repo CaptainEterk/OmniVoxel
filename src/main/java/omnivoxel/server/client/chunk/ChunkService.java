@@ -17,6 +17,7 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 public class ChunkService {
@@ -40,7 +41,7 @@ public class ChunkService {
         ctx.channel().writeAndFlush(buffer);
     }
 
-    public void serve(ChunkTask chunkTask) {
+    public List<ChunkTask> serve(ChunkTask chunkTask) {
         try {
             Position3D chunkPosition = new Position3D(chunkTask.x(), chunkTask.y(), chunkTask.z());
             byte[] chunk = world.getBytes(chunkPosition);
@@ -52,6 +53,7 @@ public class ChunkService {
             if (chunkTask.serverClient() != null) {
                 sendChunkBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.y(), chunkTask.z(), chunk);
             }
+            return null;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

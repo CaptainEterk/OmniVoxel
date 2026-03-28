@@ -14,4 +14,8 @@ public class IndexCalculator {
     public static int calculateBlockIndexPadded2D(int x, int z) {
         return (x + 1) * ConstantGameSettings.PADDED_WIDTH + z + 1;
     }
+
+    public static boolean checkBounds(int nx, int ny, int nz) {
+        return nx >= 0 && nx < ConstantGameSettings.CHUNK_WIDTH && ny >= 0 && ny < ConstantGameSettings.CHUNK_LENGTH && nz >= 0 && nz < ConstantGameSettings.CHUNK_HEIGHT;
+    }
 }

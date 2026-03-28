@@ -14,8 +14,8 @@ public class ConstantGameSettings {
     public static final String DEFAULT_WINDOW_TITLE = "OmniVoxel v0.8.1-alpha";
 
     // TODO: Move this to settings
-    public static final int MAX_MESH_GENERATOR_THREADS = Runtime.getRuntime().availableProcessors();
-    public static final int BUFFERIZE_CHUNKS_PER_FRAME = 100;
+    public static final int MAX_MESH_GENERATOR_THREADS = Runtime.getRuntime().availableProcessors()/2;
+    public static final int BUFFERIZE_CHUNKS_PER_FRAME = 10;
 
     public static final String FILE_LOCATION = getRootFolder();
 
@@ -24,6 +24,8 @@ public class ConstantGameSettings {
             width=750
             height=750
             render_distance=128
+            render_scale=1.0
+            render_filter=nearest
             sensitivity=2f
             frustum_bias=10""";
 

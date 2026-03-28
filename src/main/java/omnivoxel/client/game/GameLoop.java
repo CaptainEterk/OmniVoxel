@@ -1,9 +1,14 @@
 package omnivoxel.client.game;
 
-import omnivoxel.client.game.camera.Camera;
 import omnivoxel.client.game.graphics.Renderer;
-import omnivoxel.client.game.graphics.opengl.OpenGLRenderer;
-import omnivoxel.client.game.graphics.opengl.window.Window;
+import omnivoxel.client.game.graphics.api.opengl.OpenGLRenderer;
+import omnivoxel.client.game.graphics.api.opengl.text.TextRenderer;
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
+import omnivoxel.client.game.graphics.camera.Camera;
+import omnivoxel.client.game.graphics.menu.MenuRenderer;
+import omnivoxel.client.game.graphics.menu.MenuSystem;
+import omnivoxel.client.game.graphics.menu.components.LayoutComponent;
+import omnivoxel.client.game.graphics.menu.position.ComponentPositionOrigin;
 import omnivoxel.client.game.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
@@ -11,6 +16,7 @@ import omnivoxel.client.launcher.ClientInitializer;
 import omnivoxel.client.network.Client;
 import omnivoxel.util.log.Logger;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -24,6 +30,7 @@ public final class GameLoop {
     private final Client client;
     private final State state;
     private final Settings settings;
+    private final LayoutComponent mainComponent;
 
     public GameLoop(Camera camera, ClientWorld world, AtomicBoolean gameRunning, BlockingQueue<Consumer<Window>> contextTasks, Client client, State state, Settings settings) {
         this.camera = camera;
@@ -33,20 +40,24 @@ public final class GameLoop {
         this.client = client;
         this.state = state;
         this.settings = settings;
-        this.renderer = new OpenGLRenderer();
-    }
-
-    public void init() {
-        this.renderer.init(
+        this.mainComponent = new LayoutComponent(ComponentPositionOrigin.TOP_LEFT);
+        TextRenderer textRenderer = new TextRenderer();
+        this.renderer = new OpenGLRenderer(
                 new Logger("Game Loop", ClientInitializer.SHOW_LOGS),
                 state,
                 settings,
+                textRenderer,
                 world,
                 camera,
                 client,
                 gameRunning,
-                contextTasks
+                contextTasks,
+                new MenuSystem(new MenuRenderer(mainComponent), textRenderer)
         );
+    }
+
+    public void init() throws IOException {
+        this.renderer.init();
     }
 
     public Renderer getRenderer() {

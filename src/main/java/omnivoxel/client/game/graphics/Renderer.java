@@ -1,19 +1,11 @@
 package omnivoxel.client.game.graphics;
 
-import omnivoxel.client.game.camera.Camera;
-import omnivoxel.client.game.graphics.opengl.window.Window;
-import omnivoxel.client.game.settings.Settings;
-import omnivoxel.client.game.state.State;
-import omnivoxel.client.game.world.ClientWorld;
-import omnivoxel.client.network.Client;
-import omnivoxel.util.log.Logger;
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
 
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
+import java.io.IOException;
 
 public interface Renderer {
-    void init(Logger logger, State state, Settings settings, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks);
+    void init() throws IOException;
 
     boolean shouldClose();
 

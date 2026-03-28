@@ -1,11 +1,12 @@
 package omnivoxel.util.thread;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class WorkerThreadPool<T> {
@@ -13,7 +14,7 @@ public class WorkerThreadPool<T> {
     private final AtomicBoolean running;
 
     @SuppressWarnings("unchecked")
-    public WorkerThreadPool(int threadCount, Supplier<Consumer<T>> taskHandlerSupplier, boolean daemon) {
+    public WorkerThreadPool(int threadCount, Supplier<Function<T, List<T>>> taskHandlerSupplier, boolean daemon) {
         this.workers = new WorkerThread[threadCount];
         running = new AtomicBoolean(true);
 
@@ -63,12 +64,12 @@ public class WorkerThreadPool<T> {
 
     public static final class WorkerThread<V> implements Runnable {
         private final BlockingQueue<V> taskQueue;
-        private final Consumer<V> taskHandler;
+        private final Function<V, List<V>> taskHandler;
         private final Queue<V> localQueue;
         private final AtomicBoolean running;
         private Thread thread;
 
-        public WorkerThread(BlockingQueue<V> taskQueue, Consumer<V> taskHandler, AtomicBoolean running) {
+        public WorkerThread(BlockingQueue<V> taskQueue, Function<V, List<V>> taskHandler, AtomicBoolean running) {
             this.taskQueue = taskQueue;
             this.taskHandler = taskHandler;
             this.running = running;
@@ -83,9 +84,13 @@ public class WorkerThreadPool<T> {
                     int taskCount = taskQueue.drainTo(localQueue);
                     if (taskCount > 0) {
                         while (!localQueue.isEmpty()) {
-                            taskHandler.accept(localQueue.remove());
+                            List<V> moreTasks = taskHandler.apply(localQueue.remove());
+                            if (moreTasks != null) {
+                                localQueue.addAll(moreTasks);
+                            }
                         }
                     } else {
+                        // TODO: Use blocking
                         Thread.sleep(10);
                     }
                 }

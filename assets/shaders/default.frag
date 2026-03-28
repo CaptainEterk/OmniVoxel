@@ -2,15 +2,14 @@
 
 // TODO: Make these uniforms
 #define TEXTURE_SIZE 16u
-#define CLOSE_FRESNEL_COLOR vec4(0.0, 0.5, 0.5, 0.4)
-#define FAR_FRESNEL_COLOR vec4(0.0, 0.25, 0.3, 0.95)
-
+#define FAR_FRESNEL_COLOR vec4(0.0, 0.5, 0.5, 0.4)
+#define CLOSE_FRESNEL_COLOR vec4(0.0, 0.25, 0.3, 0.95)
 in vec2 TexCoord;
 in float shadow;
 smooth in vec3 position;
-in vec3 lighting;
-in float ao;
+in vec4 lighting;
 in vec3 vNormal;
+in vec3 faceNormal;
 flat in uint blockType;
 
 out vec4 FragColor;
@@ -73,18 +72,19 @@ void main() {
         }
 
         if (blockType == 1u) {
-            vec3 faceNormal = vec3(0.0, 1.0, 0.0);
-
-            float fresnel = abs(dot(vNormal, faceNormal));
-            FragColor *= vec4(vec3(0.5), 1-fresnel);
-//            FragColor *= vec4(simpleNoise(position.xz/2+time/1) / 10.0);
+            float fresnel = 1.0 - abs(dot(vNormal, normalize(faceNormal)));
+            FragColor *= vec4(vec3(0.5), fresnel);
             FragColor += CLOSE_FRESNEL_COLOR*fresnel+FAR_FRESNEL_COLOR*(1-fresnel);
         }
 
-        FragColor = mix(vec4(lighting, 1.0), FragColor, 1);
+        float light = clamp(lighting.a, 0.0, 1.0);
 
-        FragColor = vec4(FragColor.rgb * shadow, FragColor.a);
+        float ambient = 0.05;
 
+        float finalLight = max(light, ambient);
+
+        // apply lighting
+        FragColor.rgb *= finalLight * shadow;
         FragColor = mix(fogColor, FragColor, fogFactor);
         // TODO: Mix with filter color too for water and things.
     } else if (meshType == 1u) {

@@ -45,10 +45,10 @@ public final class ChunkGenerator {
         return chunk;
     }
 
-//    private void generateSurroundingChunks(Position3D position3D, int size) {
-//        for (int x = -size; x <= size; x++) {
-//            for (int y = -size; y <= size; y++) {
-//                for (int z = -size; z <= size; z++) {
+//    private void generateSurroundingChunks(Position3D position3D, int scale) {
+//        for (int x = -scale; x <= scale; x++) {
+//            for (int y = -scale; y <= scale; y++) {
+//                for (int z = -scale; z <= scale; z++) {
 //                    if (x == 0 && y == 0 && z == 0) {
 //                        continue;
 //                    }

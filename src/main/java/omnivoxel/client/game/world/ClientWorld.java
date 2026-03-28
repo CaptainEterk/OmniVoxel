@@ -1,12 +1,12 @@
 package omnivoxel.client.game.world;
 
 import omnivoxel.client.game.entity.ClientEntity;
-import omnivoxel.client.game.graphics.opengl.mesh.chunk.ChunkMesh;
-import omnivoxel.client.game.graphics.opengl.mesh.definition.EntityMeshDataDefinition;
-import omnivoxel.client.game.graphics.opengl.mesh.meshData.ChunkMeshData;
-import omnivoxel.client.game.graphics.opengl.mesh.meshData.GeneralEntityMeshData;
-import omnivoxel.client.game.graphics.opengl.mesh.meshData.MeshData;
-import omnivoxel.client.game.graphics.opengl.mesh.util.MeshGenerator;
+import omnivoxel.client.game.graphics.api.opengl.mesh.chunk.ChunkMesh;
+import omnivoxel.client.game.graphics.api.opengl.mesh.definition.EntityMeshDataDefinition;
+import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ChunkMeshData;
+import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.GeneralEntityMeshData;
+import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.MeshData;
+import omnivoxel.client.game.graphics.api.opengl.mesh.util.MeshGenerator;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.network.Client;
@@ -38,6 +38,7 @@ public class ClientWorld {
     private final Set<String> queuedEntityMeshData;
     private final AtomicBoolean chunksChanged = new AtomicBoolean(true);
     private final Set<Position3D> chunkRequests;
+    private final Set<Position3D> cleanLitChunks = ConcurrentHashMap.newKeySet();
     private Position3D[] cachedKeys = null;
     private Client client;
     private boolean requesting = true;
@@ -78,13 +79,12 @@ public class ClientWorld {
             }
         }
         if (requesting && request) {
-            if (queuedChunks.size() < ConstantServerSettings.CHUNK_QUEUED_LIMIT) {
-                if (chunkRequests.add(position3D)) {
-                    client.sendRequest(new ChunkRequest(position3D));
-                }
-            } else {
-                requesting = false;
+            if (chunkRequests.size() < ConstantServerSettings.INFLIGHT_REQUESTS_MAXIMUM && chunkRequests.add(position3D)) {
+                client.sendRequest(new ChunkRequest(position3D));
             }
+        } else {
+            requesting = false;
+
         }
         return null;
     }
@@ -127,7 +127,7 @@ public class ClientWorld {
                     }
                     clientWorldChunk.setMesh(chunkMesh);
                 }
-                queuedChunks.remove(chunkMeshData.chunkPosition());
+                chunkRequests.remove(chunkMeshData.chunkPosition());
             }
             return true;
         }
@@ -267,7 +267,11 @@ public class ClientWorld {
         entities.remove(entityID);
     }
 
-    public int queuedChunkCount() {
-        return queuedChunks.size();
+    public int chunkRequestCount() {
+        return chunkRequests.size();
+    }
+
+    public Set<Position3D> getCleanLitChunks() {
+        return cleanLitChunks;
     }
 }

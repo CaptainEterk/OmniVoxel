@@ -1,7 +1,7 @@
 package omnivoxel.client.game.player;
 
-import omnivoxel.client.game.camera.Camera;
-import omnivoxel.client.game.graphics.opengl.window.Window;
+import omnivoxel.client.game.graphics.camera.Camera;
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.client.game.input.KeyInput;
 import omnivoxel.client.game.input.MouseButtonInput;

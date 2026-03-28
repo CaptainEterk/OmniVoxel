@@ -1,6 +1,6 @@
 package omnivoxel.client.game.input;
 
-import omnivoxel.client.game.graphics.opengl.window.Window;
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Map;

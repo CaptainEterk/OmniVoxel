@@ -1,6 +1,6 @@
 package omnivoxel.server.games;
 
-import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.common.BlockShape;
 import omnivoxel.server.ServerLogger;
 import omnivoxel.server.client.block.ServerBlock;
