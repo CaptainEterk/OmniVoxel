@@ -182,7 +182,7 @@ public class OpenGLRenderer implements Renderer {
 //        periodicTimeExecutorCollection.add(new PeriodicTimeExecutor(() -> System.out.println(state.getItem("fps", Integer.class)), 0.25));
     }
 
-    private void initResources() throws IOException {
+    private void initResources() {
         this.meshGenerator = new MeshGenerator();
 
         // TODO: Make this stitch textures together and save texture coordinates in a string->(x, y) map.
@@ -362,7 +362,7 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glDepthMask(true);
 
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, texture);
-        int occuluded = 0;
+        int occluded = 0;
 
         if (state.getItem("z-prepass", Boolean.class)) {
             System.out.println("z-prepass");
@@ -391,11 +391,11 @@ public class OpenGLRenderer implements Renderer {
                 shaderProgram.setUniform("chunkPosition", position3D.x(), position3D.y(), position3D.z());
                 renderVAO(positionedChunk.chunk().getMesh().solidVAO(), positionedChunk.chunk().getMesh().solidIndexCount());
             } else {
-                occuluded++;
+                occluded++;
             }
         }
 
-        state.setItem("geometry_culled_chunks", occuluded);
+        state.setItem("geometry_culled_chunks", occluded);
     }
 
     private void renderTransparentChunks() {
@@ -404,7 +404,7 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glDepthMask(false);
         GL11C.glEnable(GL11C.GL_BLEND);
         GL11C.glBlendFunc(GL11C.GL_SRC_ALPHA, GL11C.GL_ONE_MINUS_SRC_ALPHA);
-        int occuluded = 0;
+        int occluded = 0;
         for (int i = transparentRenderedChunksInFrustum.size() - 1; i >= 0; i--) {
             PositionedChunk positionedChunk = transparentRenderedChunksInFrustum.get(i);
             Position3D position3D = positionedChunk.pos();
@@ -412,10 +412,10 @@ public class OpenGLRenderer implements Renderer {
             if (positionedChunk.chunk().getMesh().transparentVAO() > 0 && positionedChunk.chunk().getMesh().transparentIndexCount() > 0) {
                 renderVAO(positionedChunk.chunk().getMesh().transparentVAO(), positionedChunk.chunk().getMesh().transparentIndexCount());
             } else {
-                occuluded++;
+                occluded++;
             }
         }
-        state.setItem("geometry_culled_chunks", state.getItem("geometry_culled_chunks", Integer.class) + occuluded);
+        state.setItem("geometry_culled_chunks", state.getItem("geometry_culled_chunks", Integer.class) + occluded);
     }
 
     private void bufferizeChunks() {
