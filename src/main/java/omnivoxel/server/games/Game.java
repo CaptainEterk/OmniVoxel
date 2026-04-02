@@ -77,7 +77,7 @@ public final class Game {
                         lightDefusing[i] = (byte) Game.checkGameNodeType(lightDiffusingNode.nodes()[i], DoubleGameNode.class).value();
                     }
                 } else {
-                    Arrays.fill(lightDefusing, (byte) 1);
+                    Arrays.fill(lightDefusing, (byte) 15);
                 }
                 String uvMapping = Game.checkGameNodeType(texture.object().get("uv_mapping"), StringGameNode.class).value();
                 double[][] uvCoords = new double[6][];

@@ -160,7 +160,7 @@ public class PlayerController {
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
                 if (!leftMouseDown) {
-                    leftMouseDown = false;
+                    leftMouseDown = true;
                     Position3D observedBlock = findObservedBlock(false);
                     if (observedBlock != null) {
                         client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("omnivoxel:air/default")));
@@ -172,7 +172,7 @@ public class PlayerController {
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
                 if (!rightMouseDown) {
-                    rightMouseDown = false;
+                    rightMouseDown = true;
                     Position3D observedBlock = findObservedBlock(true);
                     if (observedBlock != null) {
                         int chunkX = observedBlock.x() >> 5;

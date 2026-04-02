@@ -241,7 +241,7 @@ public class ChunkMeshDataGenerator {
         Chunk<BlockWithMesh> center = centerChunk == null ? null : centerChunk.getChunkData();
         if (center == null) {
             // TODO: Make these logs call Logger at a really low priority
-            System.out.println("Center is null: " + position3D + " " + centerChunk);
+//            System.out.println("Center is null: " + position3D + " " + centerChunk);
             return null;
         }
 
@@ -258,7 +258,7 @@ public class ChunkMeshDataGenerator {
                 posYChunk == null ||
                 negZChunk == null ||
                 posZChunk == null) {
-            System.out.println("Shells are null");
+//            System.out.println("Shells are null");
             return null;
         }
 
