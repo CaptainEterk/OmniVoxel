@@ -46,6 +46,17 @@ public class OpenGLRenderer implements Renderer {
     private final List<PositionedChunk> transparentRenderedChunksInFrustum = new ArrayList<>();
     // Client
     private final Client client;
+    // State
+    private final Settings settings;
+    private final State state;
+    // Renderer
+    private final TextRenderer textRenderer;
+    private final Camera camera;
+    private final ClientWorld world;
+    private final AtomicBoolean gameRunning;
+    private final Queue<Consumer<Window>> contextTasks;
+    private final MenuSystem menuSystem;
+    private final Logger logger;
     // TODO: Remove all TEMP
     // Window
     private Window window;
@@ -53,12 +64,7 @@ public class OpenGLRenderer implements Renderer {
     private ShaderProgram shaderProgram;
     private ShaderProgram zppShaderProgram;
     private ShaderProgram textShaderProgram;
-    // State
-    private final Settings settings;
-    private final State state;
     private ExecutorCollection<PeriodicTimeExecutor> periodicTimeExecutorCollection;
-    // Renderer
-    private final TextRenderer textRenderer;
     // Resources
     private MeshGenerator meshGenerator;
     private int texture;
@@ -70,13 +76,7 @@ public class OpenGLRenderer implements Renderer {
     private int renderFilter;
     private List<DistanceChunk> solidRenderedChunks;
     private List<DistanceChunk> transparentRenderedChunks;
-    private final Camera camera;
-    private final ClientWorld world;
     private Timer timer;
-    private final AtomicBoolean gameRunning;
-    private final Queue<Consumer<Window>> contextTasks;
-    private final MenuSystem menuSystem;
-    private final Logger logger;
 
     public OpenGLRenderer(Logger logger, State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem) {
         this.logger = logger;
@@ -701,7 +701,6 @@ public class OpenGLRenderer implements Renderer {
 
     @Override
     public void cleanup() {
-        world.cleanup();
         textRenderer.cleanup();
         menuSystem.cleanup();
         if (renderFramebuffer != null) {
@@ -712,6 +711,8 @@ public class OpenGLRenderer implements Renderer {
         gameRunning.set(false);
 
         client.close();
+
+        world.cleanup();
 
         GLFW.glfwDestroyWindow(window.window());
 
