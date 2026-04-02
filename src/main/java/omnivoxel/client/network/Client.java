@@ -306,20 +306,6 @@ public final class Client {
         byteBuf.release();
     }
 
-    private void loadPlayer(byte[] playerID, String name) throws InterruptedException {
-        String id = ByteUtils.bytesToHex(playerID);
-        ClientEntity playerEntity = new ClientEntity(name, id, new EntityType(EntityType.Type.PLAYER, name));
-        entities.put(id, playerEntity);
-
-        logger.info("Added player: " + id);
-
-        meshDataGenerators.submit(new EntityMeshDataTask(playerEntity));
-    }
-
-    private void newPlayer(ByteBuf byteBuf) throws InterruptedException {
-        loadPlayer(ByteUtils.getBytes(byteBuf, 8, 32), "Other client!!");
-    }
-
     private void newEntity(ByteBuf byteBuf) throws InterruptedException {
         int entityIDLength = byteBuf.getInt(8);
 
