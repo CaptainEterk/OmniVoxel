@@ -13,8 +13,10 @@ import omnivoxel.server.client.chunk.result.generated.GeneratedChunk;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.util.boundingBox.WorldBoundingBox;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk2d.Chunk2D;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,6 +43,25 @@ public class ChunkService {
         ctx.channel().writeAndFlush(buffer);
     }
 
+    private void sendHeightBytes(ChannelHandlerContext ctx, int x, int z, Chunk2D<Integer> heights) {
+        ByteBuf buffer = ctx.alloc().buffer(16 + ConstantGameSettings.BLOCKS_IN_CHUNK_2D * Integer.BYTES);
+        int length = 16 + ConstantGameSettings.BLOCKS_IN_CHUNK_2D * Integer.BYTES;
+        buffer.writeInt(length);
+        buffer.writeInt(PackageID.HEIGHTS.ordinal());
+        buffer.writeInt(x);
+        buffer.writeInt(z);
+        int bx = 0, bz = 0;
+        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_2D; i++) {
+            buffer.writeInt(heights.getBlock(bx, bz));
+            bx++;
+            if (bx >= ConstantGameSettings.CHUNK_WIDTH) {
+                bx = 0;
+                bz++;
+            }
+        }
+        ctx.channel().writeAndFlush(buffer);
+    }
+
     public List<ChunkTask> serve(ChunkTask chunkTask) {
         try {
             Position3D chunkPosition = new Position3D(chunkTask.x(), chunkTask.y(), chunkTask.z());
@@ -51,7 +72,9 @@ public class ChunkService {
             }
 
             if (chunkTask.serverClient() != null) {
+                sendHeightBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.z(), world.getHighestY(new Position2D(chunkTask.x(), chunkTask.z())));
                 sendChunkBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.y(), chunkTask.z(), chunk);
+                // TODO: Only send heights once for a column, maybe a new packet
             }
             return null;
         } catch (IOException e) {

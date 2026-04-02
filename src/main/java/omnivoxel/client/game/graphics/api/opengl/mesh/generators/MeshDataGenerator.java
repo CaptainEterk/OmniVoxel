@@ -5,18 +5,26 @@ import omnivoxel.client.game.entity.ClientEntity;
 import omnivoxel.client.game.graphics.api.opengl.mesh.MeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.ShapeHelper;
 import omnivoxel.client.game.graphics.api.opengl.mesh.definition.EntityMeshDataDefinition;
-import omnivoxel.client.game.graphics.api.opengl.mesh.generators.lighting.ChunkMeshDataLightingGenerator;
+import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.MeshData;
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.ChunkMeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.EntityMeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.TextureVertex;
+import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueLightVertex;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.block.BlockMesh;
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
+import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.math.Position3D;
+import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
+import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk.ChunkShell;
+import omnivoxel.world.chunk.SingleBlockChunk;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -30,13 +38,13 @@ public final class MeshDataGenerator {
     private final ClientWorld world;
 
     public MeshDataGenerator(ClientWorldDataService worldDataService, IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, ClientWorld world, BlockService blockService) {
-        chunkMeshDataGenerator = new ChunkMeshDataGenerator(worldDataService, blockService, new ChunkMeshDataLightingGenerator(world, worldDataService), world);
+        chunkMeshDataGenerator = new ChunkMeshDataGenerator(worldDataService, blockService, world);
         this.world = world;
         entityMeshDataGenerator = new EntityMeshDataGenerator(entityMeshDefinitionCache, queuedEntityMeshData);
     }
 
-    public static void addPoint(List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, Vertex position, int tx, int ty, BlockFace normal, int r, int g, int b, int s, int type) {
-        UniqueVertex vertex = new UniqueVertex(position, new TextureVertex(tx, ty), normal);
+    public static void addPoint(List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, Vertex position, int tx, int ty, BlockFace normal, byte r, byte g, byte b, byte s, int type) {
+        UniqueVertex vertex = new UniqueLightVertex(position, new TextureVertex(tx, ty), normal, r, g, b, s);
 
         if (!vertexIndexMap.containsKey(vertex)) {
             int[] vertexData = ShapeHelper.packVertexData(position, r, g, b, s, normal, tx, ty, type);
@@ -82,19 +90,151 @@ public final class MeshDataGenerator {
         }
     }
 
+    private static final BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+    private static BlockWithMesh AIR = null;
+
+    public static BlockMesh[] unpackChunkPadded(ByteBuf byteBuf, Position3D pos, ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world) {
+        if (AIR == null) {
+            AIR = new BlockWithMesh("omnivoxel:air", worldDataService.getBlock("omnivoxel:air"));
+        }
+
+        Block[] palette = new Block[byteBuf.getShort(20)];
+
+        int index = 22;
+
+        for (int i = 0; i < palette.length; i++) {
+            short len = byteBuf.getShort(index);
+            StringBuilder id = new StringBuilder();
+
+            for (int j = 0; j < len; j++) {
+                id.append((char) byteBuf.getByte(index + 2 + j));
+            }
+
+            palette[i] = new Block(id.toString());
+            index += 2 + len;
+        }
+
+        Chunk<BlockWithMesh> center = new SingleBlockChunk<>(AIR);
+        Chunk<BlockWithMesh> negX = new ChunkShell<>();
+        Chunk<BlockWithMesh> posX = new ChunkShell<>();
+        Chunk<BlockWithMesh> negY = new ChunkShell<>();
+        Chunk<BlockWithMesh> posY = new ChunkShell<>();
+        Chunk<BlockWithMesh> negZ = new ChunkShell<>();
+        Chunk<BlockWithMesh> posZ = new ChunkShell<>();
+
+        int x = -1, y = -1, z = -1;
+
+        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED; ) {
+            int blockID = byteBuf.getInt(index);
+            int blockCount = byteBuf.getInt(index + 4);
+            index += 8;
+
+            BlockMesh blockMesh = worldDataService.getBlock(palette[blockID].id());
+
+            for (int j = 0; j < blockCount; j++) {
+                int paddedIndex = i + j;
+                blockMeshes[paddedIndex] = blockMesh;
+
+                if (x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    center = center.setBlock(x, y, z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (x == -1 && y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    negX = negX.setBlock(
+                            ConstantGameSettings.CHUNK_WIDTH - 1,
+                            y,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (x == ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    posX = posX.setBlock(
+                            0,
+                            y,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (z == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
+
+                    negZ = negZ.setBlock(
+                            x,
+                            y,
+                            ConstantGameSettings.CHUNK_LENGTH - 1,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (z == ConstantGameSettings.CHUNK_LENGTH &&
+                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
+
+                    posZ = posZ.setBlock(
+                            x,
+                            y,
+                            0,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (y == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    negY = negY.setBlock(
+                            x,
+                            ConstantGameSettings.CHUNK_HEIGHT - 1,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                } else if (y == ConstantGameSettings.CHUNK_HEIGHT &&
+                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
+                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+
+                    posY = posY.setBlock(
+                            x,
+                            0,
+                            z,
+                            blockService.getBlock(palette[blockID].id()));
+                }
+
+                y++;
+                if (y > ConstantGameSettings.CHUNK_HEIGHT) {
+                    y = -1;
+                    z++;
+
+                    if (z > ConstantGameSettings.CHUNK_LENGTH) {
+                        z = -1;
+                        x++;
+                    }
+                }
+            }
+
+            i += blockCount;
+        }
+
+        byteBuf.release();
+
+        world.addChunkData(pos, center, false);
+        world.addChunkData(pos.add(-1, 0, 0), negX, true);
+        world.addChunkData(pos.add(1, 0, 0), posX, true);
+        world.addChunkData(pos.add(0, -1, 0), negY, true);
+        world.addChunkData(pos.add(0, 1, 0), posY, true);
+        world.addChunkData(pos.add(0, 0, -1), negZ, true);
+        world.addChunkData(pos.add(0, 0, 1), posZ, true);
+
+        return blockMeshes;
+    }
+
     public List<MeshDataTask> generateMeshData(MeshDataTask meshDataTask) {
         if (meshDataTask instanceof ChunkMeshDataTask(ByteBuf byteBuf, Position3D position3D)) {
-            ChunkMeshDataGenerator.MeshDataAndTasks meshDataAndTasks = chunkMeshDataGenerator.generateMeshData(byteBuf, position3D);
-            if (meshDataAndTasks != null) {
-                world.add(position3D, meshDataAndTasks.meshData());
-                return meshDataAndTasks.meshDataTasks();
+            MeshData meshData = chunkMeshDataGenerator.generateMeshData(byteBuf, position3D);
+            if (meshData != null) {
+                world.add(position3D, meshData);
+            } else {
+                return List.of(new ChunkMeshDataTask(null, position3D));
             }
-            return null;
         } else if (meshDataTask instanceof EntityMeshDataTask(ClientEntity entity)) {
             world.addEntity(entityMeshDataGenerator.generateMeshData(entity));
-            return null;
         } else {
             throw new IllegalArgumentException(meshDataTask + " is an invalid input. Stop playing with things you CLEARLY don't know how to use...");
         }
+        return null;
     }
 }

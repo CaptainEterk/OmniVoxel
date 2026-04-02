@@ -1,14 +1,14 @@
 package omnivoxel.client.game.graphics.api.opengl.mesh.generators;
 
 import io.netty.buffer.ByteBuf;
-import omnivoxel.client.game.graphics.api.opengl.mesh.MeshDataTask;
-import omnivoxel.client.game.graphics.api.opengl.mesh.block.BlockMesh;
-import omnivoxel.client.game.graphics.api.opengl.mesh.generators.lighting.ChunkMeshDataLightingGenerator;
 import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ChunkMeshData;
 import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.MeshData;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.block.BlockMesh;
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.light.ChunkLightingData;
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -20,72 +20,38 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
 import omnivoxel.world.chunk.Chunk;
-import omnivoxel.world.chunk.ChunkShell;
-import omnivoxel.world.chunk.SingleBlockChunk;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 
 public class ChunkMeshDataGenerator {
-    public static final Block air = new Block("omnivoxel:air");
     private final ClientWorldDataService worldDataService;
-    private final BlockService blockService;
-    private final ChunkMeshDataLightingGenerator chunkMeshDataLightingGenerator;
+    private final BlockService<BlockWithMesh> blockService;
     private final BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
     private final ClientWorld world;
 
-    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService blockService, ChunkMeshDataLightingGenerator chunkMeshDataLightingGenerator, ClientWorld world) {
+    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world) {
+        // TODO: Remove hardcoding
         this.worldDataService = worldDataService;
         this.blockService = blockService;
-        this.chunkMeshDataLightingGenerator = chunkMeshDataLightingGenerator;
         this.world = world;
     }
 
-    private boolean calculateNeighborChunkLighting(Position3D position3D) {
-        ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
-        if (clientWorldChunk != null) {
-            clientWorldChunk.setChunkLightingData(chunkMeshDataLightingGenerator.generateLighting(clientWorldChunk, position3D).chunkLightingData());
-            return false;
-        }
-        return true;
-    }
-
-    private MeshDataAndTasks generateChunkMeshDataLighting(BlockMesh[] blockMeshes, Position3D position3D) {
-        ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
-        if (clientWorldChunk == null || blockMeshes == null) {
+    private MeshData generateChunkMeshData(BlockMesh[] blockMeshes, Position3D position3D) {
+        if (blockMeshes == null) {
             return null;
         }
 
-        List<MeshDataTask> meshDataTasks = null;
+        ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
 
-        boolean failed = false;
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    if (!(x == 0 && y == 0 && z == 0)) {
-                        failed = failed || calculateNeighborChunkLighting(position3D.add(x, y, z));
-                    }
-                }
-            }
+        if (clientWorldChunk == null) {
+            return null;
         }
 
-        if (failed) {
-            calculateNeighborChunkLighting(position3D);
-        }
+        ChunkLightingData chunkLightingData = clientWorldChunk.getLightingData();
 
-        ChunkMeshDataLightingGenerator.ChunkLightingDataAndTasks chunkLightingDataAndTasks = chunkMeshDataLightingGenerator.generateLighting(clientWorldChunk, position3D);
-        ChunkLightingData chunkLightingData = chunkLightingDataAndTasks.chunkLightingData();
-        clientWorldChunk.setChunkLightingData(chunkLightingData);
-        if (!failed) {
-            meshDataTasks = chunkLightingDataAndTasks.meshDataTasks();
-        }
-
-        return new MeshDataAndTasks(generateChunkMeshData(blockMeshes, position3D, chunkLightingData), meshDataTasks);
-    }
-
-    private MeshData generateChunkMeshData(BlockMesh[] blockMeshes, Position3D position3D, ChunkLightingData chunkLightingData) {
         if (chunkLightingData == null) {
-            return generateChunkMeshData(blockMeshes, position3D, ChunkLightingData.EMPTY);
+            return null;
         }
 
         List<Integer> vertices = new ArrayList<>();
@@ -101,7 +67,37 @@ public class ChunkMeshDataGenerator {
                     int index = IndexCalculator.calculateBlockIndexPadded(x, y, z);
                     BlockMesh blockMesh = blockMeshes[index];
                     if (blockMesh != null) {
-                        int t_lightLevel = chunkLightingData.getSkylightChannel().getLighting(IndexCalculator.calculateBlockIndex(x, y, z));
+                        int center = chunkLightingData.getSkylightChannel().getLighting(IndexCalculator.calculateBlockIndex(x, y, z));
+
+                        int sum = 0;
+                        int weightSum = 0;
+
+                        for (int dx = -1; dx <= 1; dx++) {
+                            for (int dy = -1; dy <= 1; dy++) {
+                                for (int dz = -1; dz <= 1; dz++) {
+
+                                    int dist = Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
+                                    int weight = (dist == 0) ? 4 : (dist == 1 ? 2 : 1);
+
+                                    int light;
+                                    int nx = x + dx, ny = y + dy, nz = z + dz;
+
+                                    if (nx < 0 || nx >= 16 ||
+                                            ny < 0 || ny >= 16 ||
+                                            nz < 0 || nz >= 16) {
+                                        light = center;
+                                    } else {
+                                        int idx = IndexCalculator.calculateBlockIndex(nx, ny, nz);
+                                        light = chunkLightingData.getSkylightChannel().getLighting(idx);
+                                    }
+                                    sum += light * weight;
+                                    weightSum += weight;
+                                }
+                            }
+                        }
+
+                        int smoothLight = sum / weightSum;
+                        int t_lightLevel = smoothLight;//chunkLightingData.getSkylightChannel().getLighting(IndexCalculator.calculateBlockIndex(x, y, z));
                         if (blockMesh.shouldRenderTransparentMesh()) {
                             generateBlockMeshData(
                                     x,
@@ -117,7 +113,7 @@ public class ChunkMeshDataGenerator {
                                     transparentVertices,
                                     transparentIndices,
                                     transparentVertexIndexMap,
-                                    t_lightLevel
+                                    chunkLightingData
                             );
                         } else {
                             generateBlockMeshData(
@@ -134,7 +130,7 @@ public class ChunkMeshDataGenerator {
                                     vertices,
                                     indices,
                                     vertexIndexMap,
-                                    t_lightLevel
+                                    chunkLightingData
                             );
                         }
                     }
@@ -153,7 +149,7 @@ public class ChunkMeshDataGenerator {
     private void generateBlockMeshData(
             int x, int y, int z,
             BlockMesh blockMesh, BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west,
-            List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, int t_lightLevel) {
+            List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, ChunkLightingData chunkLightingData) {
 
         BlockShape shape = blockMesh.getShape(top, bottom, north, south, east, west);
 
@@ -165,17 +161,17 @@ public class ChunkMeshDataGenerator {
         boolean renderWest = shouldRenderFaceCached(blockMesh, shape, west, BlockFace.WEST, top, bottom, north, south, east, west);
 
         if (renderTop)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.TOP, vertices, indices, vertexIndexMap, t_lightLevel);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.TOP, vertices, indices, vertexIndexMap, chunkLightingData);
         if (renderBottom)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.BOTTOM, vertices, indices, vertexIndexMap, t_lightLevel);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.BOTTOM, vertices, indices, vertexIndexMap, chunkLightingData);
         if (renderNorth)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.NORTH, vertices, indices, vertexIndexMap, t_lightLevel);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.NORTH, vertices, indices, vertexIndexMap, chunkLightingData);
         if (renderSouth)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.SOUTH, vertices, indices, vertexIndexMap, t_lightLevel);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.SOUTH, vertices, indices, vertexIndexMap, chunkLightingData);
         if (renderEast)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.EAST, vertices, indices, vertexIndexMap, t_lightLevel);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.EAST, vertices, indices, vertexIndexMap, chunkLightingData);
         if (renderWest)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.WEST, vertices, indices, vertexIndexMap, t_lightLevel);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.WEST, vertices, indices, vertexIndexMap, chunkLightingData);
     }
 
     private boolean shouldRenderFaceCached(BlockMesh originalBlockMesh, BlockShape originalShape, BlockMesh adjacentBlockMesh, BlockFace face,
@@ -202,7 +198,7 @@ public class ChunkMeshDataGenerator {
             List<Integer> vertices,
             List<Integer> indices,
             Map<UniqueVertex, Integer> vertexIndexMap,
-            int t_lightLevel
+            ChunkLightingData chunkLightingData
     ) {
         int[] uvCoordinates = blockMesh.getUVCoordinates(blockFace);
         Vertex[] faceVertices = shape.vertices()[blockFace.ordinal()];
@@ -222,149 +218,27 @@ public class ChunkMeshDataGenerator {
                     uvCoordinates[idx * 2],
                     uvCoordinates[idx * 2 + 1],
                     blockFace,
-                    0,
-                    0,
-                    0,
-                    t_lightLevel,
+                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.RED),
+                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.GREEN),
+                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.BLUE),
+                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.SKYLIGHT),
                     blockType
             );
         }
     }
 
-    private BlockMesh[] unpackChunkPadded(ByteBuf byteBuf, Position3D pos) {
-        Block[] palette = new Block[byteBuf.getShort(20)];
-
-        int index = 22;
-
-        for (int i = 0; i < palette.length; i++) {
-            short len = byteBuf.getShort(index);
-            StringBuilder id = new StringBuilder();
-
-            for (int j = 0; j < len; j++) {
-                id.append((char) byteBuf.getByte(index + 2 + j));
-            }
-
-            palette[i] = new Block(id.toString());
-            index += 2 + len;
-        }
-
-        Chunk<Block> center = new SingleBlockChunk<>(air);
-        Chunk<Block> negX = new ChunkShell<>();
-        Chunk<Block> posX = new ChunkShell<>();
-        Chunk<Block> negY = new ChunkShell<>();
-        Chunk<Block> posY = new ChunkShell<>();
-        Chunk<Block> negZ = new ChunkShell<>();
-        Chunk<Block> posZ = new ChunkShell<>();
-
-        int x = -1, y = -1, z = -1;
-
-        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED; ) {
-            int blockID = byteBuf.getInt(index);
-            int blockCount = byteBuf.getInt(index + 4);
-            index += 8;
-
-            BlockMesh blockMesh = worldDataService.getBlock(palette[blockID].id());
-
-            for (int j = 0; j < blockCount; j++) {
-                int paddedIndex = i + j;
-                blockMeshes[paddedIndex] = blockMesh;
-
-                if (x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
-
-                    center = center.setBlock(x, y, z,
-                            blockService.getBlock(palette[blockID].id()));
-                } else if (x == -1 && y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
-
-                    negX = negX.setBlock(
-                            ConstantGameSettings.CHUNK_WIDTH - 1,
-                            y,
-                            z,
-                            blockService.getBlock(palette[blockID].id()));
-                } else if (x == ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
-
-                    posX = posX.setBlock(
-                            0,
-                            y,
-                            z,
-                            blockService.getBlock(palette[blockID].id()));
-                } else if (z == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
-
-                    negZ = negZ.setBlock(
-                            x,
-                            y,
-                            ConstantGameSettings.CHUNK_LENGTH - 1,
-                            blockService.getBlock(palette[blockID].id()));
-                } else if (z == ConstantGameSettings.CHUNK_LENGTH &&
-                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
-
-                    posZ = posZ.setBlock(
-                            x,
-                            y,
-                            0,
-                            blockService.getBlock(palette[blockID].id()));
-                } else if (y == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
-
-                    negY = negY.setBlock(
-                            x,
-                            ConstantGameSettings.CHUNK_HEIGHT - 1,
-                            z,
-                            blockService.getBlock(palette[blockID].id()));
-                } else if (y == ConstantGameSettings.CHUNK_HEIGHT &&
-                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
-
-                    posY = posY.setBlock(
-                            x,
-                            0,
-                            z,
-                            blockService.getBlock(palette[blockID].id()));
-                }
-
-                y++;
-                if (y > ConstantGameSettings.CHUNK_HEIGHT) {
-                    y = -1;
-                    z++;
-
-                    if (z > ConstantGameSettings.CHUNK_LENGTH) {
-                        z = -1;
-                        x++;
-                    }
-                }
-            }
-
-            i += blockCount;
-        }
-
-        byteBuf.release();
-
-        world.addChunkData(pos, center, false);
-        world.addChunkData(pos.add(-1, 0, 0), negX, true);
-        world.addChunkData(pos.add(1, 0, 0), posX, true);
-        world.addChunkData(pos.add(0, -1, 0), negY, true);
-        world.addChunkData(pos.add(0, 1, 0), posY, true);
-        world.addChunkData(pos.add(0, 0, -1), negZ, true);
-        world.addChunkData(pos.add(0, 0, 1), posZ, true);
-
-        return blockMeshes;
-    }
-
-    public MeshDataAndTasks generateMeshData(ByteBuf blocks, Position3D position3D) {
-        if (blocks == null) {
-            return generateChunkMeshDataLighting(unpackChunkPadded(position3D, world.get(position3D, false, false)), position3D);
-        }
-        return generateChunkMeshDataLighting(unpackChunkPadded(blocks, position3D), position3D);
+    private byte sampleVertexLight(
+            int bx, int by, int bz,
+            BlockFace face,
+            Vertex vertex,
+            ChunkLightingData lighting,
+            LightChannels channel
+    ) {
+        return lighting.getChannel(channel).getLighting(IndexCalculator.calculateBlockIndex(bx, by, bz));
     }
 
     private BlockMesh[] unpackChunkPadded(Position3D position3D, ClientWorldChunk centerChunk) {
-        Chunk<Block> center = centerChunk == null ? null : centerChunk.getChunkData();
+        Chunk<BlockWithMesh> center = centerChunk == null ? null : centerChunk.getChunkData();
         if (center == null) {
             // TODO: Make these logs call Logger at a really low priority
             System.out.println("Center is null: " + position3D + " " + centerChunk);
@@ -388,12 +262,12 @@ public class ChunkMeshDataGenerator {
             return null;
         }
 
-        Chunk<Block> negX = negXChunk.getChunkData();
-        Chunk<Block> posX = posXChunk.getChunkData();
-        Chunk<Block> negY = negYChunk.getChunkData();
-        Chunk<Block> posY = posYChunk.getChunkData();
-        Chunk<Block> negZ = negZChunk.getChunkData();
-        Chunk<Block> posZ = posZChunk.getChunkData();
+        Chunk<BlockWithMesh> negX = negXChunk.getChunkData();
+        Chunk<BlockWithMesh> posX = posXChunk.getChunkData();
+        Chunk<BlockWithMesh> negY = negYChunk.getChunkData();
+        Chunk<BlockWithMesh> posY = posYChunk.getChunkData();
+        Chunk<BlockWithMesh> negZ = negZChunk.getChunkData();
+        Chunk<BlockWithMesh> posZ = posZChunk.getChunkData();
 
         int W = ConstantGameSettings.CHUNK_WIDTH;
         int H = ConstantGameSettings.CHUNK_HEIGHT;
@@ -413,7 +287,7 @@ public class ChunkMeshDataGenerator {
                         continue;
                     }
 
-                    Chunk<Block> chunk;
+                    Chunk<BlockWithMesh> chunk;
                     int lx = x, ly = y, lz = z;
 
                     if (x < 0) {
@@ -453,7 +327,10 @@ public class ChunkMeshDataGenerator {
         return blockMeshes;
     }
 
-    public record MeshDataAndTasks(MeshData meshData, List<MeshDataTask> meshDataTasks) {
+    public MeshData generateMeshData(ByteBuf blocks, Position3D position3D) {
+        if (blocks == null) {
+            return generateChunkMeshData(unpackChunkPadded(position3D, world.get(position3D, false, false)), position3D);
+        }
+        return generateChunkMeshData(MeshDataGenerator.unpackChunkPadded(blocks, position3D, worldDataService, blockService, world), position3D);
     }
-
 }

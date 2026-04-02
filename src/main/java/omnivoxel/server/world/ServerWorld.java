@@ -3,20 +3,24 @@ package omnivoxel.server.world;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.server.client.block.ServerBlock;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk2d.Chunk2D;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerWorld {
     private final Map<Position3D, ChunkValue> chunks;
+    private final Map<Position2D, Chunk2D<Integer>> highestY;
     private final Map<Position3D, byte[]> chunkBytes;
     private int request = 0;
 
     public ServerWorld() {
         chunks = new ConcurrentHashMap<>();
         chunkBytes = new ConcurrentHashMap<>();
+        highestY = new ConcurrentHashMap<>();
     }
 
     public void tick() {
@@ -31,6 +35,14 @@ public class ServerWorld {
         if (chunkValue.shouldSave(this.request)) {
             chunks.remove(position3D);
         }
+    }
+
+    public Chunk2D<Integer> getHighestY(Position2D position2D) {
+        return this.highestY.get(position2D);
+    }
+
+    public void putHighestY(Position2D position2D, Chunk2D<Integer> highestY) {
+        this.highestY.put(position2D, highestY);
     }
 
     public void put(Position3D position3D, Chunk<ServerBlock> chunk) {

@@ -9,9 +9,11 @@ import omnivoxel.client.game.entity.ClientEntity;
 import omnivoxel.client.game.graphics.api.opengl.mesh.MeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.definition.EntityMeshDataDefinition;
 import omnivoxel.client.game.graphics.api.opengl.mesh.generators.MeshDataGenerator;
+import omnivoxel.client.game.graphics.api.opengl.mesh.generators.lighting.ChunkMeshDataLightingGenerator;
 import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ModelEntityMeshData;
-import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.ChunkMeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.EntityMeshDataTask;
+import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.LightingChunkMeshDataTask;
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -24,11 +26,13 @@ import omnivoxel.server.entity.EntityType;
 import omnivoxel.util.bytes.ByteUtils;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.log.Logger;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
-import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk2d.Chunk2D;
+import omnivoxel.world.chunk2d.SingleBlockChunk2D;
 import org.joml.Matrix4f;
 
 import java.util.*;
@@ -45,13 +49,14 @@ public final class Client {
     private final AtomicBoolean clientRunning = new AtomicBoolean(true);
     private final Queue<Position3D> queuedChunkTasks = new LinkedBlockingDeque<>();
     private final ClientWorld world;
-    private final BlockService blockService;
+    private final BlockService<BlockWithMesh> blockService;
     private WorkerThreadPool<MeshDataTask> meshDataGenerators;
+    private WorkerThreadPool<LightingChunkMeshDataTask> lightingGenerators;
     private EventLoopGroup group;
     private Channel channel;
     private long lastFlushedTime = System.currentTimeMillis();
 
-    public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world, BlockService blockService) {
+    public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world, BlockService<BlockWithMesh> blockService) {
         this.clientID = clientID;
         this.worldDataService = worldDataService;
         this.logger = logger;
@@ -127,6 +132,9 @@ public final class Client {
                 case CHUNK:
                     receiveChunk(byteBuf);
                     break;
+                case HEIGHTS:
+                    receiveSkylight(byteBuf);
+                    break;
                 case ENTITY_UPDATE:
                     updateEntity(byteBuf);
                     byteBuf.release();
@@ -146,11 +154,10 @@ public final class Client {
                     ByteBufUtils.cacheBlockShapeFromByteBuf(byteBuf);
                     byteBuf.release();
                     break;
-                case REGISTER_BLOCK: {
+                case REGISTER_BLOCK:
                     worldDataService.addBlock(ByteBufUtils.registerBlockFromByteBuf(byteBuf));
                     byteBuf.release();
                     break;
-                }
                 case REPLACE_BLOCK:
                     int replacedBlocks = byteBuf.getInt(8);
                     int index = 12;
@@ -185,28 +192,28 @@ public final class Client {
 
                         ClientWorldChunk clientWorldChunk = world.get(chunkPosition, false, false);
                         if (clientWorldChunk != null) {
-                            Chunk<Block> chunkData = clientWorldChunk.getChunkData();
+                            Chunk<BlockWithMesh> chunkData = clientWorldChunk.getChunkData();
 
                             if (chunkData != null) {
-                                Block block = blockService.getBlock(blockID.toString());
+                                BlockWithMesh block = blockService.getBlock(blockID.toString());
                                 if (chunkData.getBlock(x, y, z) != block) {
                                     clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, block));
-                                    meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition));
+                                    lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition));
 
                                     if (x == 0)
-                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
                                     if (x == ConstantGameSettings.CHUNK_WIDTH - 1)
-                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
 
                                     if (y == 0)
-                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
                                     if (y == ConstantGameSettings.CHUNK_HEIGHT - 1)
-                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
 
                                     if (z == 0)
-                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
                                     if (z == ConstantGameSettings.CHUNK_LENGTH - 1)
-                                        meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
                                 }
                             }
                         }
@@ -279,7 +286,24 @@ public final class Client {
         int z = byteBuf.getInt(16);
         Position3D position3D = new Position3D(x, y, z);
 
-        meshDataGenerators.submit(new ChunkMeshDataTask(byteBuf, position3D));
+        lightingGenerators.submit(new LightingChunkMeshDataTask(byteBuf, position3D));
+    }
+
+    private void receiveSkylight(ByteBuf byteBuf) {
+        int cx = byteBuf.getInt(8);
+        int cz = byteBuf.getInt(12);
+        Chunk2D<Integer> skylight = new SingleBlockChunk2D<>(0);
+        int x = 0, z = 0;
+        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_2D; i++) {
+            skylight = skylight.setBlock(x, z, byteBuf.getInt(16 + i * Integer.BYTES));
+            x++;
+            if (x >= ConstantGameSettings.CHUNK_WIDTH) {
+                x = 0;
+                z++;
+            }
+        }
+        world.setSkylightChunk(new Position2D(cx, cz), skylight);
+        byteBuf.release();
     }
 
     private void loadPlayer(byte[] playerID, String name) throws InterruptedException {
@@ -418,7 +442,9 @@ public final class Client {
                 group.shutdownGracefully();
             }
             clientRunning.set(false);
+            lightingGenerators.shutdown();
             meshDataGenerators.shutdown();
+            lightingGenerators.awaitTermination();
             meshDataGenerators.awaitTermination();
         }
         logger.info("Client disconnected");
@@ -434,6 +460,16 @@ public final class Client {
                         world,
                         blockService
                 )::generateMeshData,
+                true
+        );
+        lightingGenerators = new WorkerThreadPool<>(
+                ConstantGameSettings.MAX_LIGHTING_GENERATOR_THREADS,
+                () -> new ChunkMeshDataLightingGenerator(
+                        world,
+                        worldDataService,
+                        meshDataGenerators,
+                        blockService
+                )::generateLightingMeshData,
                 true
         );
     }

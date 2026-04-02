@@ -3,8 +3,10 @@ package omnivoxel.client.game.graphics.api.opengl.mesh.vertex;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.common.face.BlockFace;
 
+import java.util.Objects;
 
-public final class UniqueVertex {
+
+public class UniqueVertex {
     private final @NotNull Vertex vertex;
     private final @NotNull TextureVertex textureVertex;
     private final @NotNull BlockFace blockFace;
@@ -17,7 +19,7 @@ public final class UniqueVertex {
         this.cachedHash = computeHash(vertex, textureVertex, blockFace);
     }
 
-    private int computeHash(@NotNull Vertex vertex, @NotNull TextureVertex textureVertex, @NotNull BlockFace blockFace) {
+    protected int computeHash(@NotNull Vertex vertex, @NotNull TextureVertex textureVertex, @NotNull BlockFace blockFace) {
         int result = 17;
         result = 31 * result + Float.hashCode(vertex.px());
         result = 31 * result + Float.hashCode(vertex.py());
@@ -35,19 +37,9 @@ public final class UniqueVertex {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof UniqueVertex)) {
-            return false;
-        }
-        // Vertex
-        if (vertex.px() != ((UniqueVertex) o).vertex.px() || vertex.py() != ((UniqueVertex) o).vertex.py() || vertex.pz() != ((UniqueVertex) o).vertex.pz()) {
-            return false;
-        }
-        // TexturePosition
-        if (textureVertex.tx() != ((UniqueVertex) o).textureVertex.tx() || textureVertex.ty() != ((UniqueVertex) o).textureVertex.ty()) {
-            return false;
-        }
-        // BlockFace
-        return blockFace == ((UniqueVertex) o).blockFace;
+        if (o == null || getClass() != o.getClass()) return false;
+        UniqueVertex that = (UniqueVertex) o;
+        return cachedHash == that.cachedHash && Objects.equals(vertex, that.vertex) && Objects.equals(textureVertex, that.textureVertex) && blockFace == that.blockFace;
     }
 
     public Vertex vertex() {

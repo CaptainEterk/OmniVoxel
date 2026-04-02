@@ -1,0 +1,63 @@
+package omnivoxel.world.chunk2d;
+
+import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.util.IndexCalculator;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class IntPaletteChunk2D<B> implements Chunk2D<B> {
+    private final int[] blocks;
+    private final List<B> palette;
+    private final Map<B, Integer> paletteIndex;
+
+    public IntPaletteChunk2D(Chunk2D<B> chunk) {
+        this.palette = new ArrayList<>();
+        this.paletteIndex = new HashMap<>();
+        this.blocks = extractBlocks(chunk);
+    }
+
+    private int[] extractBlocks(Chunk2D<B> chunk) {
+        int[] blocks = new int[ConstantGameSettings.BLOCKS_IN_CHUNK_2D];
+
+        for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
+                B block = chunk.getBlock(x, z);
+
+                Integer index = paletteIndex.get(block);
+                if (index == null) {
+                    index = palette.size();
+                    palette.add(block);
+                    paletteIndex.put(block, index);
+                }
+
+                blocks[IndexCalculator.calculateBlockIndex2D(x, z)] = index;
+            }
+        }
+
+        return blocks;
+    }
+
+    @Override
+    public B getBlock(int x, int z) {
+        return palette.get(blocks[IndexCalculator.calculateBlockIndex2D(x, z)]);
+    }
+
+    @Override
+    public Chunk2D<B> setBlock(int x, int z, B block) {
+        int blockIndex = IndexCalculator.calculateBlockIndex2D(x, z);
+
+        Integer index = paletteIndex.get(block);
+        if (index == null) {
+            index = palette.size();
+            palette.add(block);
+            paletteIndex.put(block, index);
+        }
+
+        blocks[blockIndex] = index;
+
+        return this;
+    }
+}

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -79,19 +80,28 @@ public class WorkerThreadPool<T> {
         @Override
         public void run() {
             thread = Thread.currentThread();
+            Queue<V> priorityQueue = new ArrayDeque<>();
+
             try {
                 while (!Thread.currentThread().isInterrupted() && running.get()) {
-                    int taskCount = taskQueue.drainTo(localQueue);
-                    if (taskCount > 0) {
-                        while (!localQueue.isEmpty()) {
-                            List<V> moreTasks = taskHandler.apply(localQueue.remove());
-                            if (moreTasks != null) {
-                                localQueue.addAll(moreTasks);
-                            }
+
+                    int priorityBudget = 8;
+                    while (!priorityQueue.isEmpty() && priorityBudget-- > 0) {
+                        List<V> moreTasks = taskHandler.apply(priorityQueue.remove());
+                        if (moreTasks != null) {
+                            priorityQueue.addAll(moreTasks);
                         }
-                    } else {
-                        // TODO: Use blocking
-                        Thread.sleep(10);
+                    }
+
+                    V task = priorityQueue.isEmpty()
+                            ? taskQueue.poll(100, TimeUnit.MILLISECONDS)
+                            : taskQueue.poll();
+
+                    if (task != null) {
+                        List<V> moreTasks = taskHandler.apply(task);
+                        if (moreTasks != null) {
+                            priorityQueue.addAll(moreTasks);
+                        }
                     }
                 }
             } catch (InterruptedException e) {

@@ -1,10 +1,11 @@
 package omnivoxel.client.game.graphics.light;
 
-import omnivoxel.client.game.graphics.light.channel.EmptyLightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannel;
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
+import omnivoxel.client.game.graphics.light.channel.SingleLightChannel;
 
 public class ChunkLightingData {
-    public static final ChunkLightingData EMPTY = new ChunkLightingData(new EmptyLightChannel(), new EmptyLightChannel(), new EmptyLightChannel(), new EmptyLightChannel());
+    public static final ChunkLightingData EMPTY = new ChunkLightingData(new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0));
     private LightChannel redChannel;
     private LightChannel greenChannel;
     private LightChannel blueChannel;
@@ -47,5 +48,14 @@ public class ChunkLightingData {
 
     public void setSkylightChannel(LightChannel skylightChannel) {
         this.skylightChannel = skylightChannel;
+    }
+
+    public LightChannel getChannel(LightChannels channel) {
+        return switch (channel) {
+            case LightChannels.RED -> redChannel;
+            case LightChannels.GREEN -> greenChannel;
+            case LightChannels.BLUE -> blueChannel;
+            case LightChannels.SKYLIGHT -> skylightChannel;
+        };
     }
 }

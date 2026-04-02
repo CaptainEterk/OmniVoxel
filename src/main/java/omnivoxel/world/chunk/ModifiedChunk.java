@@ -33,9 +33,8 @@ public class ModifiedChunk<B> implements Chunk<B> {
 
     @Override
     public Chunk<B> setBlock(int x, int y, int z, B block) {
-        if (modificationCount > ConstantServerSettings.CHUNK_MODIFICATION_GENERALIZATION_LIMIT) {
+        if (modificationCount > ConstantServerSettings.MODIFICATION_GENERALIZATION_LIMIT) {
             return new ShortPaletteChunk<>(this).setBlock(x, y, z, block);
-//            return new GeneralChunk<>(this).setBlock(x, y, z, block);
         }
         return new ModifiedChunk<>(x, y, z, block, this, modificationCount + 1);
     }

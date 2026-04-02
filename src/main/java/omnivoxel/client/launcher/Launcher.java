@@ -3,6 +3,7 @@ package omnivoxel.client.launcher;
 import io.netty.util.ResourceLeakDetector;
 import omnivoxel.client.game.GameLoop;
 import omnivoxel.client.game.graphics.api.opengl.window.Window;
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.camera.Camera;
 import omnivoxel.client.game.graphics.camera.Frustum;
 import omnivoxel.client.game.player.PlayerController;
@@ -51,7 +52,7 @@ public class Launcher {
 
         Logger logger = new Logger("Client", ClientInitializer.SHOW_LOGS);
 
-        BlockService blockService = new BlockService();
+        BlockService<BlockWithMesh> blockService = new BlockService<>((id -> new BlockWithMesh(id, clientWorldDataService.getBlock(id))));
 
         Client client = new Client(clientID, clientWorldDataService, logger, world, blockService);
         ClientLauncher clientLauncher = new ClientLauncher(logger, connected, client);

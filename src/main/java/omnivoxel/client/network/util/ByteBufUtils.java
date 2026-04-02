@@ -1,12 +1,14 @@
 package omnivoxel.client.network.util;
 
 import io.netty.buffer.ByteBuf;
-import omnivoxel.client.game.graphics.api.opengl.mesh.block.BlockMesh;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.block.BlockMesh;
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -92,7 +94,21 @@ public class ByteBufUtils {
             allUVCoords[f] = uvCoords;
         }
 
-        shapeCache.put(blockShape.id(), blockShape);
+        byte[] lightEmitting = new byte[3];
+
+        for (int i = 0; i < lightEmitting.length; i++) {
+            lightEmitting[i] = byteBuf.getByte(readerIndex++);
+        }
+
+        byte[] lightDiffusing = new byte[4];
+
+        for (int i = 0; i < lightDiffusing.length; i++) {
+            lightDiffusing[i] = byteBuf.getByte(readerIndex++);
+        }
+
+        System.out.println("Loaded block: " + blockID + " " + Arrays.toString(lightEmitting) + " " + Arrays.toString(lightDiffusing));
+
+//        shapeCache.put(blockShape.id(), blockShape);
 
         return new BlockMesh(ids[1]) {
             @Override
@@ -118,6 +134,16 @@ public class ByteBufUtils {
             @Override
             public int[] getUVCoordinates(BlockFace blockFace) {
                 return allUVCoords[blockFace.ordinal()];
+            }
+
+            @Override
+            public byte getLightDiffuse(LightChannels channel) {
+                return lightDiffusing[channel.ordinal()];
+            }
+
+            @Override
+            public byte getLightEmitting(LightChannels channel) {
+                return lightEmitting[channel.ordinal()];
             }
 
             @Override

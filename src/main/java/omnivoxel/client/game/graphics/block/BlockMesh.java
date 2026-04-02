@@ -1,5 +1,6 @@
-package omnivoxel.client.game.graphics.api.opengl.mesh.block;
+package omnivoxel.client.game.graphics.block;
 
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 
@@ -21,6 +22,10 @@ public abstract class BlockMesh {
     public abstract BlockShape getShape(BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west);
 
     public abstract int[] getUVCoordinates(BlockFace blockFace);
+
+    public abstract byte getLightDiffuse(LightChannels channel);
+
+    public abstract byte getLightEmitting(LightChannels channel);
 
     public boolean isTransparent() {
         return false;

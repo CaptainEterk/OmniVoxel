@@ -1,5 +1,6 @@
 package omnivoxel.client.game.player;
 
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.camera.Camera;
 import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import omnivoxel.client.game.hitbox.Hitbox;
@@ -46,7 +47,7 @@ public class PlayerController {
     private final ClientWorld world;
     private final IDCache<String, String> blockHitbox;
     private final IDCache<String, BlockHitbox> blockHitboxCache;
-    private final BlockService blockService;
+    private final BlockService<BlockWithMesh> blockService;
     private final Hitbox hitbox;
     private final Window window;
 
@@ -71,10 +72,10 @@ public class PlayerController {
     private boolean leftMouseDown;
     private boolean rightMouseDown;
     private Position3D cachedChunkPos = new Position3D(0, 0, 0);
-    private Chunk<Block> cachedChunk;
+    private Chunk<BlockWithMesh> cachedChunk;
     private boolean onGround = false;
 
-    public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, BlockService blockService, Window window) {
+    public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, BlockService<BlockWithMesh> blockService, Window window) {
         this.client = client;
         this.camera = camera;
         this.blockService = blockService;
@@ -159,7 +160,7 @@ public class PlayerController {
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
                 if (!leftMouseDown) {
-                    leftMouseDown = true;
+                    leftMouseDown = false;
                     Position3D observedBlock = findObservedBlock(false);
                     if (observedBlock != null) {
                         client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("omnivoxel:air/default")));
@@ -171,7 +172,7 @@ public class PlayerController {
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
                 if (!rightMouseDown) {
-                    rightMouseDown = true;
+                    rightMouseDown = false;
                     Position3D observedBlock = findObservedBlock(true);
                     if (observedBlock != null) {
                         int chunkX = observedBlock.x() >> 5;
@@ -190,7 +191,7 @@ public class PlayerController {
 
                         assert blockHitbox != null;
                         if (!blockHitbox.isColliding(observedBlock.x(), observedBlock.y(), observedBlock.z(), hitbox)) {
-                            client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:stone/default")));
+                            client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:red_light_block/default")));
                         } else {
                             System.out.println("Cannot place block inside player!");
                         }

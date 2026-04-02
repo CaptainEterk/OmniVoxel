@@ -17,6 +17,7 @@ public enum PackageID {
     REGISTER_BLOCK,
     REGISTER_BLOCK_SHAPE,
     REPLACE_BLOCK,
+    HEIGHTS,
 
     // TODO: Implement UDP Client/Server (using TCP for now)
     // UDP

@@ -1,6 +1,7 @@
 package omnivoxel.server.client.block;
 
-import omnivoxel.client.game.graphics.api.opengl.mesh.block.BlockMesh;
+import omnivoxel.client.game.graphics.block.BlockMesh;
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 
@@ -30,6 +31,16 @@ public final class AirBlockMesh extends BlockMesh {
     @Override
     public int[] getUVCoordinates(BlockFace blockFace) {
         return emptyUVCoords[blockFace.ordinal()];
+    }
+
+    @Override
+    public byte getLightDiffuse(LightChannels channel) {
+        return 1;
+    }
+
+    @Override
+    public byte getLightEmitting(LightChannels channel) {
+        return 15;
     }
 
     @Override

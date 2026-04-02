@@ -1,5 +1,6 @@
-package omnivoxel.client.game.graphics.api.opengl.mesh.block;
+package omnivoxel.client.game.graphics.block;
 
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 
@@ -30,6 +31,16 @@ public class BlockMeshStateWrapper extends BlockMesh {
     @Override
     public int[] getUVCoordinates(BlockFace blockFace) {
         return wrappedBlockMesh.getUVCoordinates(blockFace);
+    }
+
+    @Override
+    public byte getLightDiffuse(LightChannels channel) {
+        return wrappedBlockMesh.getLightDiffuse(channel);
+    }
+
+    @Override
+    public byte getLightEmitting(LightChannels channel) {
+        return wrappedBlockMesh.getLightEmitting(channel);
     }
 
     @Override

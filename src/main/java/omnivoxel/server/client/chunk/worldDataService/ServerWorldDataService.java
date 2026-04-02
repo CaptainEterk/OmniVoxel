@@ -13,10 +13,14 @@ import omnivoxel.server.client.chunk.worldDataService.block.functions.SequenceBl
 import omnivoxel.server.client.chunk.worldDataService.density.DensityFunction;
 import omnivoxel.server.client.chunk.worldDataService.density.functions.*;
 import omnivoxel.server.games.Game;
+import omnivoxel.server.world.ServerWorld;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.config.Config;
 import omnivoxel.util.game.nodes.*;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
+import omnivoxel.world.chunk2d.Chunk2D;
+import omnivoxel.world.chunk2d.SingleBlockChunk2D;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -25,18 +29,17 @@ import java.util.Map;
 public final class ServerWorldDataService {
     private static final Map<String, Class<? extends DensityFunction>> densityFunctionCache = new HashMap<>();
     private static final Map<String, Class<? extends BlockFunction>> blockFunctionCache = new HashMap<>();
+    private static final int STEP = 2;
     private final ServerBlockService blockService;
     private final DensityFunction densityFunction;
     private final BlockFunction blockFunction;
     private final DensityFunction heightFunction;
-
     private final Integer chunkMinX;
     private final Integer chunkMinY;
     private final Integer chunkMinZ;
     private final Integer chunkMaxX;
     private final Integer chunkMaxY;
     private final Integer chunkMaxZ;
-
     private final Integer blockMinX;
     private final Integer blockMinY;
     private final Integer blockMinZ;
@@ -214,7 +217,7 @@ public final class ServerWorldDataService {
                                   int worldX, int worldY, int worldZ,
                                   ChunkInfo chunkInfo) {
         if (!shouldGenerateBlock(worldX, worldY, worldZ)) {
-            return ServerBlock.VOID;
+            return ServerBlock.AIR;
         }
 
         double density = chunkInfo.densityCache()[IndexCalculator.calculateBlockIndexPadded(x, y, z)];
@@ -234,13 +237,9 @@ public final class ServerWorldDataService {
         return blockService.getBlock(result);
     }
 
-    private static final int STEP = 2;
-
-    public ChunkInfo getChunkInfo(Position3D position3D) {
+    public ChunkInfo getChunkInfo(Position3D position3D, ServerWorld world) {
         int chunkMinWorldY = position3D.y() * ConstantGameSettings.CHUNK_HEIGHT;
         int chunkMaxWorldY = chunkMinWorldY + ConstantGameSettings.CHUNK_HEIGHT - 1;
-
-        int[] heights = new int[ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_LENGTH];
 
         int paddedX = ConstantGameSettings.CHUNK_WIDTH + 2;
         int paddedY = ConstantGameSettings.CHUNK_HEIGHT + 2;
@@ -313,26 +312,43 @@ public final class ServerWorldDataService {
             }
         }
 
+        Position2D position2D = new Position2D(position3D.x(), position3D.z());
+        int[] heights = new int[ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_LENGTH];
+        Chunk2D<Integer> chunk2D = world.getHighestY(position2D);
+        boolean cachedHeights = chunk2D != null;
+        chunk2D = cachedHeights ? chunk2D : new SingleBlockChunk2D<>(0);
         if (chunkMaxY != null && chunkMinY != null) {
             for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
                 int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
                 for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
                     int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
                     for (int worldY = blockMaxY; worldY > blockMinY; worldY--) {
+                        boolean in = x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH && z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH;
                         double height;
-                        if (heightIsDensityFunction && worldY > chunkMinWorldY && worldY < chunkMaxWorldY) {
+                        if (cachedHeights && in) {
+                            height = 1;
+                            worldY = chunk2D.getBlock(x, z);
+                        } else if (heightIsDensityFunction && worldY > chunkMinWorldY && worldY < chunkMaxWorldY) {
                             height = densityCache[IndexCalculator.calculateBlockIndexPadded(x, worldY - chunkMinWorldY, z)];
                         } else {
                             height = heightFunction.evaluate(worldX, worldY, worldZ);
                         }
                         if (height > 0) {
                             heights[IndexCalculator.calculateBlockIndexPadded2D(x, z)] = worldY;
+                            if (!cachedHeights && in) {
+                                chunk2D = chunk2D.setBlock(x, z, worldY);
+                            }
                             break;
                         }
                     }
                 }
             }
         }
+
+        if (!cachedHeights) {
+            world.putHighestY(position2D, chunk2D);
+        }
+
         return new ChunkInfo(heights, densityCache);
     }
 

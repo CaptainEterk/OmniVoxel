@@ -7,6 +7,7 @@ import omnivoxel.common.BlockShape;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.block.ServerBlockAndPosition;
+import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.client.chunk.ChunkService;
 import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
@@ -87,15 +88,6 @@ public class Server {
         for (byte[] bites : bytes) {
             buffer.writeBytes(bites);
         }
-        ctx.channel().writeAndFlush(buffer);
-    }
-
-    private static void sendBlock(ChannelHandlerContext ctx, ServerBlock block) {
-        ByteBuf buffer = Unpooled.buffer();
-        byte[] bytes = block.getBytes();
-        buffer.writeInt(4 + bytes.length);
-        buffer.writeInt(PackageID.REGISTER_BLOCK.ordinal());
-        buffer.writeBytes(bytes);
         ctx.channel().writeAndFlush(buffer);
     }
 
@@ -189,7 +181,8 @@ public class Server {
 
             blockService.getAllBlocks().forEach((id, serverBlock) -> {
                 if (serverClient.registerBlockID(id)) {
-                    sendBlock(serverClient.getCTX(), serverBlock);
+                    ChannelHandlerContext ctx1 = serverClient.getCTX();
+                    ChunkIO.sendBlock(ctx1, serverBlock);
                 }
             });
 

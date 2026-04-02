@@ -35,7 +35,7 @@ public class ModifiedGeneratedChunk extends GeneratedChunk {
 
     @Override
     public GeneratedChunk setBlock(int x, int y, int z, @NotNull ServerBlock block) {
-        if (modificationCount > ConstantServerSettings.CHUNK_MODIFICATION_GENERALIZATION_LIMIT) {
+        if (modificationCount > ConstantServerSettings.MODIFICATION_GENERALIZATION_LIMIT) {
             return new GeneralGeneratedChunk(this);
         }
         return new ModifiedGeneratedChunk(x, y, z, block, this, modificationCount + 1);
