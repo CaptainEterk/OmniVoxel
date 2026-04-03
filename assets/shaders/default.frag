@@ -83,7 +83,7 @@ void main() {
             FragColor.a = fresnel*5;
         }
 
-        FragColor = mix(fogColor, FragColor, fogFactor);
+        FragColor.a = fogFactor;
         // TODO: Mix with filter color too for water and things.
     } else if (meshType == 1u) {
         FragColor = texture(blockTexture, TexCoord);

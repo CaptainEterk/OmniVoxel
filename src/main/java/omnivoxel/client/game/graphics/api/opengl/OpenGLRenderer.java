@@ -4,6 +4,7 @@ import omnivoxel.client.game.entity.ClientEntity;
 import omnivoxel.client.game.graphics.Renderer;
 import omnivoxel.client.game.graphics.api.opengl.framebuffer.RenderFramebuffer;
 import omnivoxel.client.game.graphics.api.opengl.mesh.EntityMesh;
+import omnivoxel.client.game.graphics.api.opengl.mesh.FullscreenQuad;
 import omnivoxel.client.game.graphics.api.opengl.mesh.util.MeshGenerator;
 import omnivoxel.client.game.graphics.api.opengl.shader.ShaderProgram;
 import omnivoxel.client.game.graphics.api.opengl.shader.ShaderProgramHandler;
@@ -77,6 +78,8 @@ public class OpenGLRenderer implements Renderer {
     private List<DistanceChunk> solidRenderedChunks;
     private List<DistanceChunk> transparentRenderedChunks;
     private Timer timer;
+    private FullscreenQuad fullscreenQuad;
+    private ShaderProgramHandler shaderProgramHandler;
 
     public OpenGLRenderer(Logger logger, State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem) {
         this.logger = logger;
@@ -132,12 +135,11 @@ public class OpenGLRenderer implements Renderer {
 
     private void initShader() throws IOException {
         // TODO: Make the player able to use their shaders instead.
-        ShaderProgramHandler shaderProgramHandler = new ShaderProgramHandler();
+        this.shaderProgramHandler = new ShaderProgramHandler();
         shaderProgramHandler.addShaderProgram("default", Map.of("assets/shaders/default.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/default.frag", GL20.GL_FRAGMENT_SHADER));
-        shaderProgramHandler.addShaderProgram("zpp", Map.of("assets/shaders/zpp.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/zpp.frag", GL20.GL_FRAGMENT_SHADER));
+        shaderProgramHandler.addShaderProgram("sky", Map.of("assets/shaders/sky.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/sky.frag", GL20.GL_FRAGMENT_SHADER));
         shaderProgramHandler.addShaderProgram("text", Map.of("assets/shaders/text.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/text.frag", GL20.GL_FRAGMENT_SHADER));
         this.shaderProgram = shaderProgramHandler.getShaderProgram("default");
-        this.zppShaderProgram = shaderProgramHandler.getShaderProgram("zpp");
         this.textShaderProgram = shaderProgramHandler.getShaderProgram("text");
         this.shaderProgram.bind();
         this.shaderProgram.setUniform("fogColor", 0.0f, 0.61568627451f, 1.0f, 1.0f);
@@ -192,6 +194,9 @@ public class OpenGLRenderer implements Renderer {
 
         this.timer = new Timer(FPS_SAMPLES);
         this.timer.start();
+
+        this.fullscreenQuad = new FullscreenQuad();
+        this.fullscreenQuad.init();
     }
 
     private void initOpenGL() {
@@ -211,6 +216,8 @@ public class OpenGLRenderer implements Renderer {
         addFrameAction(periodicTimeExecutorCollection::execute);
 
         addFrameAction(this::start);
+        addFrameAction(this::renderSky);
+
         addFrameAction(this::update);
 
         addFrameAction(this::renderEntities);
@@ -252,6 +259,28 @@ public class OpenGLRenderer implements Renderer {
         GL13C.glActiveTexture(GL13C.GL_TEXTURE0);
     }
 
+    private void renderSky() {
+        // Disable depth writes so sky stays in background
+        GL11C.glDepthMask(false);
+        GL11C.glDisable(GL11C.GL_CULL_FACE);
+        GL11C.glDisable(GL11C.GL_DEPTH_TEST);
+
+        // Bind your sky shader (NOT your chunk shader)
+        // Example:
+        shaderProgramHandler.getShaderProgram("sky").bind();
+        // skyShader.bind();
+
+        // You MUST pass inverse matrices here
+        // skyShader.setUniform("invProjection", ...);
+        // skyShader.setUniform("invView", ...);
+
+        fullscreenQuad.render();
+        shaderProgram.bind();
+        // Restore state (don’t skip this or you’ll break everything)
+        GL11C.glEnable(GL11C.GL_DEPTH_TEST);
+        GL11C.glDepthMask(true);
+    }
+
     private void update() {
         if (state.getItem("shouldRenderWireframe", Boolean.class)) {
             GL11C.glPolygonMode(GL11C.GL_FRONT_AND_BACK, GL11C.GL_LINE);
@@ -269,12 +298,19 @@ public class OpenGLRenderer implements Renderer {
             shaderProgram.setUniform("view", cameraViewMatrix);
             shaderProgram.setUniform("cameraView", cameraViewMatrix);
 
-            zppShaderProgram.bind();
-            zppShaderProgram.setUniform("projection", projectionMatrix);
-            zppShaderProgram.setUniform("view", viewMatrix);
-            shaderProgram.bind();
+            Matrix4f invProjection = new Matrix4f(projectionMatrix).invert();
+            Matrix4f invView = new Matrix4f(viewMatrix).invert();
 
-            state.setItem("shouldUpdateView", false);
+            shaderProgram.bind();
+            shaderProgramHandler.getShaderProgram("sky").bind();
+
+            shaderProgramHandler.getShaderProgram("sky").setUniform("invProjection", invProjection);
+            shaderProgramHandler.getShaderProgram("sky").setUniform("invView", invView);
+
+            shaderProgramHandler.getShaderProgram("sky").setUniform("time", (float) GLFW.glfwGetTime());
+
+            shaderProgram.bind();
+//            state.setItem("shouldUpdateView", false);
         }
 
         if (world.chunkRequestCount() < ConstantServerSettings.INFLIGHT_REQUESTS_MINIMUM) {
@@ -703,6 +739,11 @@ public class OpenGLRenderer implements Renderer {
     public void cleanup() {
         textRenderer.cleanup();
         menuSystem.cleanup();
+
+        if (fullscreenQuad != null) {
+            fullscreenQuad.cleanup();
+        }
+
         if (renderFramebuffer != null) {
             renderFramebuffer.cleanup();
             renderFramebuffer = null;

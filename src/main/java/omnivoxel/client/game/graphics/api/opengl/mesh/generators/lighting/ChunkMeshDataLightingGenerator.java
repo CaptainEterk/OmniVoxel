@@ -7,9 +7,9 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.LightingChunkMeshDat
 import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.light.ChunkLightingData;
+import omnivoxel.client.game.graphics.light.channel.GeneralLightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
-import omnivoxel.client.game.graphics.light.channel.SingleLightChannel;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -179,7 +179,7 @@ public class ChunkMeshDataLightingGenerator {
         return false;
     }
 
-    private LightChannel floodFill(LightChannel lightChannel, Chunk<BlockWithMesh> chunk, LightChannels channel) {
+    private void floodFill(byte[] lightChannel, Chunk<BlockWithMesh> chunk, LightChannels channel) {
         while (!chunkLights.isEmpty()) {
             LightNode node = chunkLights.poll();
             int x = node.x();
@@ -189,7 +189,7 @@ public class ChunkMeshDataLightingGenerator {
 
             int idx = IndexCalculator.calculateBlockIndex(x, y, z);
 
-            lightChannel = lightChannel.setLighting(idx, light);
+            lightChannel[idx] = light;
 
             if (light < 1) continue;
 
@@ -202,8 +202,8 @@ public class ChunkMeshDataLightingGenerator {
 
                 if (IndexCalculator.checkBounds(nx, ny, nz)) {
                     int nIdx = IndexCalculator.calculateBlockIndex(nx, ny, nz);
-                    if (newLight > lightChannel.getLighting(nIdx)) {
-                        lightChannel = lightChannel.setLighting(nIdx, newLight);
+                    if (newLight > lightChannel[nIdx]) {
+                        lightChannel[nIdx] = newLight;
                         chunkLights.add(new LightNode(nx, ny, nz, newLight));
                     }
                 } else {
@@ -214,8 +214,6 @@ public class ChunkMeshDataLightingGenerator {
                 }
             }
         }
-
-        return lightChannel;
     }
 
     private List<LightingChunkMeshDataTask> propagateLighting(Position3D chunkPos, LightChannels channel) {
@@ -288,7 +286,7 @@ public class ChunkMeshDataLightingGenerator {
     ) {
         clearQueues(chunkPos, channel);
 
-        LightChannel lightChannel = new SingleLightChannel((byte) 0);
+        byte[] lightChannel = new byte[ConstantGameSettings.BLOCKS_IN_CHUNK];
 
         if (!overflow) {
             loadChunkLights(channel, chunkPos, clientWorldChunk.getChunkData());
@@ -308,16 +306,16 @@ public class ChunkMeshDataLightingGenerator {
                 int y = IndexCalculator.y(idx);
                 int z = IndexCalculator.z(idx);
 
-                if (lvl > lightChannel.getLighting(idx)) {
-                    lightChannel = lightChannel.setLighting(idx, lvl);
+                if (lvl > lightChannel[idx]) {
+                    lightChannel[idx] = lvl;
                     chunkLights.add(new LightNode(x, y, z, lvl));
                 }
             }
         }
 
-        lightChannel = floodFill(lightChannel, clientWorldChunk.getChunkData(), channel);
+        floodFill(lightChannel, clientWorldChunk.getChunkData(), channel);
 
-        return new LightChannelAndMeshTasks(lightChannel, propagateLighting(chunkPos, channel));
+        return new LightChannelAndMeshTasks(new GeneralLightChannel(lightChannel), propagateLighting(chunkPos, channel));
     }
 
     public enum Direction {
