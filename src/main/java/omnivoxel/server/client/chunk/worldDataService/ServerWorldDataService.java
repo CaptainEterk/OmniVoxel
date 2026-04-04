@@ -351,8 +351,4 @@ public final class ServerWorldDataService {
 
         return new ChunkInfo(heights, densityCache);
     }
-
-    enum NoiseCacheValues {
-        DENSITY
-    }
 }

@@ -2,13 +2,13 @@ package omnivoxel.client.game.graphics.api.opengl.window;
 
 import omnivoxel.client.game.graphics.api.opengl.image.Image;
 import omnivoxel.client.game.graphics.api.opengl.image.ImageLoader;
+import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.util.log.Logger;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.glfw.GLFWVidMode;
-import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.*;
 import org.lwjgl.system.MemoryUtil;
 
 import java.util.Queue;
@@ -65,7 +65,23 @@ public final class WindowFactory {
          LWJGL detects the context that is current in the current thread,
          creates the GLCapabilities instance and makes the OpenGL bindings available for use.
         */
-        GL.createCapabilities();
+        GLCapabilities caps = GL.createCapabilities();
+
+        if (ConstantGameSettings.OPENGL_DEBUG) {
+            if (caps.GL_KHR_debug) {
+                GL11C.glEnable(GL43C.GL_DEBUG_OUTPUT);
+                GL11C.glEnable(GL43C.GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
+                GL43C.glDebugMessageCallback((source, type, id, severity, length, message, userParam) -> {
+                    String msg = GLDebugMessageCallback.getMessage(length, message);
+                    System.err.println("OpenGL debug: source=" + source +
+                            " type=" + type +
+                            " id=" + id +
+                            " severity=" + severity +
+                            " msg=" + msg);
+                }, 0L);
+            }
+        }
 
         // Mouse motion
         if (GLFW.glfwRawMouseMotionSupported()) {

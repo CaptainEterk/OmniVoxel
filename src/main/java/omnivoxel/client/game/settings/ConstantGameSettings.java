@@ -43,6 +43,7 @@ public class ConstantGameSettings {
     public static final long TICK_LENGTH_NS = 1_000_000_000L / TARGET_TPS;
     public static final String GAME_LOCATION = FILE_LOCATION + "games/";
     public static final int CHUNK_TICK_TIMEOUT = 10;
+    public static final boolean OPENGL_DEBUG = true;
     public static long BUFFERIZE_END_TIME_LIMIT_MS = 1;
 
     private static String getRootFolder() {
