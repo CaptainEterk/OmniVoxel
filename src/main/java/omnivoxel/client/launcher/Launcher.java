@@ -63,7 +63,7 @@ public class Launcher {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
         if (connected.await(5L, TimeUnit.SECONDS)) {
-            client.setListeners(world.getEntityMeshDefinitionCache(), world.getQueuedEntityMeshData());
+            client.setListeners(world.getEntityMeshDefinitionCache(), world.getQueuedEntityMeshData(), state);
             AtomicBoolean gameRunning = new AtomicBoolean(true);
             BlockingQueue<Consumer<Window>> contextTasks = new LinkedBlockingDeque<>();
 

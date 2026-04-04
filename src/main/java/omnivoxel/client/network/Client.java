@@ -15,6 +15,7 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.EntityMeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.LightingChunkMeshDataTask;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
@@ -306,7 +307,7 @@ public final class Client {
         byteBuf.release();
     }
 
-    private void newEntity(ByteBuf byteBuf) throws InterruptedException {
+    private void newEntity(ByteBuf byteBuf) {
         int entityIDLength = byteBuf.getInt(8);
 
         byte[] entityID = new byte[entityIDLength];
@@ -436,7 +437,7 @@ public final class Client {
         logger.info("Client disconnected");
     }
 
-    public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData) {
+    public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, State state) {
         meshDataGenerators = new WorkerThreadPool<>(
                 ConstantGameSettings.MAX_MESH_GENERATOR_THREADS,
                 () -> new MeshDataGenerator(
@@ -444,7 +445,8 @@ public final class Client {
                         entityMeshDefinitionCache,
                         queuedEntityMeshData,
                         world,
-                        blockService
+                        blockService,
+                        state
                 )::generateMeshData,
                 true
         );
@@ -454,7 +456,8 @@ public final class Client {
                         world,
                         worldDataService,
                         meshDataGenerators,
-                        blockService
+                        blockService,
+                        state
                 )::generateLightingMeshData,
                 true
         );

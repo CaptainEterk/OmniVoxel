@@ -11,6 +11,7 @@ import omnivoxel.client.game.graphics.light.channel.GeneralLightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
@@ -30,12 +31,14 @@ public class ChunkMeshDataLightingGenerator {
     private final ClientWorldDataService worldDataService;
     private final WorkerThreadPool<MeshDataTask> meshDataGenerators;
     private final BlockService<BlockWithMesh> blockService;
+    private final State state;
 
-    public ChunkMeshDataLightingGenerator(ClientWorld world, ClientWorldDataService worldDataService, WorkerThreadPool<MeshDataTask> meshDataGenerators, BlockService<BlockWithMesh> blockService) {
+    public ChunkMeshDataLightingGenerator(ClientWorld world, ClientWorldDataService worldDataService, WorkerThreadPool<MeshDataTask> meshDataGenerators, BlockService<BlockWithMesh> blockService, State state) {
         this.world = world;
         this.worldDataService = worldDataService;
         this.meshDataGenerators = meshDataGenerators;
         this.blockService = blockService;
+        this.state = state;
         this.chunkLights = new ArrayDeque<>();
 
         for (LightChannels channel : LightChannels.values()) {
@@ -47,12 +50,13 @@ public class ChunkMeshDataLightingGenerator {
         }
     }
 
-    public List<LightingChunkMeshDataTask> generateLightingMeshData(LightingChunkMeshDataTask lightingChunkMeshDataTask) {
+    public List<LightingChunkMeshDataTask> generateLightingMeshData(LightingChunkMeshDataTask lightingChunkMeshDataTask, int queueSize) {
+        state.setItem(Thread.currentThread().getName() + "_queue_size_cmdlg", queueSize);
         if (lightingChunkMeshDataTask.blocks() != null) {
             MeshDataGenerator.unpackChunkPadded(lightingChunkMeshDataTask.blocks(), lightingChunkMeshDataTask.position3D(), worldDataService, blockService, world);
         }
         try {
-            return generateChunkMeshDataLighting(lightingChunkMeshDataTask.position3D(), lightingChunkMeshDataTask.overflow());
+            return generateChunkMeshDataLighting(lightingChunkMeshDataTask.position3D());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -61,7 +65,7 @@ public class ChunkMeshDataLightingGenerator {
     private boolean calculateNeighborChunkLighting(Position3D position3D) {
         ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
         if (clientWorldChunk != null && clientWorldChunk.getChunkData() != null) {
-            clientWorldChunk.setChunkLightingData(generateLighting(clientWorldChunk, position3D, false).chunkLightingData());
+            clientWorldChunk.setChunkLightingData(generateLighting(clientWorldChunk, position3D).chunkLightingData());
             return false;
         }
         return true;
@@ -71,7 +75,7 @@ public class ChunkMeshDataLightingGenerator {
         return calculateNeighborChunkLighting(position3D);
     }
 
-    private List<LightingChunkMeshDataTask> generateChunkMeshDataLighting(Position3D position3D, boolean overflow) throws InterruptedException {
+    private List<LightingChunkMeshDataTask> generateChunkMeshDataLighting(Position3D position3D) throws InterruptedException {
         ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
         if (clientWorldChunk == null) {
             return null;
@@ -91,32 +95,32 @@ public class ChunkMeshDataLightingGenerator {
         }
 
         if (failed) {
-//            System.out.println("Lighting calculations failed");
             calculateChunkLighting(position3D);
-            meshDataTasks.add(new LightingChunkMeshDataTask(null, position3D, false));
+            meshDataTasks.add(new LightingChunkMeshDataTask(null, position3D));
         }
 
-        ChunkLightingDataAndTasks chunkLightingDataAndTasks = generateLighting(clientWorldChunk, position3D, false);
+        ChunkLightingDataAndTasks chunkLightingDataAndTasks = generateLighting(clientWorldChunk, position3D);
         ChunkLightingData chunkLightingData = chunkLightingDataAndTasks.chunkLightingData();
         clientWorldChunk.setChunkLightingData(chunkLightingData);
-        if (!overflow && chunkLightingDataAndTasks.meshDataTasks() != null && !failed) {
+
+        if (chunkLightingDataAndTasks.meshDataTasks() != null && !failed) {
             meshDataTasks.addAll(chunkLightingDataAndTasks.meshDataTasks());
         }
 
-        if (!failed) {
+//        if (!failed) {
 //            System.out.println("Lighting calculations succeeded");
             meshDataGenerators.submit(new ChunkMeshDataTask(null, position3D));
-        }
+//        }
 
 
         return meshDataTasks;
     }
 
-    private ChunkLightingDataAndTasks generateLighting(ClientWorldChunk clientWorldChunk, Position3D chunkPos, boolean overflow) {
-        LightChannelAndMeshTasks redChannel = generateLightChannel(clientWorldChunk, chunkPos, overflow, LightChannels.RED);
-        LightChannelAndMeshTasks greenChannel = generateLightChannel(clientWorldChunk, chunkPos, overflow, LightChannels.GREEN);
-        LightChannelAndMeshTasks blueChannel = generateLightChannel(clientWorldChunk, chunkPos, overflow, LightChannels.BLUE);
-        LightChannelAndMeshTasks skyChannel = generateLightChannel(clientWorldChunk, chunkPos, overflow, LightChannels.SKYLIGHT);
+    private ChunkLightingDataAndTasks generateLighting(ClientWorldChunk clientWorldChunk, Position3D chunkPos) {
+        LightChannelAndMeshTasks redChannel = generateLightChannel(clientWorldChunk, chunkPos, LightChannels.RED);
+        LightChannelAndMeshTasks greenChannel = generateLightChannel(clientWorldChunk, chunkPos, LightChannels.GREEN);
+        LightChannelAndMeshTasks blueChannel = generateLightChannel(clientWorldChunk, chunkPos, LightChannels.BLUE);
+        LightChannelAndMeshTasks skyChannel = generateLightChannel(clientWorldChunk, chunkPos, LightChannels.SKYLIGHT);
 
         List<LightingChunkMeshDataTask> meshDataTasks = null;
         if (redChannel.meshDataTasks != null) {
@@ -147,14 +151,10 @@ public class ChunkMeshDataLightingGenerator {
         return new ChunkLightingDataAndTasks(new ChunkLightingData(redChannel.lightChannel, greenChannel.lightChannel, blueChannel.lightChannel, skyChannel.lightChannel), meshDataTasks);
     }
 
-    private boolean loadChunkLights(LightChannels channel, Position3D chunkPos, Chunk<BlockWithMesh> chunk) {
+    private void loadChunkLights(LightChannels channel, Position3D chunkPos, Chunk<BlockWithMesh> chunk) {
         int chunkYOffset = chunkPos.y() * ConstantGameSettings.CHUNK_HEIGHT;
 
         Chunk2D<Integer> skyLightChunk = channel == LightChannels.SKYLIGHT ? world.getSkylightChunk(chunkPos.getPosition2D()) : null;
-        if (channel == LightChannels.SKYLIGHT && skyLightChunk == null) {
-            System.out.println("NO SKYLIGHT");
-            return true;
-        }
 
         for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
             for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
@@ -176,7 +176,6 @@ public class ChunkMeshDataLightingGenerator {
                 }
             }
         }
-        return false;
     }
 
     private void floodFill(byte[] lightChannel, Chunk<BlockWithMesh> chunk, LightChannels channel) {
@@ -265,14 +264,14 @@ public class ChunkMeshDataLightingGenerator {
 
             if (changed) {
                 if (meshDataTasks == null) meshDataTasks = new ArrayList<>();
-                meshDataTasks.add(new LightingChunkMeshDataTask(null, chunkPos.add(dir.dx, dir.dy, dir.dz), true));
+                meshDataTasks.add(new LightingChunkMeshDataTask(null, chunkPos.add(dir.dx, dir.dy, dir.dz)));
             }
         }
 
         return meshDataTasks;
     }
 
-    private void clearQueues(Position3D position3D, LightChannels channel) {
+    private void clearQueues() {
         chunkLights.clear();
         borderLightQueues.values().forEach(c -> c.values().forEach(Queue::clear));
     }
@@ -281,16 +280,13 @@ public class ChunkMeshDataLightingGenerator {
     private LightChannelAndMeshTasks generateLightChannel(
             ClientWorldChunk clientWorldChunk,
             Position3D chunkPos,
-            boolean overflow,
             LightChannels channel
     ) {
-        clearQueues(chunkPos, channel);
+        clearQueues();
 
         byte[] lightChannel = new byte[ConstantGameSettings.BLOCKS_IN_CHUNK];
 
-        if (!overflow) {
-            loadChunkLights(channel, chunkPos, clientWorldChunk.getChunkData());
-        }
+        loadChunkLights(channel, chunkPos, clientWorldChunk.getChunkData());
 
         // Loads overflow lighting
         for (Direction dir : Direction.VALUES) {

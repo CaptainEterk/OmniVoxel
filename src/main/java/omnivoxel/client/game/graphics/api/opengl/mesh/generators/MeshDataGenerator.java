@@ -15,6 +15,7 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.face.BlockFace;
@@ -36,8 +37,10 @@ public final class MeshDataGenerator {
     private final ChunkMeshDataGenerator chunkMeshDataGenerator;
     private final EntityMeshDataGenerator entityMeshDataGenerator;
     private final ClientWorld world;
+    private final State state;
 
-    public MeshDataGenerator(ClientWorldDataService worldDataService, IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, ClientWorld world, BlockService blockService) {
+    public MeshDataGenerator(ClientWorldDataService worldDataService, IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, ClientWorld world, BlockService<BlockWithMesh> blockService, State state) {
+        this.state = state;
         chunkMeshDataGenerator = new ChunkMeshDataGenerator(worldDataService, blockService, world);
         this.world = world;
         entityMeshDataGenerator = new EntityMeshDataGenerator(entityMeshDefinitionCache, queuedEntityMeshData);
@@ -222,7 +225,8 @@ public final class MeshDataGenerator {
         return blockMeshes;
     }
 
-    public List<MeshDataTask> generateMeshData(MeshDataTask meshDataTask) {
+    public List<MeshDataTask> generateMeshData(MeshDataTask meshDataTask, int queueSize) {
+        state.setItem(Thread.currentThread().getName() + "_queue_size_mdg", queueSize);
         if (meshDataTask instanceof ChunkMeshDataTask(ByteBuf byteBuf, Position3D position3D)) {
             MeshData meshData = chunkMeshDataGenerator.generateMeshData(byteBuf, position3D);
             if (meshData != null) {

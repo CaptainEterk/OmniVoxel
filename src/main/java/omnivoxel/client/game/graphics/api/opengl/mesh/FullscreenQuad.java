@@ -49,13 +49,8 @@ public class FullscreenQuad {
         // --- Attributes ---
         int stride = 4 * Float.BYTES;
 
-        // position (location = 0)
-        GL30C.glEnableVertexAttribArray(0);
-        GL30C.glVertexAttribPointer(0, 2, GL30C.GL_FLOAT, false, stride, 0);
-
-        // uv (location = 1)
-        GL30C.glEnableVertexAttribArray(1);
-        GL30C.glVertexAttribPointer(1, 2, GL30C.GL_FLOAT, false, stride, 2L * Float.BYTES);
+        GL30C.glEnableVertexAttribArray(5);
+        GL30C.glVertexAttribPointer(5, 2, GL30C.GL_FLOAT, false, stride, 0);
 
         GL30C.glBindVertexArray(0);
 

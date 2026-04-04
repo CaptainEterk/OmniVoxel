@@ -71,6 +71,7 @@ public class OpenGLRenderer implements Renderer {
     private int texture;
     private int TEMP_texture;
     private RenderFramebuffer renderFramebuffer;
+    private RenderFramebuffer skyFramebuffer;
     private int renderWidth;
     private int renderHeight;
     private boolean renderTracksWindowSize;
@@ -110,6 +111,11 @@ public class OpenGLRenderer implements Renderer {
                 renderFramebuffer.resize(renderWidth, renderHeight);
             }
 
+            if (skyFramebuffer != null && renderTracksWindowSize) {
+                updateInternalRenderSizeFromSettings();
+                skyFramebuffer.resize(renderWidth, renderHeight);
+            }
+
             textShaderProgram.bind();
             textShaderProgram.setUniform("projection", new Matrix4f().ortho(0.0f, w.getWidth(), w.getHeight(), 0.0f, -1.0f, 1.0f));
             shaderProgram.bind();
@@ -137,7 +143,6 @@ public class OpenGLRenderer implements Renderer {
         // TODO: Make the player able to use their shaders instead.
         this.shaderProgramHandler = new ShaderProgramHandler();
         shaderProgramHandler.addShaderProgram("default", Map.of("assets/shaders/default.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/default.frag", GL20.GL_FRAGMENT_SHADER));
-        shaderProgramHandler.addShaderProgram("sky", Map.of("assets/shaders/sky.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/sky.frag", GL20.GL_FRAGMENT_SHADER));
         shaderProgramHandler.addShaderProgram("text", Map.of("assets/shaders/text.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/text.frag", GL20.GL_FRAGMENT_SHADER));
         this.shaderProgram = shaderProgramHandler.getShaderProgram("default");
         this.textShaderProgram = shaderProgramHandler.getShaderProgram("text");
@@ -145,13 +150,13 @@ public class OpenGLRenderer implements Renderer {
         this.shaderProgram.setUniform("fogColor", 0.0f, 0.61568627451f, 1.0f, 1.0f);
         this.shaderProgram.setUniform("fogFar", settings.getFloatSetting("render_distance", 100) - ConstantGameSettings.CHUNK_SIZE);
         this.shaderProgram.setUniform("fogNear", (settings.getFloatSetting("render_distance", 100) - ConstantGameSettings.CHUNK_SIZE) / 10 * 9);
-        this.shaderProgram.setUniform("blockTexture", 0);
+        this.shaderProgram.setUniformUnsigned("blockTexture", 0);
         this.shaderProgram.unbind();
 
         this.textShaderProgram.bind();
 
         this.textShaderProgram.setUniform("textColor", 1f, 1f, 1f);
-        this.textShaderProgram.setUniform("textTexture", 0);
+        this.textShaderProgram.setUniformUnsigned("textTexture", 0);
 
         this.textShaderProgram.unbind();
     }
@@ -167,8 +172,6 @@ public class OpenGLRenderer implements Renderer {
         state.setItem("seeDebug", true);
         state.setItem("bufferizing_queue_size", 0);
         state.setItem("missing_chunks", 0);
-
-        state.setItem("z-prepass", false);
 
         state.setItem("inflight_requests", 0);
         state.setItem("chunk_requests_sent", 0);
@@ -210,12 +213,15 @@ public class OpenGLRenderer implements Renderer {
         updateInternalRenderSizeFromSettings();
         renderFramebuffer = new RenderFramebuffer();
         renderFramebuffer.init(renderWidth, renderHeight, renderFilter);
+        skyFramebuffer = new RenderFramebuffer();
+        skyFramebuffer.init(renderWidth, renderHeight, renderFilter);
     }
 
     private void initFrameActions() {
         addFrameAction(periodicTimeExecutorCollection::execute);
 
-        addFrameAction(this::start);
+        addFrameAction(this::updateTime);
+        addFrameAction(this::clearSkyFramebuffer);
         addFrameAction(this::renderSky);
 
         addFrameAction(this::update);
@@ -245,40 +251,61 @@ public class OpenGLRenderer implements Renderer {
         addFrameAction(world::tick);
     }
 
-    private void start() {
+    private void updateTime() {
+        shaderProgram.bind();
+        shaderProgram.setUniform("time", (float) GLFW.glfwGetTime());
+    }
+
+    private void clearSkyFramebuffer() {
+        if (skyFramebuffer != null) {
+            skyFramebuffer.bindForDraw();
+            shaderProgram.setUniform("screenResolution", skyFramebuffer.width(), skyFramebuffer.height());
+            GL11C.glViewport(0, 0, skyFramebuffer.width(), skyFramebuffer.height());
+        }
+
+        GL11.glClear(GL11C.GL_COLOR_BUFFER_BIT);
+    }
+
+    private void renderSkyToCurrentFramebuffer() {
+        GL11C.glDepthMask(false);
+        GL11C.glDisable(GL11C.GL_CULL_FACE);
+        GL11C.glDisable(GL11C.GL_DEPTH_TEST);
+
+        shaderProgram.bind();
+        shaderProgram.setUniformUnsigned("meshType", 2);
+        fullscreenQuad.render();
+
+        GL11C.glEnable(GL11C.GL_CULL_FACE);
+        GL11C.glEnable(GL11C.GL_DEPTH_TEST);
+        GL11C.glDepthMask(true);
+    }
+
+    private void renderSky() {
+        skyFramebuffer.bindForDraw();
+        GL11C.glViewport(0, 0, skyFramebuffer.width(), skyFramebuffer.height());
+        GL11C.glClear(GL11C.GL_COLOR_BUFFER_BIT);
+        renderSkyToCurrentFramebuffer();
+        shaderProgram.setUniform("skyTexture", 1);
+
+        clearRenderFramebuffer();
+        GL11C.glViewport(0, 0, renderFramebuffer.width(), renderFramebuffer.height());
+        renderSkyToCurrentFramebuffer();
+
+        GL13C.glActiveTexture(GL13C.GL_TEXTURE1);
+        GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, skyFramebuffer.colorTexture());
+        GL13C.glActiveTexture(GL13C.GL_TEXTURE0);
+    }
+
+    private void clearRenderFramebuffer() {
         if (renderFramebuffer != null) {
             renderFramebuffer.bindForDraw();
+            shaderProgram.setUniform("screenResolution", renderFramebuffer.width(), renderFramebuffer.height());
             GL11C.glViewport(0, 0, renderFramebuffer.width(), renderFramebuffer.height());
         }
 
         GL11.glClear(GL11C.GL_COLOR_BUFFER_BIT | GL11C.GL_DEPTH_BUFFER_BIT);
 
-        shaderProgram.bind();
-        shaderProgram.setUniform("time", (float) GLFW.glfwGetTime());
-
         GL13C.glActiveTexture(GL13C.GL_TEXTURE0);
-    }
-
-    private void renderSky() {
-        // Disable depth writes so sky stays in background
-        GL11C.glDepthMask(false);
-        GL11C.glDisable(GL11C.GL_CULL_FACE);
-        GL11C.glDisable(GL11C.GL_DEPTH_TEST);
-
-        // Bind your sky shader (NOT your chunk shader)
-        // Example:
-        shaderProgramHandler.getShaderProgram("sky").bind();
-        // skyShader.bind();
-
-        // You MUST pass inverse matrices here
-        // skyShader.setUniform("invProjection", ...);
-        // skyShader.setUniform("invView", ...);
-
-        fullscreenQuad.render();
-        shaderProgram.bind();
-        // Restore state (don’t skip this or you’ll break everything)
-        GL11C.glEnable(GL11C.GL_DEPTH_TEST);
-        GL11C.glDepthMask(true);
     }
 
     private void update() {
@@ -301,16 +328,10 @@ public class OpenGLRenderer implements Renderer {
             Matrix4f invProjection = new Matrix4f(projectionMatrix).invert();
             Matrix4f invView = new Matrix4f(viewMatrix).invert();
 
-            shaderProgram.bind();
-            shaderProgramHandler.getShaderProgram("sky").bind();
+            shaderProgram.setUniform("invProjection", invProjection);
+            shaderProgram.setUniform("invView", invView);
 
-            shaderProgramHandler.getShaderProgram("sky").setUniform("invProjection", invProjection);
-            shaderProgramHandler.getShaderProgram("sky").setUniform("invView", invView);
-
-            shaderProgramHandler.getShaderProgram("sky").setUniform("time", (float) GLFW.glfwGetTime());
-
-            shaderProgram.bind();
-//            state.setItem("shouldUpdateView", false);
+            state.setItem("shouldUpdateView", false);
         }
 
         if (world.chunkRequestCount() < ConstantServerSettings.INFLIGHT_REQUESTS_MINIMUM) {
@@ -363,7 +384,7 @@ public class OpenGLRenderer implements Renderer {
 
     private void renderEntities() {
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, TEMP_texture);
-        shaderProgram.setUniform("meshType", 1);
+        shaderProgram.setUniformUnsigned("meshType", 1);
         Map<String, ClientEntity> entityMeshes = world.getEntities();
 
         entityMeshes.forEach((id, clientEntity) -> {
@@ -390,7 +411,7 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void renderSolidChunks() {
-        shaderProgram.setUniform("meshType", 0);
+        shaderProgram.setUniformUnsigned("meshType", 0);
         shaderProgram.setUniform("model", IDENTITY_MATRIX);
 
         GL11C.glEnable(GL11C.GL_DEPTH_TEST);
@@ -399,27 +420,6 @@ public class OpenGLRenderer implements Renderer {
 
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, texture);
         int occluded = 0;
-
-        if (state.getItem("z-prepass", Boolean.class)) {
-            System.out.println("z-prepass");
-            zppShaderProgram.bind();
-            zppShaderProgram.setUniform("meshType", 0);
-            zppShaderProgram.setUniform("model", IDENTITY_MATRIX);
-
-            GL11C.glColorMask(false, false, false, false);
-
-            for (PositionedChunk positionedChunk : solidRenderedChunksInFrustum) {
-                Position3D position3D = positionedChunk.pos();
-                if (positionedChunk.chunk().getMesh().solidVAO() > 0 && positionedChunk.chunk().getMesh().solidIndexCount() > 0) {
-                    shaderProgram.setUniform("chunkPosition", position3D.x(), position3D.y(), position3D.z());
-                    renderVAO(positionedChunk.chunk().getMesh().solidVAO(), positionedChunk.chunk().getMesh().solidIndexCount());
-                }
-            }
-
-            GL11C.glDepthFunc(GL11C.GL_EQUAL);
-
-            GL11C.glColorMask(true, true, true, true);
-        }
 
         for (PositionedChunk positionedChunk : solidRenderedChunksInFrustum) {
             Position3D position3D = positionedChunk.pos();
@@ -469,7 +469,6 @@ public class OpenGLRenderer implements Renderer {
             return;
         }
 
-        // Resolve/scale the internal framebuffer to the window framebuffer.
         renderFramebuffer.bindForRead();
         GL30C.glBindFramebuffer(GL30C.GL_DRAW_FRAMEBUFFER, 0);
         GL30C.glBlitFramebuffer(
@@ -490,7 +489,6 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void updateInternalRenderSizeFromSettings() {
-        // Explicit render scale wins.
         int explicitW = settings.getIntSetting("render_width", 0);
         int explicitH = settings.getIntSetting("render_height", 0);
 
@@ -536,7 +534,7 @@ public class OpenGLRenderer implements Renderer {
         state.setItem("fps", (int) (1_000_000_000 / deltaTime));
     }
 
-    // TODO: Remove this
+    // TODO: Remove this replace it with GUI rendering
     private void renderDebugText() {
         if (state.getItem("seeDebug", Boolean.class)) {
             String leftDebugText = ConstantGameSettings.DEFAULT_WINDOW_TITLE + "\n" + String.format(
@@ -550,11 +548,6 @@ public class OpenGLRenderer implements Renderer {
                             \t- Should be loaded: %d
                             \t- Bufferized Chunks: %d
                             \t- Non-Bufferized Chunks: %d
-                            \t- Missing Chunks: %d
-                            Culling:
-                            \t- Total: %d,
-                            \t- Frustum: %d,
-                            \t- Geometry: %d,
                             Network:
                             \t- Inflight Requests: %d
                             \t- Chunk Requests Sent: %d
@@ -570,6 +563,32 @@ public class OpenGLRenderer implements Renderer {
                             \t- Queued Meshes: %d
                             \t- Queued Mesh Data's: %d
                             \t- Bufferizing Chunks: %d
+                            Lighting Worker Threads:
+                            \t- Thread 1: %d
+                            \t- Thread 2: %d
+                            \t- Thread 3: %d
+                            \t- Thread 4: %d
+                            \t- Thread 5: %d
+                            \t- Thread 6: %d
+                            \t- Thread 7: %d
+                            \t- Thread 8: %d
+                            \t- Thread 9: %d
+                            \t- Thread 10: %d
+                            \t- Thread 11: %d
+                            \t- Thread 12: %d
+                            Mesh Data Generator Worker Threads:
+                            \t- Thread 1: %d
+                            \t- Thread 2: %d
+                            \t- Thread 3: %d
+                            \t- Thread 4: %d
+                            \t- Thread 5: %d
+                            \t- Thread 6: %d
+                            \t- Thread 7: %d
+                            \t- Thread 8: %d
+                            \t- Thread 9: %d
+                            \t- Thread 10: %d
+                            \t- Thread 11: %d
+                            \t- Thread 12: %d
                             """,
                     state.getItem("fps", Integer.class),
                     camera.getX(),
@@ -583,10 +602,6 @@ public class OpenGLRenderer implements Renderer {
                     state.getItem("total_rendered_chunks", Integer.class),
                     state.getItem("bufferizing_chunk_count", Integer.class),
                     state.getItem("bufferizing_queue_size", Integer.class),
-                    state.getItem("missing_chunks", Integer.class),
-                    world.size() - solidRenderedChunks.size() + transparentRenderedChunks.size(),
-                    (solidRenderedChunks.size() - solidRenderedChunksInFrustum.size()) + (transparentRenderedChunks.size() - transparentRenderedChunksInFrustum.size()),
-                    state.getItem("geometry_culled_chunks", Integer.class),
                     world.chunkRequestCount(),
                     state.getItem("chunk_requests_sent", Integer.class),
                     state.getItem("chunk_requests_received", Integer.class),
@@ -598,7 +613,31 @@ public class OpenGLRenderer implements Renderer {
                     state.getItem("movement_mode", String.class),
                     0,
                     0,
-                    0
+                    0,
+                    state.getItem("Worker-0_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-1_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-2_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-3_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-4_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-5_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-6_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-7_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-8_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-9_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-10_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-11_queue_size_cmdlg", Integer.class),
+                    state.getItem("Worker-0_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-1_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-2_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-3_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-4_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-5_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-6_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-7_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-8_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-9_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-10_queue_size_mdg", Integer.class),
+                    state.getItem("Worker-11_queue_size_mdg", Integer.class)
             );
 
             GL11C.glPolygonMode(GL11C.GL_FRONT_AND_BACK, GL11C.GL_FILL);

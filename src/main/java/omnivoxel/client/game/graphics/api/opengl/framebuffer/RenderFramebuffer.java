@@ -7,8 +7,7 @@ import org.lwjgl.opengl.GL30C;
 import java.nio.ByteBuffer;
 
 /**
- * Minimal OpenGL 3.3 framebuffer wrapper for rendering the scene at an internal resolution
- * and blitting to the default framebuffer.
+ * Minimal OpenGL 3.3 framebuffer wrapper for rendering the scene at an internal resolution and blitting to the default framebuffer.
  */
 public final class RenderFramebuffer {
     private int fboId;
@@ -54,6 +53,7 @@ public final class RenderFramebuffer {
         depthStencilRboId = GL30C.glGenRenderbuffers();
         GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, depthStencilRboId);
         GL30C.glRenderbufferStorage(GL30C.GL_RENDERBUFFER, GL30C.GL_DEPTH24_STENCIL8, this.width, this.height);
+        // TODO: Be able to customize this
         GL30C.glFramebufferRenderbuffer(
                 GL30C.GL_FRAMEBUFFER,
                 GL30C.GL_DEPTH_STENCIL_ATTACHMENT,
@@ -135,5 +135,9 @@ public final class RenderFramebuffer {
         }
         width = 0;
         height = 0;
+    }
+
+    public int colorTexture() {
+        return colorTexId;
     }
 }

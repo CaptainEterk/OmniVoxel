@@ -26,6 +26,7 @@ layout(location = 1) in uint data2;
 layout(location = 2) in uint data3;
 layout(location = 3) in vec3 vPosition;
 layout(location = 4) in vec2 vUV;
+layout (location = 5) in vec2 aPos;
 
 out vec2 TexCoord;
 out float shadow;
@@ -35,6 +36,7 @@ out float ao;
 out vec3 vNormal;
 out vec3 faceNormal;
 flat out uint blockType;
+out vec2 skyUV;
 
 uniform uint meshType;
 
@@ -112,5 +114,8 @@ void main() {
         TexCoord = vUV;
 
         gl_Position = projection * cameraView * model * vec4(position, 1.0);
+    } else if (meshType == 2u) {
+        skyUV = aPos * 0.5 + 0.5;
+        gl_Position = vec4(aPos, 0.0, 1.0);
     }
 }

@@ -1,4 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.mesh;
 
-public interface MeshDataTask {
+import omnivoxel.util.thread.worker.WorkerTask;
+
+public interface MeshDataTask extends WorkerTask {
 }

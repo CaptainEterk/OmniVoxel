@@ -62,7 +62,7 @@ public class ChunkService {
         ctx.channel().writeAndFlush(buffer);
     }
 
-    public List<ChunkTask> serve(ChunkTask chunkTask) {
+    public List<ChunkTask> serve(ChunkTask chunkTask, int queueSize) {
         try {
             Position3D chunkPosition = new Position3D(chunkTask.x(), chunkTask.y(), chunkTask.z());
             byte[] chunk = world.getBytes(chunkPosition);

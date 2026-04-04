@@ -27,7 +27,6 @@ import java.util.*;
 public class ChunkMeshDataGenerator {
     private final ClientWorldDataService worldDataService;
     private final BlockService<BlockWithMesh> blockService;
-    private final BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
     private final ClientWorld world;
 
     public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world) {
@@ -268,6 +267,16 @@ public class ChunkMeshDataGenerator {
         Chunk<BlockWithMesh> posY = posYChunk.getChunkData();
         Chunk<BlockWithMesh> negZ = negZChunk.getChunkData();
         Chunk<BlockWithMesh> posZ = posZChunk.getChunkData();
+
+        if (negX == null ||
+                posX == null ||
+                negY == null ||
+                posY == null ||
+                negZ == null ||
+                posZ == null) {
+//            System.out.println("Shell chunk data is null");
+            return null;
+        }
 
         int W = ConstantGameSettings.CHUNK_WIDTH;
         int H = ConstantGameSettings.CHUNK_HEIGHT;
