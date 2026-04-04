@@ -172,7 +172,7 @@ public class PlayerController {
 
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
                 if (!rightMouseDown) {
-                    rightMouseDown = true;
+//                    rightMouseDown = true;
                     Position3D observedBlock = findObservedBlock(true);
                     if (observedBlock != null) {
                         int chunkX = observedBlock.x() >> 5;

@@ -14,7 +14,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object pack) throws InterruptedException {
+    public void channelRead(ChannelHandlerContext ctx, Object pack) {
         if (pack instanceof ByteBuf byteBuf) {
             int bPackageID = byteBuf.getInt(0);
             PackageID packageID = PackageID.values()[bPackageID];

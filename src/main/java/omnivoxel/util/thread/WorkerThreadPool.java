@@ -44,10 +44,9 @@ public class WorkerThreadPool<T extends WorkerTask> {
                 BlockingDeque<T> smallestQueue = null;
                 int smallestSize = Integer.MAX_VALUE;
                 for (WorkerThread<T> workerThread : workers) {
-                    BlockingDeque<T> queue = workerThread.taskQueue();
-                    int size = queue.size();
+                    int size = workerThread.size();
                     if (size < smallestSize) {
-                        smallestQueue = queue;
+                        smallestQueue = workerThread.taskQueue();
                         smallestSize = size;
                         if (size == 0) {
                             break;
@@ -82,6 +81,7 @@ public class WorkerThreadPool<T extends WorkerTask> {
         private final BiFunction<V, Integer, List<V>> taskHandler;
         private final AtomicBoolean running;
         private final Set<V> pendingTasks;
+        private final Queue<V> priorityQueue;
         private Thread thread;
 
         public WorkerThread(BlockingDeque<V> taskQueue, BiFunction<V, Integer, List<V>> taskHandler, AtomicBoolean running, Set<V> pendingTasks) {
@@ -89,12 +89,12 @@ public class WorkerThreadPool<T extends WorkerTask> {
             this.taskHandler = taskHandler;
             this.running = running;
             this.pendingTasks = pendingTasks;
+            this.priorityQueue = new ArrayDeque<>();
         }
 
         @Override
         public void run() {
             thread = Thread.currentThread();
-            Queue<V> priorityQueue = new ArrayDeque<>();
 
             try {
                 while (!Thread.currentThread().isInterrupted() && running.get()) {
@@ -135,6 +135,10 @@ public class WorkerThreadPool<T extends WorkerTask> {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+        }
+
+        public int size() {
+            return priorityQueue.size() + taskQueue.size();
         }
 
         public BlockingDeque<V> taskQueue() {

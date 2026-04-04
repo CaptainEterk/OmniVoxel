@@ -143,6 +143,5 @@ public final class Game {
         blockShapeCache.put(BlockShape.EMPTY_BLOCK_SHAPE_STRING, BlockShape.EMPTY_BLOCK_SHAPE);
 
         blockService.registerServerBlock(ServerBlock.AIR);
-        blockService.registerServerBlock(ServerBlock.VOID);
     }
 }

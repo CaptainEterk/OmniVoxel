@@ -40,6 +40,7 @@ public class ClientWorld {
     private final Set<String> queuedEntityMeshData;
     private final AtomicBoolean chunksChanged = new AtomicBoolean(true);
     private final Set<Position3D> chunkRequests;
+    private final Set<Position3D> inflightRequests;
     private final Map<Position2D, Chunk2D<Integer>> skylights;
     private Position3D[] cachedKeys = null;
     private Client client;
@@ -57,6 +58,7 @@ public class ClientWorld {
         entities = new ConcurrentHashMap<>();
         queuedEntityMeshData = ConcurrentHashMap.newKeySet();
         chunkRequests = ConcurrentHashMap.newKeySet();
+        inflightRequests = ConcurrentHashMap.newKeySet();
         skylights = new ConcurrentHashMap<>();
     }
 
@@ -119,6 +121,14 @@ public class ClientWorld {
         } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME && System.nanoTime() < endTime);
         state.setItem("bufferizing_queue_size", nonBufferizedChunks.size());
         return count;
+    }
+
+    public void receivedChunk(Position3D position3D) {
+        inflightRequests.remove(position3D);
+    }
+
+    public boolean isChunkInflight(Position3D position3D) {
+        return inflightRequests.contains(position3D);
     }
 
     public boolean bufferize(MeshGenerator meshGenerator) {

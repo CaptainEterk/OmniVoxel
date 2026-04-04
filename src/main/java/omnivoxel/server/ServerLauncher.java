@@ -35,7 +35,6 @@ public class ServerLauncher {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        Map<String, String> blockIDMap = new HashMap<>();
         Map<String, BlockShape> blockShapeCache = new HashMap<>();
 
         ServerWorld world = new ServerWorld();
@@ -43,7 +42,7 @@ public class ServerLauncher {
         try {
             // TODO: Make a wrapper class around clients
             Map<String, ServerClient> clients = new ConcurrentHashMap<>();
-            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, blockIDMap, new ServerWorldHandler(world, clients));
+            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients));
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
             ServerHandler serverHandler = new ServerHandler(server);

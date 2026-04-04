@@ -65,6 +65,9 @@ public class ByteBufUtils {
         String blockIDState = new String(idBytes);
 
         String[] ids = blockIDState.split("/");
+        if (ids.length == 1) {
+            ids = new String[]{ids[0], "default"};
+        }
         String modID = ids[0];
 
         final String blockID = modID.contains(":") ? modID.split(":", 2)[1] : modID;
@@ -106,9 +109,9 @@ public class ByteBufUtils {
             lightDiffusing[i] = byteBuf.getByte(readerIndex++);
         }
 
-        System.out.println("Loaded block: " + blockID + " " + Arrays.toString(lightEmitting) + " " + Arrays.toString(lightDiffusing));
+        System.out.println("Loaded block: " + blockIDState + " " + Arrays.toString(lightEmitting) + " " + Arrays.toString(lightDiffusing));
 
-//        shapeCache.put(blockShape.id(), blockShape);
+        shapeCache.put(blockShape.id(), blockShape);
 
         return new BlockMesh(ids[1]) {
             @Override

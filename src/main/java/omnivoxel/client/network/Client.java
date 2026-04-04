@@ -168,15 +168,21 @@ public final class Client {
                         int worldZ = byteBuf.getInt(index + 8);
                         index += 12;
 
-                        // Use floorDiv so negative world coordinates map to correct chunk indices
                         int chunkX = Math.floorDiv(worldX, ConstantGameSettings.CHUNK_WIDTH);
                         int chunkY = Math.floorDiv(worldY, ConstantGameSettings.CHUNK_HEIGHT);
                         int chunkZ = Math.floorDiv(worldZ, ConstantGameSettings.CHUNK_LENGTH);
 
-                        // Local block coordinates inside the chunk (handles negatives correctly)
                         int x = Math.floorMod(worldX, ConstantGameSettings.CHUNK_WIDTH);
                         int y = Math.floorMod(worldY, ConstantGameSettings.CHUNK_HEIGHT);
                         int z = Math.floorMod(worldZ, ConstantGameSettings.CHUNK_LENGTH);
+
+                        int highestY = byteBuf.getByte(index);
+                        Position2D chunkPosition2D = new Position2D(chunkX, chunkZ);
+                        Chunk2D<Integer> skylightChunk = world.getSkylightChunk(chunkPosition2D);
+                        if (skylightChunk != null) {
+                            world.setSkylightChunk(chunkPosition2D, skylightChunk.setBlock(x, z, highestY));
+                        }
+                        index += 4;
 
                         short paletteLength = byteBuf.getShort(index);
                         index += 2;
@@ -281,11 +287,13 @@ public final class Client {
         }
     }
 
-    private void receiveChunk(ByteBuf byteBuf) throws InterruptedException {
+    private void receiveChunk(ByteBuf byteBuf) {
         int x = byteBuf.getInt(8);
         int y = byteBuf.getInt(12);
         int z = byteBuf.getInt(16);
         Position3D position3D = new Position3D(x, y, z);
+
+        world.receivedChunk(position3D);
 
         lightingGenerators.submit(new LightingChunkMeshDataTask(byteBuf, position3D));
     }

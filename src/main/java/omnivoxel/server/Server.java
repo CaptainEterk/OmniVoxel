@@ -3,6 +3,7 @@ package omnivoxel.server;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.common.BlockShape;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
@@ -22,35 +23,32 @@ import omnivoxel.util.game.GameParser;
 import omnivoxel.util.game.nodes.ArrayGameNode;
 import omnivoxel.util.game.nodes.GameNode;
 import omnivoxel.util.game.nodes.ObjectGameNode;
-import omnivoxel.util.math.Position3D;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.thread.WorkerThreadPool;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
     private static final int HANDSHAKE_ID = 0;
     private static final int TPS = 20;
-    private static final Set<Position3D> positions = new HashSet<>();
     private final Map<String, ServerClient> clients;
     private final WorkerThreadPool<ChunkTask> workerThreadPool;
     private final ServerWorld world;
-    private final Map<String, String> blockIDMap;
     private final Map<String, BlockShape> blockShapeCache;
     private final ServerBlockService blockService;
     private final ServerWorldHandler worldHandler;
 
-    // TODO: Cleanup the server
-    private boolean done = false;
-
-    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, Map<String, String> blockIDMap, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
+    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
         this.clients = clients;
         this.world = world;
         this.blockShapeCache = blockShapeCache;
-        this.blockIDMap = blockIDMap;
         this.blockService = blockService;
         this.worldHandler = worldHandler;
 
@@ -100,7 +98,7 @@ public class Server {
         ctx.channel().writeAndFlush(buffer);
     }
 
-    public void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) throws InterruptedException {
+    public void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) {
         String clientID = ByteUtils.bytesToHex(byteBuf, 4, 32);
         switch (packageID) {
             case CHUNK_REQUEST:
@@ -111,7 +109,6 @@ public class Server {
                     int z = byteBuf.getInt(i * 3 * Integer.BYTES + 48);
                     workerThreadPool.submit(new ChunkTask(clients.get(clientID), x, y, z));
                 }
-                done = true;
                 byteBuf.release();
                 break;
             case REGISTER_CLIENT:
@@ -242,7 +239,6 @@ public class Server {
 
     private void sendQueuedClientPackets() {
         clients.forEach((id, serverClient) -> {
-            // Replaced blocks
             Queue<ServerBlockAndPosition> queuedReplacedBlocks = serverClient.getReplacedBlocks();
 
             int size = queuedReplacedBlocks.size();
@@ -254,11 +250,20 @@ public class Server {
                     break;
                 }
                 byte[] blockBytes = block.serverBlock().getBlockBytes();
-                byte[] out = new byte[12 + blockBytes.length];
+                byte[] out = new byte[16 + blockBytes.length];
+
+                int chunkX = Math.floorDiv(block.x(), ConstantGameSettings.CHUNK_WIDTH);
+                int chunkZ = Math.floorDiv(block.z(), ConstantGameSettings.CHUNK_LENGTH);
+
+                int x = Math.floorMod(block.x(), ConstantGameSettings.CHUNK_WIDTH);
+                int z = Math.floorMod(block.z(), ConstantGameSettings.CHUNK_LENGTH);
+
                 ByteUtils.addInt(out, block.x(), 0);
                 ByteUtils.addInt(out, block.y(), 4);
                 ByteUtils.addInt(out, block.z(), 8);
-                System.arraycopy(blockBytes, 0, out, 12, blockBytes.length);
+                int highestY = world.getHighestY(new Position2D(chunkX, chunkZ)).getBlock(x, z);
+                ByteUtils.addInt(out, highestY, 12);
+                System.arraycopy(blockBytes, 0, out, 16, blockBytes.length);
                 outBytes[i] = out;
                 byteCount += out.length;
             }

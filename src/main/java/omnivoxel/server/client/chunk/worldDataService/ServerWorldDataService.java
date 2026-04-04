@@ -324,16 +324,16 @@ public final class ServerWorldDataService {
                     int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
                     for (int worldY = blockMaxY; worldY > blockMinY; worldY--) {
                         boolean in = x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH && z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH;
-                        double height;
+                        double heightDensity;
                         if (cachedHeights && in) {
-                            height = 1;
+                            heightDensity = 1;
                             worldY = chunk2D.getBlock(x, z);
                         } else if (heightIsDensityFunction && worldY > chunkMinWorldY && worldY < chunkMaxWorldY) {
-                            height = densityCache[IndexCalculator.calculateBlockIndexPadded(x, worldY - chunkMinWorldY, z)];
+                            heightDensity = densityCache[IndexCalculator.calculateBlockIndexPadded(x, worldY - chunkMinWorldY, z)];
                         } else {
-                            height = heightFunction.evaluate(worldX, worldY, worldZ);
+                            heightDensity = heightFunction.evaluate(worldX, worldY, worldZ);
                         }
-                        if (height > 0) {
+                        if (heightDensity > 0) {
                             heights[IndexCalculator.calculateBlockIndexPadded2D(x, z)] = worldY;
                             if (!cachedHeights && in) {
                                 chunk2D = chunk2D.setBlock(x, z, worldY);
