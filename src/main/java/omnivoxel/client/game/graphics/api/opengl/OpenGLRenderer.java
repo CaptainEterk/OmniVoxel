@@ -150,13 +150,13 @@ public class OpenGLRenderer implements Renderer {
         this.shaderProgram.setUniform("fogColor", 0.0f, 0.61568627451f, 1.0f, 1.0f);
         this.shaderProgram.setUniform("fogFar", settings.getFloatSetting("render_distance", 100) - ConstantGameSettings.CHUNK_SIZE);
         this.shaderProgram.setUniform("fogNear", (settings.getFloatSetting("render_distance", 100) - ConstantGameSettings.CHUNK_SIZE) / 10 * 9);
-        this.shaderProgram.setUniformUnsigned("blockTexture", 0);
+        this.shaderProgram.setUniform("blockTexture", 0);
         this.shaderProgram.unbind();
 
         this.textShaderProgram.bind();
 
         this.textShaderProgram.setUniform("textColor", 1f, 1f, 1f);
-        this.textShaderProgram.setUniformUnsigned("textTexture", 0);
+        this.textShaderProgram.setUniform("textTexture", 0);
 
         this.textShaderProgram.unbind();
     }
