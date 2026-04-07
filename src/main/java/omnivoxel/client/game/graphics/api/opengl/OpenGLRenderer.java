@@ -42,7 +42,6 @@ import java.util.function.Consumer;
 public class OpenGLRenderer implements Renderer {
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f().identity();
     private static final int FPS_SAMPLES = 60;
-    private final Queue<Runnable> frameActions = new ArrayDeque<>();
     private final List<PositionedChunk> solidRenderedChunksInFrustum = new ArrayList<>();
     private final List<PositionedChunk> transparentRenderedChunksInFrustum = new ArrayList<>();
     // Client
@@ -63,7 +62,6 @@ public class OpenGLRenderer implements Renderer {
     private Window window;
     // Shader program
     private ShaderProgram shaderProgram;
-    private ShaderProgram zppShaderProgram;
     private ShaderProgram textShaderProgram;
     private ExecutorCollection<PeriodicTimeExecutor> periodicTimeExecutorCollection;
     // Resources
@@ -80,7 +78,6 @@ public class OpenGLRenderer implements Renderer {
     private List<DistanceChunk> transparentRenderedChunks;
     private Timer timer;
     private FullscreenQuad fullscreenQuad;
-    private ShaderProgramHandler shaderProgramHandler;
 
     public OpenGLRenderer(Logger logger, State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem) {
         this.logger = logger;
@@ -135,13 +132,11 @@ public class OpenGLRenderer implements Renderer {
 
         initOpenGL();
         initRenderTarget();
-
-        initFrameActions();
     }
 
     private void initShader() throws IOException {
         // TODO: Make the player able to use their shaders instead.
-        this.shaderProgramHandler = new ShaderProgramHandler();
+        ShaderProgramHandler shaderProgramHandler = new ShaderProgramHandler();
         shaderProgramHandler.addShaderProgram("default", Map.of("assets/shaders/default.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/default.frag", GL20.GL_FRAGMENT_SHADER));
         shaderProgramHandler.addShaderProgram("text", Map.of("assets/shaders/text.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/text.frag", GL20.GL_FRAGMENT_SHADER));
         String shaderProgramID = settings.getSetting("shader", "default");
@@ -193,6 +188,7 @@ public class OpenGLRenderer implements Renderer {
 
         // TODO: Make this stitch textures together and save texture coordinates in a string->(x, y) map.
         // TODO: Make the user be able to use texture packs instead (by loading it and stitching it together)
+        // TODO: Make this also be able to use texture arrays instead of texture atlases depending on OpenGL version (keep atlases around for older hardware).
         this.texture = TextureLoader.loadTexture("texture_atlas.png");
         this.TEMP_texture = TextureLoader.loadTexture("player_texture.png");
 
@@ -218,38 +214,38 @@ public class OpenGLRenderer implements Renderer {
         skyFramebuffer.init(renderWidth, renderHeight, renderFilter);
     }
 
-    private void initFrameActions() {
-        addFrameAction(periodicTimeExecutorCollection::execute);
+    private void frame() {
+        periodicTimeExecutorCollection.execute();
 
-        addFrameAction(this::updateTime);
-        addFrameAction(this::clearSkyFramebuffer);
-        addFrameAction(this::renderSky);
+        updateTime();
+        clearSkyFramebuffer();
+        renderSky();
 
-        addFrameAction(this::update);
+        update();
 
-        addFrameAction(this::renderEntities);
+        renderEntities();
 
-        addFrameAction(this::calculateFrustumChunks);
+        calculateFrustumChunks();
 
-        addFrameAction(this::renderSolidChunks);
-        addFrameAction(this::renderTransparentChunks);
+    renderSolidChunks();
+        renderTransparentChunks();
 
-        addFrameAction(this::bufferizeChunks);
+        bufferizeChunks();
 
-        addFrameAction(this::blitToWindowFramebuffer);
+        blitToWindowFramebuffer();
 
 //        addFrameAction(this::prepareGuiRendering);
 //        addFrameAction(this.menuSystem::tick);
 //        addFrameAction(this::resetGuiRendering);
-        addFrameAction(this::renderDebugText);
-        addFrameAction(this::openGLStateReset);
+        renderDebugText();
+        openGLStateReset();
 
-        addFrameAction(this::cleanupOpenGL);
+        cleanupOpenGL();
 
-        addFrameAction(this::updateState);
+        updateState();
 
-        addFrameAction(client::tick);
-        addFrameAction(world::tick);
+        client.tick();
+        world.tick();
     }
 
     private void updateTime() {
@@ -748,30 +744,21 @@ public class OpenGLRenderer implements Renderer {
     }
 
     @Override
-    public void addFrameAction(Runnable action) {
-        frameActions.add(action);
-    }
-
-    @Override
     public boolean shouldClose() {
         return window.shouldClose();
     }
 
     @Override
     public void renderFrame() {
-        // Run the context tasks
         Consumer<Window> task;
         while ((task = contextTasks.poll()) != null) {
             task.accept(window);
         }
 
-        // Run all frameActions
-        frameActions.forEach(Runnable::run);
+        frame();
 
-        // Swap the framebuffers
         GLFW.glfwSwapBuffers(window.window());
 
-        // Poll for window events.
         GLFW.glfwPollEvents();
     }
 

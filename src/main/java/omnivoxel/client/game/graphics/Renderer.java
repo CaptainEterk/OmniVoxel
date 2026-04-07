@@ -9,8 +9,6 @@ public interface Renderer {
 
     boolean shouldClose();
 
-    void addFrameAction(Runnable action);
-
     void renderFrame();
 
     void cleanup();
