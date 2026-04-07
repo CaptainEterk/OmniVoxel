@@ -144,7 +144,8 @@ public class OpenGLRenderer implements Renderer {
         this.shaderProgramHandler = new ShaderProgramHandler();
         shaderProgramHandler.addShaderProgram("default", Map.of("assets/shaders/default.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/default.frag", GL20.GL_FRAGMENT_SHADER));
         shaderProgramHandler.addShaderProgram("text", Map.of("assets/shaders/text.vert", GL20.GL_VERTEX_SHADER, "assets/shaders/text.frag", GL20.GL_FRAGMENT_SHADER));
-        this.shaderProgram = shaderProgramHandler.getShaderProgram("default");
+        String shaderProgramID = settings.getSetting("shader", "default");
+        this.shaderProgram = shaderProgramHandler.getShaderProgram(shaderProgramID) == null ? shaderProgramHandler.getShaderProgram("default") : shaderProgramHandler.getShaderProgram(shaderProgramID);
         this.textShaderProgram = shaderProgramHandler.getShaderProgram("text");
         this.shaderProgram.bind();
         this.shaderProgram.setUniform("fogColor", 0.0f, 0.61568627451f, 1.0f, 1.0f);

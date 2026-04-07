@@ -29,7 +29,8 @@ public class ConstantGameSettings {
             render_scale=1.0
             render_filter=nearest
             sensitivity=2f
-            frustum_bias=10""";
+            frustum_bias=10
+            shader=default""";
 
     public static final String DATA_LOCATION = "";
     public static final String LOG_LOCATION = FILE_LOCATION + ".logs/";
