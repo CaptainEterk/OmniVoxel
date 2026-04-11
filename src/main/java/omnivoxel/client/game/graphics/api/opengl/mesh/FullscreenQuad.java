@@ -15,10 +15,10 @@ public class FullscreenQuad {
         // Positions (NDC) + UV
         float[] vertices = {
                 // pos      // uv
-                -1f, -1f,   0f, 0f,
-                 1f, -1f,   1f, 0f,
-                 1f,  1f,   1f, 1f,
-                -1f,  1f,   0f, 1f
+                -1f, -1f, 0f, 0f,
+                1f, -1f, 1f, 0f,
+                1f, 1f, 1f, 1f,
+                -1f, 1f, 0f, 1f
         };
 
         int[] indices = {

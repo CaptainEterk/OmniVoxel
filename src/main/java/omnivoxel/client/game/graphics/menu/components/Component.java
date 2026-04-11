@@ -4,5 +4,6 @@ import omnivoxel.client.game.graphics.menu.position.ComponentPosition;
 
 public interface Component {
     boolean isHidden();
+
     ComponentPosition position();
 }

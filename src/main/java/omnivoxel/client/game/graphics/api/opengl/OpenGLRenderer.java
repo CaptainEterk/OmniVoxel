@@ -226,7 +226,7 @@ public class OpenGLRenderer implements Renderer {
 
         calculateFrustumChunks();
 
-    renderSolidChunks();
+        renderSolidChunks();
         renderTransparentChunks();
 
         bufferizeChunks();

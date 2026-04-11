@@ -34,6 +34,8 @@ import java.util.Map;
 import java.util.Set;
 
 public final class MeshDataGenerator {
+    private static final BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+    private static BlockWithMesh AIR = null;
     private final ChunkMeshDataGenerator chunkMeshDataGenerator;
     private final EntityMeshDataGenerator entityMeshDataGenerator;
     private final ClientWorld world;
@@ -92,9 +94,6 @@ public final class MeshDataGenerator {
             throw new RuntimeException("Error creating buffer", e);
         }
     }
-
-    private static final BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
-    private static BlockWithMesh AIR = null;
 
     public static BlockMesh[] unpackChunkPadded(ByteBuf byteBuf, Position3D pos, ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world) {
         if (AIR == null) {

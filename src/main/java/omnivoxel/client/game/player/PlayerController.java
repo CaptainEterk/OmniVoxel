@@ -1,8 +1,8 @@
 package omnivoxel.client.game.player;
 
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.camera.Camera;
-import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.client.game.input.KeyInput;
 import omnivoxel.client.game.input.MouseButtonInput;
@@ -89,6 +89,14 @@ public class PlayerController {
         blockHitbox = new IDCache<>(new HashMap<>());
         blockHitboxCache = new IDCache<>(new HashMap<>());
         hitbox = new Hitbox(-0.4f, -1.5f, -0.4f, 0.4f, 0.4f, 0.4f, 2, 2, 3);
+    }
+
+    private static double intBound(double s, double ds) {
+        if (ds > 0) {
+            return (Math.floor(s + 1) - s) / ds;
+        } else {
+            return (s - Math.floor(s)) / -ds;
+        }
     }
 
     private boolean isSolidAt(double wx, double wy, double wz) {
@@ -329,14 +337,6 @@ public class PlayerController {
             }
         }
         return null;
-    }
-
-    private static double intBound(double s, double ds) {
-        if (ds > 0) {
-            return (Math.floor(s + 1) - s) / ds;
-        } else {
-            return (s - Math.floor(s)) / -ds;
-        }
     }
 
     private void handleMovement(double deltaTime, boolean collide) {

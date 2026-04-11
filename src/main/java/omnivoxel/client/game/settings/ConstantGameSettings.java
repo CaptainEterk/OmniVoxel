@@ -10,7 +10,7 @@ public class ConstantGameSettings {
     public static final int PADDED_LENGTH = ConstantGameSettings.CHUNK_LENGTH + 2;
     public static final int BLOCKS_IN_CHUNK_PADDED = PADDED_WIDTH * PADDED_HEIGHT * PADDED_LENGTH;
     public static final int BLOCKS_IN_CHUNK = ((ConstantGameSettings.CHUNK_WIDTH) * (ConstantGameSettings.CHUNK_LENGTH) * (ConstantGameSettings.CHUNK_HEIGHT));
-    public static final int BLOCKS_IN_CHUNK_2D = ConstantGameSettings.CHUNK_WIDTH*ConstantGameSettings.CHUNK_LENGTH;
+    public static final int BLOCKS_IN_CHUNK_2D = ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH;
 
     public static final String DEFAULT_WINDOW_TITLE = "OmniVoxel v0.8.1-alpha";
 

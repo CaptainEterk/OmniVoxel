@@ -6,8 +6,8 @@ import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3D;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3DProvider;
-import omnivoxel.util.log.Logger;
 import omnivoxel.util.game.nodes.*;
+import omnivoxel.util.log.Logger;
 
 import java.util.Arrays;
 import java.util.Map;
