@@ -26,7 +26,6 @@ import omnivoxel.client.network.Client;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.util.executor.ExecutorCollection;
-import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.time.PeriodicTimeExecutor;
 import omnivoxel.util.time.Timer;
@@ -56,7 +55,6 @@ public class OpenGLRenderer implements Renderer {
     private final AtomicBoolean gameRunning;
     private final Queue<Consumer<Window>> contextTasks;
     private final MenuSystem menuSystem;
-    private final Logger logger;
     // TODO: Remove all TEMP
     // Window
     private Window window;
@@ -79,8 +77,7 @@ public class OpenGLRenderer implements Renderer {
     private Timer timer;
     private FullscreenQuad fullscreenQuad;
 
-    public OpenGLRenderer(Logger logger, State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem) {
-        this.logger = logger;
+    public OpenGLRenderer(State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem) {
         this.state = state;
         this.settings = settings;
         this.textRenderer = textRenderer;
@@ -96,7 +93,7 @@ public class OpenGLRenderer implements Renderer {
     @Override
     public void init() throws IOException {
         // Creates an OpenGL window
-        this.window = WindowFactory.createWindow(settings.getIntSetting("width", 500), settings.getIntSetting("height", 500), ConstantGameSettings.DEFAULT_WINDOW_TITLE, logger, contextTasks);
+        this.window = WindowFactory.createWindow(settings.getIntSetting("width", 500), settings.getIntSetting("height", 500), ConstantGameSettings.DEFAULT_WINDOW_TITLE, contextTasks);
 
         initShader();
 
@@ -204,6 +201,7 @@ public class OpenGLRenderer implements Renderer {
         GL11C.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL11C.glClearDepth(1.0f);
         GL11C.glCullFace(GL11C.GL_BACK);
+        OpenGLChecks.checkError("initialize OpenGL state");
     }
 
     private void initRenderTarget() {
@@ -212,6 +210,7 @@ public class OpenGLRenderer implements Renderer {
         renderFramebuffer.init(renderWidth, renderHeight, renderFilter);
         skyFramebuffer = new RenderFramebuffer();
         skyFramebuffer.init(renderWidth, renderHeight, renderFilter);
+        OpenGLChecks.checkError("initialize render targets");
     }
 
     private void frame() {
@@ -241,6 +240,7 @@ public class OpenGLRenderer implements Renderer {
         openGLStateReset();
 
         cleanupOpenGL();
+        OpenGLChecks.checkError("finish frame");
 
         updateState();
 
@@ -459,6 +459,7 @@ public class OpenGLRenderer implements Renderer {
         GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, 0);
         GL30C.glBindVertexArray(0);
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, 0);
+        OpenGLChecks.checkError("cleanup OpenGL bindings");
     }
 
     private void blitToWindowFramebuffer() {

@@ -14,6 +14,7 @@ import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
+import omnivoxel.util.log.Logger;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -62,7 +63,7 @@ public class ServerLauncher {
                     });
 
             ChannelFuture future = serverBootstrap.bind(IP, PORT).sync();
-            ServerLogger.logger.info("Server started at " + IP + ":" + PORT);
+            Logger.info("Server started at " + IP + ":" + PORT);
 
             future.channel().closeFuture().sync();
         } catch (InterruptedException e) {

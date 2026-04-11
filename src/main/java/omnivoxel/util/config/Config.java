@@ -1,5 +1,7 @@
 package omnivoxel.util.config;
 
+import omnivoxel.util.log.Logger;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -33,7 +35,7 @@ public final class Config {
         try {
             configFile.write(properties);
         } catch (IOException e) {
-            System.err.println("Failed to save config: " + e.getMessage());
+            Logger.error(Logger.Priority.HIGH, "Failed to save config: " + e.getMessage());
         }
     }
 

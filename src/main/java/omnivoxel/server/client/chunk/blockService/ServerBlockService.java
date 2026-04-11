@@ -1,7 +1,7 @@
 package omnivoxel.server.client.chunk.blockService;
 
-import omnivoxel.server.ServerLogger;
 import omnivoxel.server.client.block.ServerBlock;
+import omnivoxel.util.log.Logger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,7 +17,7 @@ public final class ServerBlockService {
         ServerBlock serverBlock = serverBlocksById.get(id);
         if (serverBlock == null) {
             serverBlocksById.put(id, ServerBlock.AIR);
-            ServerLogger.logger.warn("Unregistered block: " + id);
+            Logger.warn("Unregistered block: " + id);
         }
 
         return serverBlock;
@@ -28,7 +28,7 @@ public final class ServerBlockService {
     }
 
     public void registerServerBlock(ServerBlock serverBlock) {
-        ServerLogger.logger.debug("Registered block: " + serverBlock.id());
+        Logger.debug("Registered block: " + serverBlock.id());
         serverBlocksById.put(serverBlock.id(), serverBlock);
     }
 }

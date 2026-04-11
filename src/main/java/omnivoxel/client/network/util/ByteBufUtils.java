@@ -6,6 +6,7 @@ import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
+import omnivoxel.util.log.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -109,7 +110,7 @@ public class ByteBufUtils {
             lightDiffusing[i] = byteBuf.getByte(readerIndex++);
         }
 
-        System.out.println("Loaded block: " + blockIDState + " " + Arrays.toString(lightEmitting) + " " + Arrays.toString(lightDiffusing));
+        Logger.info("Registering block: " + blockIDState + " " + Arrays.toString(lightEmitting) + " " + Arrays.toString(lightDiffusing));
 
         shapeCache.put(blockShape.id(), blockShape);
 

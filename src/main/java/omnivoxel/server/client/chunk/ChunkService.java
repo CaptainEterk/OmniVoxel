@@ -72,7 +72,10 @@ public class ChunkService {
             }
 
             if (chunkTask.serverClient() != null) {
-                sendHeightBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.z(), world.getHighestY(new Position2D(chunkTask.x(), chunkTask.z())));
+                Chunk2D<Integer> heights = world.getHighestY(new Position2D(chunkTask.x(), chunkTask.z()));
+                if (heights != null) {
+                    sendHeightBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.z(), heights);
+                }
                 sendChunkBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.y(), chunkTask.z(), chunk);
                 // TODO: Only send heights once for a column, maybe a new packet
             }

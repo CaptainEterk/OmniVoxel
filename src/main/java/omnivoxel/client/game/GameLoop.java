@@ -12,9 +12,7 @@ import omnivoxel.client.game.graphics.menu.position.ComponentPositionOrigin;
 import omnivoxel.client.game.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
-import omnivoxel.client.launcher.ClientInitializer;
 import omnivoxel.client.network.Client;
-import omnivoxel.util.log.Logger;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
@@ -43,7 +41,6 @@ public final class GameLoop {
         this.mainComponent = new LayoutComponent(ComponentPositionOrigin.TOP_LEFT);
         TextRenderer textRenderer = new TextRenderer();
         this.renderer = new OpenGLRenderer(
-                new Logger("Game Loop", ClientInitializer.SHOW_LOGS),
                 state,
                 settings,
                 textRenderer,

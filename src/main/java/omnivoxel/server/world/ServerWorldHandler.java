@@ -1,10 +1,10 @@
 package omnivoxel.server.world;
 
 import omnivoxel.client.game.settings.ConstantGameSettings;
-import omnivoxel.server.ServerLogger;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.block.ServerBlockAndPosition;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
@@ -50,7 +50,7 @@ public class ServerWorldHandler {
 
                 clients.forEach((id, serverClient) -> serverClient.queueReplacedBlocks(new ServerBlockAndPosition(worldX, worldY, worldZ, block)));
             } else {
-                ServerLogger.logger.debug("Unable to set block (%d, %d, %d)".formatted(worldX, worldY, worldZ));
+                Logger.debug("Unable to set block (%d, %d, %d)".formatted(worldX, worldY, worldZ));
             }
         }
     }

@@ -21,15 +21,13 @@ public class ClientLauncher implements Runnable {
     private static final int VERSION_ID = 0;
     private static final String HOST = "172.28.217.111";
     private static final int PORT = 1515;
-    private final Logger logger;
 
     private final CountDownLatch connected;
     private final byte[] clientID;
 
     private final Client client;
 
-    public ClientLauncher(Logger logger, CountDownLatch connected, Client client) {
-        this.logger = logger;
+    public ClientLauncher(CountDownLatch connected, Client client) {
         this.connected = connected;
         this.client = client;
         clientID = client.getClientID();
@@ -74,7 +72,7 @@ public class ClientLauncher implements Runnable {
             client.setGroup(group);
             connected.countDown();
 
-            logger.info("Connected to server at " + HOST + ":" + PORT + " with clientID " + ByteUtils.bytesToHex(clientID));
+            Logger.info("Connected to server at " + HOST + ":" + PORT + " with clientID " + ByteUtils.bytesToHex(clientID));
 
             sendBytes(future, PackageID.REGISTER_CLIENT, String.format("%-8s", VERSION_ID).getBytes(), clientID);
 

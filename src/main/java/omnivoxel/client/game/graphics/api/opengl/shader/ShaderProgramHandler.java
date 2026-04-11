@@ -1,6 +1,7 @@
 package omnivoxel.client.game.graphics.api.opengl.shader;
 
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.util.log.Logger;
 import org.lwjgl.opengl.GL30C;
 
 import java.io.IOException;
@@ -41,8 +42,8 @@ public class ShaderProgramHandler {
             glShaderSource(shaderID, contents);
             glCompileShader(shaderID);
             if (glGetShaderi(shaderID, GL_COMPILE_STATUS) == GL_FALSE) {
-                System.err.println("Error compiling shader: " + path);
-                System.err.println(glGetShaderInfoLog(shaderID, 1024 * 8));
+                Logger.error(Logger.Priority.HIGH, "Error compiling shader: " + path);
+                Logger.error(Logger.Priority.HIGH, glGetShaderInfoLog(shaderID, 1024 * 8));
                 throw new IOException("Shader compilation failed.");
             }
 
@@ -54,7 +55,7 @@ public class ShaderProgramHandler {
         glLinkProgram(programID);
 
         if (glGetProgrami(programID, GL_LINK_STATUS) == GL_FALSE) {
-            System.err.println("Error linking shader program: " + glGetProgramInfoLog(programID, 1024));
+            Logger.error(Logger.Priority.HIGH, "Error linking shader program: " + glGetProgramInfoLog(programID, 1024));
             throw new IOException("Program linking failed.");
         }
 
@@ -64,8 +65,7 @@ public class ShaderProgramHandler {
         glValidateProgram(programID);
 
         if (glGetProgrami(programID, GL_VALIDATE_STATUS) == GL_FALSE) {
-            System.err.println(
-                    "Error validating shader program: " + glGetProgramInfoLog(programID, 1024));
+            Logger.error(Logger.Priority.HIGH, "Error validating shader program: " + glGetProgramInfoLog(programID, 1024));
             throw new IOException("Program validation failed.");
         }
 

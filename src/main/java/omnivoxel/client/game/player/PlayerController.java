@@ -17,6 +17,7 @@ import omnivoxel.client.network.request.BlockReplaceRequest;
 import omnivoxel.client.network.request.PlayerUpdateRequest;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.util.cache.IDCache;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
@@ -193,7 +194,7 @@ public class PlayerController {
                         if (!blockHitbox.isColliding(observedBlock.x(), observedBlock.y(), observedBlock.z(), hitbox)) {
                             client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:red_light_block/default")));
                         } else {
-                            System.out.println("Cannot place block inside player!");
+                            Logger.warn(Logger.Priority.NORMAL, "Cannot place block inside player!");
                         }
                     }
                 }

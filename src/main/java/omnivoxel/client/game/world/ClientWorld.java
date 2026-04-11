@@ -1,6 +1,7 @@
 package omnivoxel.client.game.world;
 
 import omnivoxel.client.game.entity.ClientEntity;
+import omnivoxel.client.game.graphics.api.opengl.OpenGLChecks;
 import omnivoxel.client.game.graphics.api.opengl.mesh.chunk.ChunkMesh;
 import omnivoxel.client.game.graphics.api.opengl.mesh.definition.EntityMeshDataDefinition;
 import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ChunkMeshData;
@@ -264,6 +265,7 @@ public class ClientWorld {
             GL30C.glDeleteBuffers(mesh.transparentEBO());
 
             mesh.meshData().cleanup();
+            OpenGLChecks.checkError("delete chunk mesh");
         }
     }
 

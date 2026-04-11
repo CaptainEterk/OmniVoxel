@@ -46,7 +46,6 @@ public final class Client {
     private final Map<String, ClientEntity> entities;
     private final byte[] clientID;
     private final ClientWorldDataService worldDataService;
-    private final Logger logger;
     private final AtomicBoolean clientRunning = new AtomicBoolean(true);
     private final Queue<Position3D> queuedChunkTasks = new LinkedBlockingDeque<>();
     private final ClientWorld world;
@@ -57,10 +56,9 @@ public final class Client {
     private Channel channel;
     private long lastFlushedTime = System.currentTimeMillis();
 
-    public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world, BlockService<BlockWithMesh> blockService) {
+    public Client(byte[] clientID, ClientWorldDataService worldDataService, ClientWorld world, BlockService<BlockWithMesh> blockService) {
         this.clientID = clientID;
         this.worldDataService = worldDataService;
-        this.logger = logger;
         this.world = world;
         this.blockService = blockService;
         entities = new ConcurrentHashMap<>();
@@ -68,11 +66,11 @@ public final class Client {
 
     private static void sendDoubles(Channel channel, PackageID id, byte[] clientID, double... numbers) {
         if (channel == null) {
-            System.err.println("[ERROR] Channel is null! Client may not be connected.");
+            Logger.error(Logger.Priority.HIGH, "Channel is null! Client may not be connected.");
             return;
         }
         if (!channel.isActive()) {
-            System.out.println("[ERROR] Channel is closed! Cannot send data.");
+            Logger.error(Logger.Priority.HIGH, "Channel is closed. Cannot send data.");
             return;
         }
 
@@ -88,7 +86,7 @@ public final class Client {
     private static void flush(Channel channel, ByteBuf byteBuf) {
         channel.writeAndFlush(byteBuf).addListener(f -> {
             if (!f.isSuccess()) {
-                System.err.println("[ERROR] Failed: " + f.cause());
+                Logger.error(Logger.Priority.HIGH, "Failed to send packet: " + f.cause());
                 f.cause().printStackTrace();
             }
         });
@@ -109,12 +107,12 @@ public final class Client {
 
     private void sendInts(Channel channel, PackageID id, byte[] clientID, int... numbers) {
         if (channel == null) {
-            logger.error(String.format("Failed to send PackageID.%s because channel is null. Client may not be connected.", id.toString()));
+            Logger.error(String.format("Failed to send PackageID.%s because channel is null. Client may not be connected.", id.toString()));
             return;
         }
         if (!channel.isActive()) {
             close();
-            logger.error("Channel is closed. Cannot send data.");
+            Logger.error("Channel is closed. Cannot send data.");
             return;
         }
 
@@ -143,7 +141,7 @@ public final class Client {
                 case CLOSE:
                     String playerID = ByteUtils.bytesToHex(ByteUtils.getBytes(byteBuf, 8, 32));
                     entities.remove(playerID);
-                    logger.info("Removed Player: " + playerID);
+                    Logger.info("Removed Player: " + playerID);
                     world.removeEntity(playerID);
                     byteBuf.release();
                     break;
@@ -229,7 +227,7 @@ public final class Client {
                     byteBuf.release();
                     break;
                 default:
-                    System.err.println("Unexpected package key: " + packageID);
+                    Logger.error(Logger.Priority.HIGH, "Unexpected package key: " + packageID);
                     byteBuf.release();
                     break;
             }
@@ -253,7 +251,7 @@ public final class Client {
         String entityID = ByteUtils.bytesToHex(entityIDBytes);
         ClientEntity entity = entities.get(entityID);
         if (entity == null) {
-            System.err.println("Received update for unknown entity: " + entityID);
+            Logger.warn(Logger.Priority.NORMAL, "Received update for unknown entity: " + entityID);
             return;
         }
 
@@ -407,7 +405,7 @@ public final class Client {
                 sendBytes(channel, PackageID.REPLACE_BLOCK, clientID, bytes);
                 break;
             default:
-                System.err.println("Unexpected request type: " + request.getType());
+                Logger.error(Logger.Priority.HIGH, "Unexpected request type: " + request.getType());
         }
     }
 
@@ -424,7 +422,7 @@ public final class Client {
     }
 
     public void close() {
-        logger.debug("Disconnecting from server...");
+        Logger.debug("Disconnecting from server...");
         sendRequest(new CloseRequest());
         try {
             if (channel != null) {
@@ -442,7 +440,7 @@ public final class Client {
             lightingGenerators.awaitTermination();
             meshDataGenerators.awaitTermination();
         }
-        logger.info("Client disconnected");
+        Logger.info("Client disconnected");
     }
 
     public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, State state) {

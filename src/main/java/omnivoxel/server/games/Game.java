@@ -2,11 +2,11 @@ package omnivoxel.server.games;
 
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.common.BlockShape;
-import omnivoxel.server.ServerLogger;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3D;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3DProvider;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.game.nodes.*;
 
 import java.util.Arrays;
@@ -40,7 +40,7 @@ public final class Game {
                 .mapToDouble(gameNode -> checkGameNodeType(gameNode, DoubleGameNode.class).value())
                 .toArray();
         double firstOctave = checkGameNodeType(noise.object().get("first_octave"), DoubleGameNode.class).value();
-        ServerLogger.logger.debug("Registered noise: " + id);
+        Logger.debug("Registered noise: " + id);
         Noise3DProvider.registerNoise(id, new Noise3D(octaves, (int) firstOctave, seed));
     }
 

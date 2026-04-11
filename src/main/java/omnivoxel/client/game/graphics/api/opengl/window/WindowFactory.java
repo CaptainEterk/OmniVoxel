@@ -15,11 +15,11 @@ import java.util.Queue;
 import java.util.function.Consumer;
 
 public final class WindowFactory {
-    public static Window createWindow(int width, int height, String title, Logger logger, Queue<Consumer<Window>> contextTasks) throws RuntimeException {
+    public static Window createWindow(int width, int height, String title, Queue<Consumer<Window>> contextTasks) throws RuntimeException {
         // Set up an error callback. The default implementation will print the error message in System.err.
         GLFW.glfwSetErrorCallback((error, description) -> {
             String msg = GLFWErrorCallback.getDescription(description);
-            logger.error(String.format("GLFW Error %d: %s", error, msg));
+            Logger.error(String.format("GLFW Error %d: %s", error, msg));
         });
 
         // Initialize GLFW. Most GLFW functions will not work before doing this.
@@ -88,9 +88,7 @@ public final class WindowFactory {
             GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION, GLFW.GLFW_TRUE);
         }
 
-        if (logger != null) {
-            logger.debug(String.format("OpenGL/GLFW window created - title \"%s\" - position (%d, %d) - scale (%d, %d) - key %d", title, x, y, width, height, window));
-        }
+        Logger.debug(String.format("OpenGL/GLFW window created - title \"%s\" - position (%d, %d) - scale (%d, %d) - key %d", title, x, y, width, height, window));
 
         String osName = System.getProperty("os.name").toLowerCase();
         if (!osName.contains("mac")) {

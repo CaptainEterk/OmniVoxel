@@ -10,6 +10,7 @@ import omnivoxel.client.game.graphics.light.ChunkLightingData;
 import omnivoxel.client.game.graphics.light.channel.GeneralLightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
+import omnivoxel.client.game.graphics.light.channel.SingleLightChannel;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
@@ -304,14 +305,18 @@ public class ChunkMeshDataLightingGenerator {
 
                 int x = IndexCalculator.x(idx);
                 int y = IndexCalculator.y(idx);
-                    int z = IndexCalculator.z(idx);
+                int z = IndexCalculator.z(idx);
 
-                    if (lvl > lightChannel[idx]) {
-                        lightChannel[idx] = lvl;
-                        chunkLights.add(x, y, z, lvl);
-                    }
+                if (lvl > lightChannel[idx]) {
+                    lightChannel[idx] = lvl;
+                    chunkLights.add(x, y, z, lvl);
                 }
             }
+        }
+
+        if (chunkLights.isEmpty()) {
+            return new LightChannelAndMeshTasks(new SingleLightChannel((byte) 0), null);
+        }
 
         floodFill(lightChannel, clientWorldChunk.getChunkData(), channel);
 

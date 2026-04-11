@@ -23,6 +23,7 @@ import omnivoxel.util.game.GameParser;
 import omnivoxel.util.game.nodes.ArrayGameNode;
 import omnivoxel.util.game.nodes.GameNode;
 import omnivoxel.util.game.nodes.ObjectGameNode;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.thread.WorkerThreadPool;
 
@@ -119,7 +120,7 @@ public class Server {
                 ServerClient client = clients.get(clientID);
                 clients.remove(clientID);
                 clients.values().forEach(player -> sendBytes(player.getCTX(), PackageID.CLOSE, client.getPlayerID()));
-                ServerLogger.logger.debug("Client Disconnected: " + clientID + " playerID: " + ByteUtils.bytesToHex(client.getPlayerID()));
+                Logger.debug("Client Disconnected: " + clientID + " playerID: " + ByteUtils.bytesToHex(client.getPlayerID()));
                 byteBuf.release();
                 break;
             case PLAYER_UPDATE:
@@ -158,7 +159,7 @@ public class Server {
                 byteBuf.release();
                 break;
             default:
-                System.err.println("Unknown package key: " + packageID);
+                Logger.error(Logger.Priority.HIGH, "Unknown package key: " + packageID);
         }
     }
 
@@ -185,11 +186,11 @@ public class Server {
 
             clients.put(clientID, serverClient);
 
-            ServerLogger.logger.debug("Client Connected: " + clientID + " playerID: " + ByteUtils.bytesToHex(serverClient.getPlayerID()));
+            Logger.debug("Client Connected: " + clientID + " playerID: " + ByteUtils.bytesToHex(serverClient.getPlayerID()));
         } else {
-            System.err.println("Client has an incompatible version, disconnecting...");
-            System.err.println("\tClient: " + Arrays.toString(versionID));
-            System.err.println("\tServer: " + Arrays.toString(String.format("%-8s", HANDSHAKE_ID).getBytes()));
+            Logger.error(Logger.Priority.HIGH, "Client has an incompatible version, disconnecting...");
+            Logger.error(Logger.Priority.HIGH, "\tClient: " + Arrays.toString(versionID));
+            Logger.error(Logger.Priority.HIGH, "\tServer: " + Arrays.toString(String.format("%-8s", HANDSHAKE_ID).getBytes()));
             ctx.close();
         }
     }
@@ -229,7 +230,7 @@ public class Server {
                         break;
                     }
                 } else {
-                    System.err.println("Tick took too long: " + (elapsed / 1_000_000.0) + " ms");
+                    Logger.warn(Logger.Priority.NORMAL, "Tick took too long: " + (elapsed / 1_000_000.0) + " ms");
                 }
             }
         } catch (InterruptedException e) {
@@ -247,6 +248,7 @@ public class Server {
             for (int i = 0; i < size; i++) {
                 ServerBlockAndPosition block = queuedReplacedBlocks.poll();
                 if (block == null) {
+                    Logger.warn(Logger.Priority.NORMAL, "Block was null when polling from queue, this should not happen");
                     break;
                 }
                 byte[] blockBytes = block.serverBlock().getBlockBytes();

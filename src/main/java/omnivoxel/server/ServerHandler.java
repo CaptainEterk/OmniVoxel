@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import omnivoxel.util.log.Logger;
 
 @ChannelHandler.Sharable
 public class ServerHandler extends ChannelInboundHandlerAdapter {
@@ -21,7 +22,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
             server.handlePackage(ctx, packageID, byteBuf);
         } else {
-            System.out.println("Unknown package: " + pack);
+            Logger.error(Logger.Priority.HIGH, "Unknown package: " + pack);
         }
     }
 

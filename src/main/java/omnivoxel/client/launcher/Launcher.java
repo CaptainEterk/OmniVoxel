@@ -35,6 +35,7 @@ public class Launcher {
 
         ClientInitializer.SHOW_LOGS = !args.contains("--no-logs");
         ClientInitializer.init();
+        Logger.setShowLogs(ClientInitializer.SHOW_LOGS);
 
         SecureRandom secureRandom = new SecureRandom();
         byte[] clientID = new byte[32];
@@ -50,12 +51,10 @@ public class Launcher {
 
         ClientWorld world = new ClientWorld(state);
 
-        Logger logger = new Logger("Client", ClientInitializer.SHOW_LOGS);
-
         BlockService<BlockWithMesh> blockService = new BlockService<>((id -> new BlockWithMesh(id, clientWorldDataService.getBlock(id))));
 
-        Client client = new Client(clientID, clientWorldDataService, logger, world, blockService);
-        ClientLauncher clientLauncher = new ClientLauncher(logger, connected, client);
+        Client client = new Client(clientID, clientWorldDataService, world, blockService);
+        ClientLauncher clientLauncher = new ClientLauncher(connected, client);
         Thread clientThread = new Thread(clientLauncher, "Client");
         clientThread.start();
 

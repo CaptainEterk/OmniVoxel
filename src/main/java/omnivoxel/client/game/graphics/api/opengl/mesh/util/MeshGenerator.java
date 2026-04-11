@@ -1,5 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.mesh.util;
 
+import omnivoxel.client.game.graphics.api.opengl.OpenGLChecks;
 import omnivoxel.client.game.graphics.api.opengl.mesh.EntityMesh;
 import omnivoxel.client.game.graphics.api.opengl.mesh.chunk.*;
 import omnivoxel.client.game.graphics.api.opengl.mesh.definition.GeneralEntityMeshDefinition;
@@ -103,6 +104,7 @@ public class MeshGenerator {
         glVertexAttribPointer(4, 2, GL_FLOAT, false, stride, 3L * Float.BYTES);
 
         glBindVertexArray(0);
+        OpenGLChecks.checkError("bufferize entity mesh");
 
         return new int[]{vao, vbo, ebo};
     }
@@ -135,6 +137,7 @@ public class MeshGenerator {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        OpenGLChecks.checkError("bufferize chunk mesh");
 
         return new int[]{vao, vbo, ebo};
     }

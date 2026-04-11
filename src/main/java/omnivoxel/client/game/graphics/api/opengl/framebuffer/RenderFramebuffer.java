@@ -1,5 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.framebuffer;
 
+import omnivoxel.client.game.graphics.api.opengl.OpenGLChecks;
 import org.lwjgl.opengl.GL11C;
 import org.lwjgl.opengl.GL12C;
 import org.lwjgl.opengl.GL30C;
@@ -70,6 +71,7 @@ public final class RenderFramebuffer {
         GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, 0);
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, 0);
         GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, 0);
+        OpenGLChecks.checkError("initialize framebuffer");
     }
 
     public void resize(int width, int height) {
@@ -101,6 +103,7 @@ public final class RenderFramebuffer {
         GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, depthStencilRboId);
         GL30C.glRenderbufferStorage(GL30C.GL_RENDERBUFFER, GL30C.GL_DEPTH24_STENCIL8, this.width, this.height);
         GL30C.glBindRenderbuffer(GL30C.GL_RENDERBUFFER, 0);
+        OpenGLChecks.checkError("resize framebuffer");
     }
 
     public void bindForDraw() {
@@ -135,6 +138,7 @@ public final class RenderFramebuffer {
         }
         width = 0;
         height = 0;
+        OpenGLChecks.checkError("cleanup framebuffer");
     }
 
     public int colorTexture() {

@@ -1,5 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.texture;
 
+import omnivoxel.client.game.graphics.api.opengl.OpenGLChecks;
 import omnivoxel.client.game.graphics.api.opengl.image.Image;
 import omnivoxel.client.game.graphics.api.opengl.image.ImageLoader;
 import org.lwjgl.opengl.GL11;
@@ -39,6 +40,7 @@ public class TextureLoader {
         GL30C.glGenerateMipmap(GL11.GL_TEXTURE_2D);
 
         STBImage.stbi_image_free(image.image());
+        OpenGLChecks.checkError("load texture " + path);
 
         return textureId;
     }
