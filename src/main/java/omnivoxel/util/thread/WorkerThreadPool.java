@@ -1,7 +1,5 @@
 package omnivoxel.util.thread;
 
-import omnivoxel.util.thread.worker.WorkerTask;
-
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;

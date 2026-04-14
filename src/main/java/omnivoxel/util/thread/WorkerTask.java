@@ -1,4 +1,4 @@
-package omnivoxel.util.thread.worker;
+package omnivoxel.util.thread;
 
 public interface WorkerTask {
     void reject();

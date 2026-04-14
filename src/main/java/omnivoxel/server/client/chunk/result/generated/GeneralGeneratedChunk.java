@@ -1,9 +1,9 @@
 package omnivoxel.server.client.chunk.result.generated;
 
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.util.IndexCalculator;
-import org.jetbrains.annotations.NotNull;
 
 public class GeneralGeneratedChunk extends GeneratedChunk {
     private final ServerBlock[] blocks;
