@@ -235,6 +235,8 @@ public class PlayerController {
         }
         state.setItem("friction_factor", frictionFactor);
 
+        boolean shouldUpdate = velocityX != 0 || velocityY != 0 || velocityZ != 0 || changeRot.get();
+
         handleMovement(deltaTime, movementMode != MovementMode.FLY);
 
         state.setItem("velocity_x", velocityX);
@@ -243,7 +245,7 @@ public class PlayerController {
         state.setItem("on_ground", onGround);
         state.setItem("movement_mode", movementMode.toString());
 
-        if (velocityX != 0 || velocityY != 0 || velocityZ != 0 || changeRot.get()) {
+        if (shouldUpdate) {
             state.setItem("shouldUpdateView", true);
             state.setItem("shouldUpdateVisibleMeshes", true);
 

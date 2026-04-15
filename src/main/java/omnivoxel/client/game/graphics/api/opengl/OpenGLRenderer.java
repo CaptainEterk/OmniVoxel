@@ -342,9 +342,9 @@ public class OpenGLRenderer implements Renderer {
 
             int renderDistance = settings.getIntSetting("render_distance", 100);
 
-            chunks = calculateRenderedChunks(renderDistance);
-
             attemptFreeChunks();
+
+            chunks = calculateRenderedChunks(renderDistance);
 
             for (DistanceChunk chunk : chunks) {
                 ClientWorldChunk clientWorldChunk = world.get(chunk.pos(), true, false);
