@@ -16,6 +16,7 @@ import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.util.IndexCalculator;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
@@ -38,18 +39,21 @@ public class ChunkMeshDataGenerator {
 
     private MeshData generateChunkMeshData(BlockMesh[] blockMeshes, Position3D position3D) {
         if (blockMeshes == null) {
+            Logger.warn("blockMeshes is null");
             return null;
         }
 
         ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
 
         if (clientWorldChunk == null) {
+            Logger.warn("clientWorldChunk is null");
             return null;
         }
 
         ChunkLightingData chunkLightingData = clientWorldChunk.getLightingData();
 
         if (chunkLightingData == null) {
+            Logger.warn("chunkLightingData is null");
             return null;
         }
 
@@ -208,8 +212,7 @@ public class ChunkMeshDataGenerator {
     private BlockMesh[] unpackChunkPadded(Position3D position3D, ClientWorldChunk centerChunk) {
         Chunk<BlockWithMesh> center = centerChunk == null ? null : centerChunk.getChunkData();
         if (center == null) {
-            // TODO: Make these logs call Logger at a really low priority
-//            System.out.println("Center is null: " + position3D + " " + centerChunk);
+            Logger.warn(Logger.Priority.LOW, "The center chunk is null");
             return null;
         }
 
@@ -226,7 +229,7 @@ public class ChunkMeshDataGenerator {
                 posYChunk == null ||
                 negZChunk == null ||
                 posZChunk == null) {
-//            System.out.println("Shells are null");
+            Logger.warn(Logger.Priority.LOW, "One or more shell chunk is null");
             return null;
         }
 
@@ -243,7 +246,7 @@ public class ChunkMeshDataGenerator {
                 posY == null ||
                 negZ == null ||
                 posZ == null) {
-//            System.out.println("Shell chunk data is null");
+            Logger.warn(Logger.Priority.LOW, "One or more shell chunk data is null");
             return null;
         }
 
