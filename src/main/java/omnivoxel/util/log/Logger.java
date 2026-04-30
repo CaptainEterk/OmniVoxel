@@ -17,8 +17,17 @@ public final class Logger {
     private static final Map<String, Queue<String>> DEBUG_LOGS = new HashMap<>();
     private static final StackWalker STACK_WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     private static boolean showLogs = true;
+    private static volatile Priority minPriority = Priority.LOW;
 
     private Logger() {
+    }
+
+    public static void setMinPriority(Priority priority) {
+        minPriority = priority;
+    }
+
+    private static boolean allowed(Priority priority) {
+        return priority.ordinal() >= minPriority.ordinal();
     }
 
     public static void setShowLogs(boolean showLogs) {
@@ -90,6 +99,8 @@ public final class Logger {
     }
 
     private static void logError(String source, Priority priority, String message) {
+        if (!allowed(priority)) return;
+
         String formatted = format(priority, message);
         if (showLogs) {
             System.err.println("[" + source + "] " + formatted);
@@ -102,6 +113,8 @@ public final class Logger {
     }
 
     private static void logWarn(String source, Priority priority, String message) {
+        if (!allowed(priority)) return;
+
         String formatted = format(priority, message);
         if (showLogs) {
             System.err.println("\u001B[33m[" + source + "] " + formatted + "\u001B[0m");
@@ -113,6 +126,8 @@ public final class Logger {
     }
 
     private static void logDebug(String source, Priority priority, String message) {
+        if (!allowed(priority)) return;
+
         String formatted = format(priority, message);
         if (showLogs) {
             System.out.println("\u001B[34m[" + source + "] " + formatted + "\u001B[0m");
@@ -124,6 +139,8 @@ public final class Logger {
     }
 
     private static void logInfo(String source, Priority priority, String message) {
+        if (!allowed(priority)) return;
+
         String formatted = format(priority, message);
         if (showLogs) {
             System.out.println("\u001B[32m[" + source + "] " + formatted + "\u001B[0m");
