@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.network.NetworkHandler;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
@@ -31,6 +32,8 @@ public class ServerLauncher {
     }
 
     public void run(long seed) throws IOException {
+        Logger.setMinPriority(Logger.Priority.NORMAL);
+
         ServerInitializer.init();
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -46,7 +49,6 @@ public class ServerLauncher {
             Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients));
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
-            ServerHandler serverHandler = new ServerHandler(server);
 
             ServerBootstrap serverBootstrap = new ServerBootstrap();
             serverBootstrap.group(bossGroup, workerGroup)
@@ -56,7 +58,7 @@ public class ServerLauncher {
                         protected void initChannel(SocketChannel ch) {
                             ch.pipeline().addLast(
                                     new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4),
-                                    serverHandler,
+                                    new NetworkHandler(server),
                                     new LengthFieldPrepender(4)
                             );
                         }

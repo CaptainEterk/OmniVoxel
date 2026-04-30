@@ -13,14 +13,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerWorld {
     private final Map<Position3D, ChunkValue> chunks;
-    private final Map<Position2D, Chunk2D<Integer>> highestY;
-    private final Map<Position3D, byte[]> chunkBytes;
+    private final Map<Position2D, Chunk2D<Integer>> chunkHeights;
     private int request = 0;
 
     public ServerWorld() {
         chunks = new ConcurrentHashMap<>();
-        chunkBytes = new ConcurrentHashMap<>();
-        highestY = new ConcurrentHashMap<>();
+        chunkHeights = new ConcurrentHashMap<>();
     }
 
     public void tick() {
@@ -31,23 +29,23 @@ public class ServerWorld {
         request++;
     }
 
+    // TODO: Remove chunkHeights too
     private void checkForOldChunks(Position3D position3D, ChunkValue chunkValue) {
         if (chunkValue.shouldSave(this.request)) {
             chunks.remove(position3D);
         }
     }
 
-    public Chunk2D<Integer> getHighestY(Position2D position2D) {
-        return this.highestY.get(position2D);
+    public Chunk2D<Integer> getChunkHeights(Position2D position2D) {
+        return chunkHeights.get(position2D);
     }
 
-    public void putHighestY(Position2D position2D, Chunk2D<Integer> highestY) {
-        this.highestY.put(position2D, highestY);
+    public void putChunkHeights(Position2D position2D, Chunk2D<Integer> chunkHeights) {
+        this.chunkHeights.put(position2D, chunkHeights);
     }
 
     public void put(Position3D position3D, Chunk<ServerBlock> chunk) {
-        this.chunks.put(position3D, new ChunkValue(chunk, request));
-        this.chunkBytes.remove(position3D);
+        chunks.put(position3D, new ChunkValue(chunk, request));
     }
 
     public Chunk<ServerBlock> get(Position3D position3D) {
@@ -73,14 +71,6 @@ public class ServerWorld {
         int lz = Math.floorMod(z, CL);
 
         return chunk.getBlock(lx, ly, lz);
-    }
-
-    public byte[] getBytes(Position3D chunkPosition) {
-        return chunkBytes.get(chunkPosition);
-    }
-
-    public void put(Position3D chunkPosition, byte[] chunkBytes) {
-        this.chunkBytes.put(chunkPosition, chunkBytes);
     }
 
     private static class ChunkValue {

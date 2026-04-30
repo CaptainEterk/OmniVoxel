@@ -237,7 +237,7 @@ public final class ServerWorldDataService {
         return blockService.getBlock(result);
     }
 
-    public ChunkInfo getChunkInfo(Position3D position3D, ServerWorld world) {
+    public ChunkInfo getChunkInfo(ServerWorld world, Position3D position3D) {
         int chunkMinWorldY = position3D.y() * ConstantGameSettings.CHUNK_HEIGHT;
         int chunkMaxWorldY = chunkMinWorldY + ConstantGameSettings.CHUNK_HEIGHT - 1;
 
@@ -314,7 +314,7 @@ public final class ServerWorldDataService {
 
         Position2D position2D = new Position2D(position3D.x(), position3D.z());
         int[] heights = new int[ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_LENGTH];
-        Chunk2D<Integer> chunk2D = world.getHighestY(position2D);
+        Chunk2D<Integer> chunk2D = world.getChunkHeights(position2D);
         boolean cachedHeights = chunk2D != null;
         chunk2D = cachedHeights ? chunk2D : new SingleBlockChunk2D<>(0);
         if (chunkMaxY != null && chunkMinY != null) {
@@ -346,7 +346,7 @@ public final class ServerWorldDataService {
         }
 
         if (!cachedHeights) {
-            world.putHighestY(position2D, chunk2D);
+            world.putChunkHeights(position2D, chunk2D);
         }
 
         return new ChunkInfo(heights, densityCache);

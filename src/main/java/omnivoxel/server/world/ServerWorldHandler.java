@@ -36,15 +36,16 @@ public class ServerWorldHandler {
                 world.put(position3D, chunk.setBlock(x, y, z, block));
 
                 Position2D position2D = position3D.getPosition2D();
-                Chunk2D<Integer> highestY = world.getHighestY(position2D);
-                int currentHighestY = highestY.getBlock(x, z);
+                Chunk2D<Integer> chunkHeights = world.getChunkHeights(position2D);
+                int currentHighestY = chunkHeights.getBlock(x, z);
+                // TODO: Don't hardcode "omnivoxel:air"
                 if (Objects.equals(block.id(), "omnivoxel:air")) {
                     if (worldY == currentHighestY) {
-                        world.putHighestY(position2D, highestY.setBlock(x, z, worldY));
+                        world.putChunkHeights(position2D, chunkHeights.setBlock(x, z, worldY));
                     }
                 } else {
                     if (worldY > currentHighestY) {
-                        world.putHighestY(position2D, highestY.setBlock(x, z, worldY));
+                        world.putChunkHeights(position2D, chunkHeights.setBlock(x, z, worldY));
                     }
                 }
 

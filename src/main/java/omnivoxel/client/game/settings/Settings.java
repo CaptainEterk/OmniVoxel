@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Settings {
+// TODO: Make static
+public final class Settings {
     private final List<Setting> settings;
 
     public Settings() {
@@ -29,6 +30,7 @@ public class Settings {
             settingFileContents.append((char) b);
         }
         String[] settings = settingFileContents.toString().split("[\n\r]");
+        this.settings.clear();
         for (String setting : settings) {
             if (setting.contains("=")) {
                 String[] keyValue = setting.split("=");
