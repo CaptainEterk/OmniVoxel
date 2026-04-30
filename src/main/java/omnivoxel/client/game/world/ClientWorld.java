@@ -158,9 +158,6 @@ public class ClientWorld {
     }
 
     public void add(Position3D position3D, MeshData meshData) {
-        if (meshData == null) {
-            return;
-        }
         ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(position3D, new ClientWorldChunk(meshData));
         if (clientWorldChunk == null) {
             chunkKeysChanged.set(true);
