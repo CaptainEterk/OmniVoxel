@@ -22,10 +22,29 @@ public final class WindowFactory {
             Logger.error(String.format("GLFW Error %d: %s", error, msg));
         });
 
+        String forced = System.getenv("GLFW_PLATFORM");
+        String session = (forced != null && !forced.isBlank())
+                ? forced
+                : System.getenv("XDG_SESSION_TYPE");
+
+        if ("wayland".equalsIgnoreCase(session)) {
+            GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_PLATFORM_WAYLAND);
+        } else if ("x11".equalsIgnoreCase(session)) {
+            GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_PLATFORM_X11);
+        } else {
+            throw new IllegalStateException("Unsupported platform: " + session);
+        }
+
         // Initialize GLFW. Most GLFW functions will not work before doing this.
         if (!GLFW.glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
+
+        int platform = GLFW.glfwGetPlatform();
+        Logger.debug("Using GLFW platform: " + (
+                platform == GLFW.GLFW_PLATFORM_WAYLAND ? "Wayland" :
+                        platform == GLFW.GLFW_PLATFORM_X11 ? "X11" : "Unknown"
+        ) + " - \"" + GLFW.glfwGetVersionString() + "\"");
 
         // Get the resolution of the primary monitor
         GLFWVidMode vidmode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
@@ -37,14 +56,21 @@ public final class WindowFactory {
         // Set window hints before window creation
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
         GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_TRUE);
-        GLFW.glfwWindowHint(GLFW.GLFW_POSITION_X, x);
-        GLFW.glfwWindowHint(GLFW.GLFW_POSITION_Y, y);
+        if (GLFW.glfwGetPlatform() == GLFW.GLFW_PLATFORM_X11) {
+            GLFW.glfwWindowHint(GLFW.GLFW_POSITION_X, x);
+            GLFW.glfwWindowHint(GLFW.GLFW_POSITION_Y, y);
+        }
+        // TODO: Turn into a setting
+        if (GLFW.glfwGetPlatform() == GLFW.GLFW_PLATFORM_WAYLAND) {
+            GLFW.glfwWindowHint(GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
+        } else {
+            GLFW.glfwWindowHint(GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
+        }
         GLFW.glfwWindowHint(GLFW.GLFW_DEPTH_BITS, 24);
         GLFW.glfwWindowHint(GLFW.GLFW_DOUBLEBUFFER, GLFW.GLFW_TRUE);
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 3);
         GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE);
-
 
         // Create the window
         long window = GLFW.glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
@@ -88,10 +114,10 @@ public final class WindowFactory {
             GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION, GLFW.GLFW_TRUE);
         }
 
-        Logger.debug(String.format("OpenGL/GLFW window created - title \"%s\" - position (%d, %d) - scale (%d, %d) - key %d", title, x, y, width, height, window));
+        Logger.debug(String.format("GLFW window created - title \"%s\" - position (%d, %d) - scale (%d, %d) - key %d", title, x, y, width, height, window));
 
         String osName = System.getProperty("os.name").toLowerCase();
-        if (!osName.contains("mac")) {
+        if (!osName.contains("mac") && GLFW.glfwGetPlatform() != GLFW.GLFW_PLATFORM_WAYLAND) {
             Image img = ImageLoader.load("assets/icons/favicon.png");
 
             GLFWImage image = GLFWImage.malloc();
