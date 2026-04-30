@@ -1,8 +1,7 @@
 package omnivoxel.server.client.chunk;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.network.NetworkService;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
@@ -13,6 +12,7 @@ import omnivoxel.server.client.chunk.result.generated.GeneratedChunk;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.util.boundingBox.WorldBoundingBox;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
@@ -31,54 +31,23 @@ public class ChunkService {
         this.world = world;
     }
 
-    private void sendChunkBytes(ChannelHandlerContext ctx, int x, int y, int z, byte[] chunk) {
-        ByteBuf buffer = ctx.alloc().buffer(16 + chunk.length);
-        int length = 16 + chunk.length;
-        buffer.writeInt(length);
-        buffer.writeInt(PackageID.CHUNK.ordinal());
-        buffer.writeInt(x);
-        buffer.writeInt(y);
-        buffer.writeInt(z);
-        buffer.writeBytes(chunk);
-        ctx.channel().writeAndFlush(buffer);
-    }
-
-    private void sendHeightBytes(ChannelHandlerContext ctx, int x, int z, Chunk2D<Integer> heights) {
-        ByteBuf buffer = ctx.alloc().buffer(16 + ConstantGameSettings.BLOCKS_IN_CHUNK_2D * Integer.BYTES);
-        int length = 16 + ConstantGameSettings.BLOCKS_IN_CHUNK_2D * Integer.BYTES;
-        buffer.writeInt(length);
-        buffer.writeInt(PackageID.HEIGHTS.ordinal());
-        buffer.writeInt(x);
-        buffer.writeInt(z);
-        int bx = 0, bz = 0;
-        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_2D; i++) {
-            buffer.writeInt(heights.getBlock(bx, bz));
-            bx++;
-            if (bx >= ConstantGameSettings.CHUNK_WIDTH) {
-                bx = 0;
-                bz++;
-            }
-        }
-        ctx.channel().writeAndFlush(buffer);
-    }
-
     public List<ChunkTask> serve(ChunkTask chunkTask, int queueSize) {
         try {
             Position3D chunkPosition = new Position3D(chunkTask.x(), chunkTask.y(), chunkTask.z());
-            byte[] chunk = world.getBytes(chunkPosition);
-
-            if (chunk == null) {
-                chunk = getChunkBytes(chunkPosition, chunkTask.serverClient());
-            }
+            byte[] chunk = getChunkBytes(chunkPosition, chunkTask.serverClient());
 
             if (chunkTask.serverClient() != null) {
-                Chunk2D<Integer> heights = world.getHighestY(new Position2D(chunkTask.x(), chunkTask.z()));
-                if (heights != null) {
-                    sendHeightBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.z(), heights);
+                Position2D position2D = chunkPosition.getPosition2D();
+                Chunk2D<Integer> chunk2D = world.getChunkHeights(position2D);
+                if (chunk2D != null) {
+                    NetworkService.sendBytes2D(chunkTask.serverClient().getCTX().channel(), PackageID.HEIGHTS, position2D.x(), position2D.z(), ChunkIO.encodeIntegerChunk2D(chunk2D));
+                } else {
+                    Logger.error("heights is null: " + chunkPosition);
                 }
-                sendChunkBytes(chunkTask.serverClient().getCTX(), chunkTask.x(), chunkTask.y(), chunkTask.z(), chunk);
-                // TODO: Only send heights once for a column, maybe a new packet
+
+                NetworkService.sendBytes3D(chunkTask.serverClient().getCTX().channel(), PackageID.CHUNK, chunkPosition.x(), chunkPosition.y(), chunkPosition.z(), chunk);
             }
+            System.out.println(Thread.currentThread().getName() + " queueSize: " + queueSize);
             return null;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -96,10 +65,12 @@ public class ChunkService {
                     Chunk<ServerBlock> chunk = world.get(newChunkPosition);
                     if (chunk == null) {
                         chunk = ChunkIO.decode(ChunkIO.get(newChunkPosition));
-                        world.put(newChunkPosition, chunk);
+                        if (chunk != null) {
+                            world.put(newChunkPosition, chunk);
+                        }
                     }
                     if (chunk == null) {
-                        chunk = chunkGenerator.generateChunk(newChunkPosition.x(), newChunkPosition.y(), newChunkPosition.z());
+                        chunk = chunkGenerator.generateChunk(newChunkPosition);
                         world.put(newChunkPosition, chunk);
                     }
                     chunks[i] = chunk;

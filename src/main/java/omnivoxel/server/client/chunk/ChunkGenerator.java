@@ -24,12 +24,10 @@ public final class ChunkGenerator {
         this.worldBoundingBoxes = worldBoundingBoxes;
     }
 
-    public Chunk<ServerBlock> generateChunk(int cx, int cy, int cz) {
-        Position3D position3D = new Position3D(cx, cy, cz);
-
+    public Chunk<ServerBlock> generateChunk(Position3D position3D) {
         Chunk<ServerBlock> chunk = new SingleBlockChunk<>(ServerBlock.AIR);
         if (worldDataService.shouldGenerateChunk(position3D)) {
-            ChunkInfo chunkInfo = worldDataService.getChunkInfo(position3D, world);
+            ChunkInfo chunkInfo = worldDataService.getChunkInfo(world, position3D);
             for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
                 int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
                 for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
@@ -40,6 +38,8 @@ public final class ChunkGenerator {
                     }
                 }
             }
+        } else if (world.getChunkHeights(position3D.getPosition2D()) == null) {
+            worldDataService.getChunkInfo(world, position3D);
         }
 
         return chunk;

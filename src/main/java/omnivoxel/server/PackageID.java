@@ -5,7 +5,7 @@ public enum PackageID {
 
     // CLIENT -> SERVER
 
-    REGISTER_CLIENT,
+    VERSION_HANDSHAKE,
     CHUNK_REQUEST,
     CLOSE,
 

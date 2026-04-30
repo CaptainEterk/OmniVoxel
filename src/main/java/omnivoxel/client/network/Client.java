@@ -1,7 +1,6 @@
 package omnivoxel.client.network;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
@@ -21,6 +20,8 @@ import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.client.network.request.*;
 import omnivoxel.client.network.util.ByteBufUtils;
+import omnivoxel.common.network.NetworkService;
+import omnivoxel.common.network.NetworkUser;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.entity.EntityType;
@@ -42,7 +43,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 // TODO: Clean this up
-public final class Client {
+public final class Client implements NetworkUser {
     private final Map<String, ClientEntity> entities;
     private final byte[] clientID;
     private final ClientWorldDataService worldDataService;
@@ -64,75 +65,19 @@ public final class Client {
         entities = new ConcurrentHashMap<>();
     }
 
-    private static void sendDoubles(Channel channel, PackageID id, byte[] clientID, double... numbers) {
-        if (channel == null) {
-            Logger.error(Logger.Priority.HIGH, "Channel is null! Client may not be connected.");
-            return;
-        }
-        if (!channel.isActive()) {
-            Logger.error(Logger.Priority.HIGH, "Channel is closed. Cannot send data.");
-            return;
-        }
-
-        ByteBuf buffer = Unpooled.buffer();
-        buffer.writeInt(id.ordinal());
-        buffer.writeBytes(clientID);
-        for (double i : numbers) {
-            buffer.writeDouble(i);
-        }
-        flush(channel, buffer);
-    }
-
-    private static void flush(Channel channel, ByteBuf byteBuf) {
-        channel.writeAndFlush(byteBuf).addListener(f -> {
-            if (!f.isSuccess()) {
-                Logger.error(Logger.Priority.HIGH, "Failed to send packet: " + f.cause());
-                f.cause().printStackTrace();
-            }
-        });
-    }
-
     public boolean isClientRunning() {
         return clientRunning.get();
     }
 
-    private void sendBytes(Channel channel, PackageID id, byte[]... bytes) {
-        ByteBuf buffer = Unpooled.buffer();
-        buffer.writeInt(id.ordinal());
-        for (byte[] bites : bytes) {
-            buffer.writeBytes(bites);
-        }
-        flush(channel, buffer);
-    }
-
-    private void sendInts(Channel channel, PackageID id, byte[] clientID, int... numbers) {
-        if (channel == null) {
-            Logger.error(String.format("Failed to send PackageID.%s because channel is null. Client may not be connected.", id.toString()));
-            return;
-        }
-        if (!channel.isActive()) {
-            close();
-            Logger.error("Channel is closed. Cannot send data.");
-            return;
-        }
-
-        ByteBuf buffer = Unpooled.buffer();
-        buffer.writeInt(id.ordinal());
-        buffer.writeBytes(clientID);
-        for (int i : numbers) {
-            buffer.writeInt(i);
-        }
-        flush(channel, buffer);
-    }
-
-    void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) throws InterruptedException {
+    @Override
+    public void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) {
         try {
             switch (packageID) {
                 case CHUNK:
                     receiveChunk(byteBuf);
                     break;
                 case HEIGHTS:
-                    receiveSkylight(byteBuf);
+                    receiveChunkHeights(byteBuf);
                     break;
                 case ENTITY_UPDATE:
                     updateEntity(byteBuf);
@@ -176,9 +121,9 @@ public final class Client {
 
                         int highestY = byteBuf.getByte(index);
                         Position2D chunkPosition2D = new Position2D(chunkX, chunkZ);
-                        Chunk2D<Integer> skylightChunk = world.getSkylightChunk(chunkPosition2D);
+                        Chunk2D<Integer> skylightChunk = world.getChunkHeights(chunkPosition2D);
                         if (skylightChunk != null) {
-                            world.setSkylightChunk(chunkPosition2D, skylightChunk.setBlock(x, z, highestY));
+                            world.setChunkHeights(chunkPosition2D, skylightChunk.setBlock(x, z, highestY));
                         }
                         index += 4;
 
@@ -296,20 +241,20 @@ public final class Client {
         lightingGenerators.submit(new LightingChunkMeshDataTask(byteBuf, position3D));
     }
 
-    private void receiveSkylight(ByteBuf byteBuf) {
+    private void receiveChunkHeights(ByteBuf byteBuf) {
         int cx = byteBuf.getInt(8);
         int cz = byteBuf.getInt(12);
-        Chunk2D<Integer> skylight = new SingleBlockChunk2D<>(0);
+        Chunk2D<Integer> chunkHeights = new SingleBlockChunk2D<>(0);
         int x = 0, z = 0;
         for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_2D; i++) {
-            skylight = skylight.setBlock(x, z, byteBuf.getInt(16 + i * Integer.BYTES));
+            chunkHeights = chunkHeights.setBlock(x, z, byteBuf.getInt(16 + i * Integer.BYTES));
             x++;
             if (x >= ConstantGameSettings.CHUNK_WIDTH) {
                 x = 0;
                 z++;
             }
         }
-        world.setSkylightChunk(new Position2D(cx, cz), skylight);
+        world.setChunkHeights(new Position2D(cx, cz), chunkHeights);
         byteBuf.release();
     }
 
@@ -359,9 +304,10 @@ public final class Client {
         if (time - lastFlushedTime > ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME || queuedChunkTasks.size() > ConstantServerSettings.CHUNK_REQUEST_BATCHING_LIMIT) {
             List<Position3D> queuedChunkTasksBatch = new ArrayList<>();
             while (!queuedChunkTasks.isEmpty()) {
-                queuedChunkTasksBatch.add(queuedChunkTasks.remove());
-                if (queuedChunkTasksBatch.getLast() == null) {
-                    queuedChunkTasksBatch.removeLast();
+                Position3D position3D = queuedChunkTasks.remove();
+                if (position3D != null) {
+                    queuedChunkTasksBatch.add(position3D);
+                } else {
                     break;
                 }
             }
@@ -375,7 +321,7 @@ public final class Client {
                     data[i * 3 + 2] = req.y();
                     data[i * 3 + 3] = req.z();
                 }
-                sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
+                NetworkService.sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
             }
             lastFlushedTime += ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME;
         }
@@ -388,11 +334,11 @@ public final class Client {
                 queuedChunkTasks.add(position3D);
                 break;
             case CLOSE:
-                sendBytes(channel, PackageID.CLOSE, clientID);
+                NetworkService.sendBytes(channel, PackageID.CLOSE, clientID);
                 break;
             case PLAYER_UPDATE:
                 PlayerUpdateRequest playerUpdateRequest = (PlayerUpdateRequest) request;
-                sendDoubles(channel, PackageID.PLAYER_UPDATE, clientID, playerUpdateRequest.x(), playerUpdateRequest.y(), playerUpdateRequest.z(), playerUpdateRequest.pitch(), playerUpdateRequest.yaw());
+                NetworkService.sendDoubles(channel, PackageID.PLAYER_UPDATE, clientID, playerUpdateRequest.x(), playerUpdateRequest.y(), playerUpdateRequest.z(), playerUpdateRequest.pitch(), playerUpdateRequest.yaw());
                 break;
             case BLOCK_REPLACE:
                 BlockReplaceRequest blockReplaceRequest = (BlockReplaceRequest) request;
@@ -402,7 +348,7 @@ public final class Client {
                 ByteUtils.addInt(bytes, blockReplaceRequest.position3D().z(), Integer.BYTES * 2);
                 ByteUtils.addInt(bytes, blockReplaceRequest.newBlock().id().length(), Integer.BYTES * 3);
                 System.arraycopy(blockReplaceRequest.newBlock().id().getBytes(), 0, bytes, Integer.BYTES * 4, blockReplaceRequest.newBlock().id().length());
-                sendBytes(channel, PackageID.REPLACE_BLOCK, clientID, bytes);
+                NetworkService.sendBytes(channel, PackageID.REPLACE_BLOCK, clientID, bytes);
                 break;
             default:
                 Logger.error(Logger.Priority.HIGH, "Unexpected request type: " + request.getType());

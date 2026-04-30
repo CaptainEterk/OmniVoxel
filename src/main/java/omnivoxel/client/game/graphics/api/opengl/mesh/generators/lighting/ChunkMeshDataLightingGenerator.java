@@ -17,6 +17,7 @@ import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.util.IndexCalculator;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
 import omnivoxel.world.block.BlockService;
@@ -111,11 +112,7 @@ public class ChunkMeshDataLightingGenerator {
             meshDataTasks.addAll(chunkLightingDataAndTasks.meshDataTasks());
         }
 
-//        if (!failed) {
-//            System.out.println("Lighting calculations succeeded");
         meshDataGenerators.submit(new ChunkMeshDataTask(null, position3D));
-//        }
-
 
         return meshDataTasks;
     }
@@ -158,13 +155,17 @@ public class ChunkMeshDataLightingGenerator {
     private void loadChunkLights(LightChannels channel, Position3D chunkPos, Chunk<BlockWithMesh> chunk) {
         int chunkYOffset = chunkPos.y() * ConstantGameSettings.CHUNK_HEIGHT;
 
-        Chunk2D<Integer> skyLightChunk = channel == LightChannels.SKYLIGHT ? world.getSkylightChunk(chunkPos.getPosition2D()) : null;
+        Chunk2D<Integer> chunkHeights = channel == LightChannels.SKYLIGHT ? world.getChunkHeights(chunkPos.getPosition2D()) : null;
+        if (channel == LightChannels.SKYLIGHT && chunkHeights == null) {
+            Logger.error("chunkHeights is null (" + chunkPos.x() + ", " + chunkPos.z() + ")");
+            return;
+        }
 
         for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
             for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
                 for (int y = ConstantGameSettings.CHUNK_HEIGHT - 1; y >= 0; y--) {
                     if (channel == LightChannels.SKYLIGHT) {
-                        int highestY = skyLightChunk.getBlock(x, z);
+                        int highestY = chunkHeights.getBlock(x, z);
                         if (chunkYOffset + y >= highestY) {
                             chunkLights.add(x, y, z, (byte) 15);
                         }

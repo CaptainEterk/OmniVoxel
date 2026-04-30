@@ -32,6 +32,7 @@ import java.util.function.Predicate;
 
 public class ClientWorld {
     private final Set<Position3D> queuedChunks;
+    // TODO: nonBufferizedChunks is a messy solution, fix it
     private final Queue<MeshData> nonBufferizedChunks;
     private final Set<Position3D> newChunks;
     private final State state;
@@ -39,10 +40,10 @@ public class ClientWorld {
     private final Map<String, ClientEntity> entities;
     private final IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache;
     private final Set<String> queuedEntityMeshData;
-    private final AtomicBoolean chunksChanged = new AtomicBoolean(true);
+    private final AtomicBoolean chunkKeysChanged = new AtomicBoolean(true);
     private final Set<Position3D> chunkRequests;
     private final Set<Position3D> inflightRequests;
-    private final Map<Position2D, Chunk2D<Integer>> skylights;
+    private final Map<Position2D, Chunk2D<Integer>> chunkHeights;
     private Position3D[] cachedKeys = null;
     private Client client;
     private boolean requesting = true;
@@ -60,15 +61,15 @@ public class ClientWorld {
         queuedEntityMeshData = ConcurrentHashMap.newKeySet();
         chunkRequests = ConcurrentHashMap.newKeySet();
         inflightRequests = ConcurrentHashMap.newKeySet();
-        skylights = new ConcurrentHashMap<>();
+        chunkHeights = new ConcurrentHashMap<>();
     }
 
-    public Chunk2D<Integer> getSkylightChunk(Position2D position2D) {
-        return skylights.get(position2D);
+    public Chunk2D<Integer> getChunkHeights(Position2D position2D) {
+        return chunkHeights.get(position2D);
     }
 
-    public void setSkylightChunk(Position2D position2D, Chunk2D<Integer> chunk2D) {
-        this.skylights.put(position2D, chunk2D);
+    public void setChunkHeights(Position2D position2D, Chunk2D<Integer> chunk2D) {
+        chunkHeights.put(position2D, chunk2D);
     }
 
     public void setClient(Client client) {
@@ -104,8 +105,8 @@ public class ClientWorld {
     }
 
     public Position3D[] getKeys() {
-        if (chunksChanged.get()) {
-            chunksChanged.set(false);
+        if (chunkKeysChanged.get()) {
+            chunkKeysChanged.set(false);
             cachedKeys = chunks.keySet().toArray(new Position3D[0]);
         }
         return cachedKeys;
@@ -142,7 +143,7 @@ public class ClientWorld {
                 ChunkMesh chunkMesh = meshGenerator.bufferizeChunkMesh(chunkMeshData);
                 ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(chunkMeshData.chunkPosition(), new ClientWorldChunk(chunkMesh));
                 if (clientWorldChunk == null) {
-                    chunksChanged.set(true);
+                    chunkKeysChanged.set(true);
                 } else {
                     if (clientWorldChunk.getMesh() != null) {
                         freeChunk(clientWorldChunk.getMesh());
@@ -162,7 +163,7 @@ public class ClientWorld {
         }
         ClientWorldChunk clientWorldChunk = chunks.putIfAbsent(position3D, new ClientWorldChunk(meshData));
         if (clientWorldChunk == null) {
-            chunksChanged.set(true);
+            chunkKeysChanged.set(true);
         } else {
             clientWorldChunk.setMeshData(meshData);
         }
@@ -176,7 +177,7 @@ public class ClientWorld {
 
         if (existing == null) {
             if (!shell) {
-                chunksChanged.set(true);
+                chunkKeysChanged.set(true);
             }
             return;
         }
@@ -236,7 +237,7 @@ public class ClientWorld {
         }
 
         if (changed) {
-            chunksChanged.set(true);
+            chunkKeysChanged.set(true);
         }
     }
 

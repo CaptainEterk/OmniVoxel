@@ -1,14 +1,14 @@
 package omnivoxel.server;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.network.NetworkService;
+import omnivoxel.common.network.NetworkUser;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.block.ServerBlockAndPosition;
-import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.client.chunk.ChunkService;
 import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
@@ -36,7 +36,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Server {
+public class Server implements NetworkUser {
     private static final int HANDSHAKE_ID = 0;
     private static final int TPS = 20;
     private final Map<String, ServerClient> clients;
@@ -76,57 +76,38 @@ public class Server {
         }
     }
 
-    private static void sendBytes(ChannelHandlerContext ctx, PackageID id, byte[]... bytes) {
-        ByteBuf buffer = Unpooled.buffer();
-        int length = 4;
-        for (byte[] bites : bytes) {
-            length += bites.length;
-        }
-        buffer.writeInt(length);
-        buffer.writeInt(id.ordinal());
-        for (byte[] bites : bytes) {
-            buffer.writeBytes(bites);
-        }
-        ctx.channel().writeAndFlush(buffer);
-    }
-
-    private static void sendBlockShape(ChannelHandlerContext ctx, BlockShape blockShape) {
-        ByteBuf buffer = Unpooled.buffer();
-        byte[] bytes = blockShape.getBytes();
-        buffer.writeInt(4 + bytes.length);
-        buffer.writeInt(PackageID.REGISTER_BLOCK_SHAPE.ordinal());
-        buffer.writeBytes(bytes);
-        ctx.channel().writeAndFlush(buffer);
-    }
-
+    @Override
     public void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) {
-        String clientID = ByteUtils.bytesToHex(byteBuf, 4, 32);
+        String clientID = ByteUtils.bytesToHex(byteBuf, 8, 32);
+        int index = 40;
         switch (packageID) {
             case CHUNK_REQUEST:
-                int count = byteBuf.getInt(36);
+                int count = byteBuf.getInt(index);
+                System.out.println(count);
+                index += 4;
                 for (int i = 0; i < count; i++) {
-                    int x = byteBuf.getInt(i * 3 * Integer.BYTES + 40);
-                    int y = byteBuf.getInt(i * 3 * Integer.BYTES + 44);
-                    int z = byteBuf.getInt(i * 3 * Integer.BYTES + 48);
+                    int x = byteBuf.getInt(i * 3 * Integer.BYTES + index);
+                    int y = byteBuf.getInt(i * 3 * Integer.BYTES + index);
+                    int z = byteBuf.getInt(i * 3 * Integer.BYTES + index);
                     workerThreadPool.submit(new ChunkTask(clients.get(clientID), x, y, z));
                 }
                 byteBuf.release();
                 break;
-            case REGISTER_CLIENT:
-                registerClient(ctx, byteBuf);
+            case VERSION_HANDSHAKE:
+                registerClient(ctx, byteBuf, index, clientID);
                 byteBuf.release();
                 break;
             case CLOSE:
                 ServerClient client = clients.get(clientID);
                 clients.remove(clientID);
-                clients.values().forEach(player -> sendBytes(player.getCTX(), PackageID.CLOSE, client.getPlayerID()));
-                Logger.debug("Client Disconnected: " + clientID + " playerID: " + ByteUtils.bytesToHex(client.getPlayerID()));
+                clients.values().forEach(player -> NetworkService.sendBytes(player.getCTX().channel(), PackageID.CLOSE, null, client.getPlayerID()));
+                Logger.info("Client Disconnected: " + clientID + " playerID: " + ByteUtils.bytesToHex(client.getPlayerID()));
                 byteBuf.release();
                 break;
             case PLAYER_UPDATE:
                 double[] data = new double[5];
                 for (int i = 0; i < 5; i++) {
-                    data[i] = byteBuf.getDouble(36 + i * Double.BYTES);
+                    data[i] = byteBuf.getDouble(index + i * Double.BYTES);
                 }
                 double x = data[0];
                 double y = data[1];
@@ -138,18 +119,18 @@ public class Server {
 
                 clients.values().forEach(player -> {
                     if (!Arrays.equals(player.getPlayerID(), serverClient.getPlayerID())) {
-                        sendBytes(player.getCTX(), PackageID.ENTITY_UPDATE, serverClient.getBytes());
+                        NetworkService.sendBytes(player.getCTX().channel(), PackageID.ENTITY_UPDATE, null, serverClient.getBytes());
                     }
                 });
                 byteBuf.release();
                 break;
             case REPLACE_BLOCK:
-                int bx = byteBuf.getInt(36);
-                int by = byteBuf.getInt(40);
-                int bz = byteBuf.getInt(44);
-                int length = byteBuf.getInt(48);
+                int bx = byteBuf.getInt(index);
+                int by = byteBuf.getInt(index + Integer.BYTES);
+                int bz = byteBuf.getInt(index + Integer.BYTES * 2);
+                int length = byteBuf.getInt(index + Integer.BYTES * 3);
                 byte[] bytes = new byte[length];
-                byteBuf.getBytes(52, bytes);
+                byteBuf.getBytes(index + Integer.BYTES * 4, bytes);
                 StringBuilder blockID = new StringBuilder();
                 for (byte b : bytes) {
                     blockID.append((char) b);
@@ -163,24 +144,24 @@ public class Server {
         }
     }
 
-    private void registerClient(ChannelHandlerContext ctx, ByteBuf byteBuf) {
-        byte[] versionID = ByteUtils.getBytes(byteBuf, 4, 8);
+    private void registerClient(ChannelHandlerContext ctx, ByteBuf byteBuf, int index, String clientID) {
+        byte[] versionID = ByteUtils.getBytes(byteBuf, index, 8);
+        // TODO: Replace handshake id string with a long and just use the 8 bytes from that maybe?
         if (Arrays.equals(versionID, String.format("%-8s", HANDSHAKE_ID).getBytes())) {
-            String clientID = ByteUtils.bytesToHex(byteBuf, 12, 32);
             ServerClient serverClient = new ServerClient(clientID, ctx);
             byte[] encodedServerPlayer = serverClient.getBytes();
 
             clients.values().forEach(player -> {
-                sendBytes(player.getCTX(), PackageID.NEW_ENTITY, encodedServerPlayer);
-                sendBytes(ctx, PackageID.NEW_ENTITY, player.getBytes());
+                NetworkService.sendBytes(player.getCTX().channel(), PackageID.NEW_ENTITY, null, encodedServerPlayer);
+                NetworkService.sendBytes(ctx.channel(), PackageID.NEW_ENTITY, null, player.getBytes());
             });
 
-            blockShapeCache.forEach((id, blockShape) -> sendBlockShape(serverClient.getCTX(), blockShape));
+            blockShapeCache.forEach((id, blockShape) -> NetworkService.sendBytes(serverClient.getCTX().channel(), PackageID.REGISTER_BLOCK_SHAPE, null, blockShape.getBytes()));
 
             blockService.getAllBlocks().forEach((id, serverBlock) -> {
                 if (serverClient.registerBlockID(id)) {
                     ChannelHandlerContext ctx1 = serverClient.getCTX();
-                    ChunkIO.sendBlock(ctx1, serverBlock);
+                    NetworkService.sendBytes(ctx1.channel(), PackageID.REGISTER_BLOCK, null, serverBlock.getBytes());
                 }
             });
 
@@ -203,11 +184,22 @@ public class Server {
             while (true) {
                 long startNano = System.nanoTime();
 
+                // TODO: Turn into a setting
                 if (tick % 10 == 0) {
                     ChunkCacheHandler.cacheAll();
                 }
 
-                for (int i = 0; i < 10; i++) {
+                if (tick % TPS == 0) {
+                    Set<String> values = clients.keySet();
+                    values.forEach(id -> {
+                        if (!NetworkService.checkChannel(clients.get(id).getCTX().channel())) {
+                            clients.remove(id);
+                            Logger.info("Client Lost Contact... Disconnecting: " + id);
+                        }
+                    });
+                }
+
+                for (int i = 0; i < 100; i++) {
                     worldHandler.replaceBlock((int) Math.floor(Math.random() * 16), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 16), ServerBlock.AIR, null);
                 }
 
@@ -216,6 +208,7 @@ public class Server {
                 sendQueuedClientPackets();
 
                 long elapsed = System.nanoTime() - startNano;
+
                 long sleepNanos = tickIntervalNanos - elapsed;
 
                 tick++;
@@ -263,7 +256,7 @@ public class Server {
                 ByteUtils.addInt(out, block.x(), 0);
                 ByteUtils.addInt(out, block.y(), 4);
                 ByteUtils.addInt(out, block.z(), 8);
-                int highestY = world.getHighestY(new Position2D(chunkX, chunkZ)).getBlock(x, z);
+                int highestY = world.getChunkHeights(new Position2D(chunkX, chunkZ)).getBlock(x, z);
                 ByteUtils.addInt(out, highestY, 12);
                 System.arraycopy(blockBytes, 0, out, 16, blockBytes.length);
                 outBytes[i] = out;
@@ -279,7 +272,7 @@ public class Server {
                 index += outBytes[i].length;
             }
 
-            sendBytes(serverClient.getCTX(), PackageID.REPLACE_BLOCK, out);
+            NetworkService.sendBytes(serverClient.getCTX().channel(), PackageID.REPLACE_BLOCK, null, out);
         });
     }
 }

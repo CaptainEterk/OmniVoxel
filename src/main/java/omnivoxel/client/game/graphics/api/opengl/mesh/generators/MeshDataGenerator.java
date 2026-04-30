@@ -20,6 +20,7 @@ import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.util.cache.IDCache;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
@@ -100,9 +101,9 @@ public final class MeshDataGenerator {
             AIR = new BlockWithMesh("omnivoxel:air", worldDataService.getBlock("omnivoxel:air"));
         }
 
-        Block[] palette = new Block[byteBuf.getShort(20)];
+        Block[] palette = new Block[byteBuf.getShort(24)];
 
-        int index = 22;
+        int index = 26;
 
         for (int i = 0; i < palette.length; i++) {
             short len = byteBuf.getShort(index);
@@ -231,6 +232,7 @@ public final class MeshDataGenerator {
             if (meshData != null) {
                 world.add(position3D, meshData);
             } else {
+                Logger.warn("Mesh data generation failed... retrying...");
                 return List.of(new ChunkMeshDataTask(null, position3D));
             }
         } else if (meshDataTask instanceof EntityMeshDataTask(ClientEntity entity)) {

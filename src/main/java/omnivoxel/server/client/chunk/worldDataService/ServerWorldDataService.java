@@ -312,11 +312,11 @@ public final class ServerWorldDataService {
             }
         }
 
-        Position2D position2D = new Position2D(position3D.x(), position3D.z());
+        Position2D position2D = position3D.getPosition2D();
         int[] heights = new int[ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_LENGTH];
-        Chunk2D<Integer> chunk2D = world.getChunkHeights(position2D);
-        boolean cachedHeights = chunk2D != null;
-        chunk2D = cachedHeights ? chunk2D : new SingleBlockChunk2D<>(0);
+        Chunk2D<Integer> chunkHeights = world.getChunkHeights(position2D);
+        boolean cachedHeights = chunkHeights != null;
+        chunkHeights = cachedHeights ? chunkHeights : new SingleBlockChunk2D<>(0);
         if (chunkMaxY != null && chunkMinY != null) {
             for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
                 int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
@@ -327,7 +327,7 @@ public final class ServerWorldDataService {
                         double heightDensity;
                         if (cachedHeights && in) {
                             heightDensity = 1;
-                            worldY = chunk2D.getBlock(x, z);
+                            worldY = chunkHeights.getBlock(x, z);
                         } else if (heightIsDensityFunction && worldY > chunkMinWorldY && worldY < chunkMaxWorldY) {
                             heightDensity = densityCache[IndexCalculator.calculateBlockIndexPadded(x, worldY - chunkMinWorldY, z)];
                         } else {
@@ -336,7 +336,7 @@ public final class ServerWorldDataService {
                         if (heightDensity > 0) {
                             heights[IndexCalculator.calculateBlockIndexPadded2D(x, z)] = worldY;
                             if (!cachedHeights && in) {
-                                chunk2D = chunk2D.setBlock(x, z, worldY);
+                                chunkHeights = chunkHeights.setBlock(x, z, worldY);
                             }
                             break;
                         }
@@ -346,7 +346,7 @@ public final class ServerWorldDataService {
         }
 
         if (!cachedHeights) {
-            world.putChunkHeights(position2D, chunk2D);
+            world.putChunkHeights(position2D, chunkHeights);
         }
 
         return new ChunkInfo(heights, densityCache);

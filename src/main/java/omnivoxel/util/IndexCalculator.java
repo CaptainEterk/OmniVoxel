@@ -3,6 +3,13 @@ package omnivoxel.util;
 import omnivoxel.client.game.settings.ConstantGameSettings;
 
 public class IndexCalculator {
+    // Precompute these once
+    private static final int Y_BITS = Integer.numberOfTrailingZeros(ConstantGameSettings.CHUNK_LENGTH);
+    private static final int Z_BITS = Integer.numberOfTrailingZeros(ConstantGameSettings.CHUNK_WIDTH);
+    private static final int SLICE_BITS = Y_BITS + Z_BITS;
+    private static final int Y_MASK = (1 << Y_BITS) - 1;
+    private static final int Z_MASK = (1 << Z_BITS) - 1;
+
     public static int calculateBlockIndex(int x, int y, int z) {
         return x * ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH + z * ConstantGameSettings.CHUNK_LENGTH + y;
     }
@@ -24,17 +31,14 @@ public class IndexCalculator {
     }
 
     public static int x(int index) {
-        int slice = ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH;
-        return index / slice;
+        return index >> SLICE_BITS;
     }
 
     public static int z(int index) {
-        int slice = ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH;
-        int rem = index % slice;
-        return rem / ConstantGameSettings.CHUNK_LENGTH;
+        return (index >> Y_BITS) & Z_MASK;
     }
 
     public static int y(int index) {
-        return index % ConstantGameSettings.CHUNK_LENGTH;
+        return index & Y_MASK;
     }
 }

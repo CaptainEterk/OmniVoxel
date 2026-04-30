@@ -66,37 +66,6 @@ public class ChunkMeshDataGenerator {
                     int index = IndexCalculator.calculateBlockIndexPadded(x, y, z);
                     BlockMesh blockMesh = blockMeshes[index];
                     if (blockMesh != null) {
-                        int center = chunkLightingData.getSkylightChannel().getLighting(IndexCalculator.calculateBlockIndex(x, y, z));
-
-                        int sum = 0;
-                        int weightSum = 0;
-
-                        for (int dx = -1; dx <= 1; dx++) {
-                            for (int dy = -1; dy <= 1; dy++) {
-                                for (int dz = -1; dz <= 1; dz++) {
-
-                                    int dist = Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
-                                    int weight = (dist == 0) ? 4 : (dist == 1 ? 2 : 1);
-
-                                    int light;
-                                    int nx = x + dx, ny = y + dy, nz = z + dz;
-
-                                    if (nx < 0 || nx >= 16 ||
-                                            ny < 0 || ny >= 16 ||
-                                            nz < 0 || nz >= 16) {
-                                        light = center;
-                                    } else {
-                                        int idx = IndexCalculator.calculateBlockIndex(nx, ny, nz);
-                                        light = chunkLightingData.getSkylightChannel().getLighting(idx);
-                                    }
-                                    sum += light * weight;
-                                    weightSum += weight;
-                                }
-                            }
-                        }
-
-                        int smoothLight = sum / weightSum;
-                        int t_lightLevel = smoothLight;//chunkLightingData.getSkylightChannel().getLighting(IndexCalculator.calculateBlockIndex(x, y, z));
                         if (blockMesh.shouldRenderTransparentMesh()) {
                             generateBlockMeshData(
                                     x,

@@ -197,7 +197,6 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void initOpenGL() {
-//        GL11C.glClearColor(0.0f, 0.61568627451f, 1.0f, 1.0f);
         GL11C.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL11C.glClearDepth(1.0f);
         GL11C.glCullFace(GL11C.GL_BACK);
