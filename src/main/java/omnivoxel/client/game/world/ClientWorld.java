@@ -15,6 +15,7 @@ import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.ChunkRequest;
 import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.util.cache.IDCache;
+import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
@@ -150,7 +151,9 @@ public class ClientWorld {
                     }
                     clientWorldChunk.setMesh(chunkMesh);
                 }
-                chunkRequests.remove(chunkMeshData.chunkPosition());
+                if (!chunkRequests.remove(chunkMeshData.chunkPosition())) {
+                    Logger.warn("Just bufferized a chunk that wasn't requested");
+                }
             }
             return true;
         }
@@ -210,20 +213,14 @@ public class ClientWorld {
         boolean changed = false;
 
         for (Position3D pos : positions) {
-
-            ClientWorldChunk chunk = chunks.get(pos);
-            if (chunk == null) continue;
-
-            // Only consider chunks OUTSIDE the predicate
             if (predicate.test(pos)) continue;
 
-            // Skip chunks still queued for mesh generation
             if (queuedChunks.contains(pos)) continue;
 
-            // Skip if recently accessed
+            ClientWorldChunk chunk = chunks.get(pos);
+
             if (tick - chunk.getLastFetchedTick() < ConstantGameSettings.CHUNK_TICK_TIMEOUT) continue;
 
-            // Skip if any neighbor was recently accessed
             if (neighborRecentlyFetched(pos)) continue;
 
             freeChunk(chunk.getMesh());

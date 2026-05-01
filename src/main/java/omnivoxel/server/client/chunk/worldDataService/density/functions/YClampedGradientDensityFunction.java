@@ -24,7 +24,6 @@ public class YClampedGradientDensityFunction extends DensityFunction {
             this.fromValue = ServerWorldDataService.getDensityFunction(objectGameNode.object().get("low_value"), seed);
             this.toValue = ServerWorldDataService.getDensityFunction(objectGameNode.object().get("high_value"), seed);
         } catch (RuntimeException e) {
-            System.out.println("SDF " + node);
             throw new RuntimeException(e);
         }
     }

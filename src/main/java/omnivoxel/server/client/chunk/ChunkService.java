@@ -47,7 +47,6 @@ public class ChunkService {
 
                 NetworkService.sendBytes3D(chunkTask.serverClient().getCTX().channel(), PackageID.CHUNK, chunkPosition.x(), chunkPosition.y(), chunkPosition.z(), chunk);
             }
-            System.out.println(Thread.currentThread().getName() + " queueSize: " + queueSize);
             return null;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -93,10 +92,6 @@ public class ChunkService {
                     int lx = x < 0 ? ConstantGameSettings.CHUNK_WIDTH - 1 : (x == ConstantGameSettings.CHUNK_WIDTH ? 0 : x);
                     int ly = y < 0 ? ConstantGameSettings.CHUNK_HEIGHT - 1 : (y == ConstantGameSettings.CHUNK_HEIGHT ? 0 : y);
                     int lz = z < 0 ? ConstantGameSettings.CHUNK_LENGTH - 1 : (z == ConstantGameSettings.CHUNK_LENGTH ? 0 : z);
-
-                    if ((cx != 0 || cy != 0 || cz != 0) && chunkIndex == 13) {
-                        System.out.println(lx + " " + ly + " " + lz);
-                    }
 
                     builtChunk = builtChunk.setBlock(x, y, z, chunk.getBlock(lx, ly, lz));
                 }
