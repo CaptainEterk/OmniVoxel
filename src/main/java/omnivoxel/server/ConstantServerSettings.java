@@ -2,7 +2,7 @@ package omnivoxel.server;
 
 // TODO: Move to Settings
 public final class ConstantServerSettings {
-    public static final int CHUNK_GENERATOR_INDIVIDUAL_TASK_COUNT = 20;
+    public static final int CHUNK_GENERATOR_INDIVIDUAL_TASK_COUNT = 5;
     public static final int CHUNK_GENERATOR_THREAD_LIMIT = Runtime.getRuntime().availableProcessors();
     public static final int INFLIGHT_REQUESTS_MAXIMUM = CHUNK_GENERATOR_THREAD_LIMIT * CHUNK_GENERATOR_INDIVIDUAL_TASK_COUNT * 5;
     public static final int INFLIGHT_REQUESTS_MINIMUM = INFLIGHT_REQUESTS_MAXIMUM / 2;

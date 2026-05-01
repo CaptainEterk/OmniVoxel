@@ -315,7 +315,7 @@ public final class Client implements NetworkUser {
                 int[] data = new int[queuedChunkTasksBatch.size() * 3 + 1];
                 data[0] = queuedChunkTasksBatch.size();
                 for (int i = 0; !queuedChunkTasksBatch.isEmpty(); i++) {
-                    Position3D req = queuedChunkTasksBatch.removeLast();
+                    Position3D req = queuedChunkTasksBatch.removeFirst();
 
                     data[i * 3 + 1] = req.x();
                     data[i * 3 + 2] = req.y();

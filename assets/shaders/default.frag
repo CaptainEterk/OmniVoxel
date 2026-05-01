@@ -64,10 +64,10 @@ vec3 getSunDir(float time) {
     float angle = time * 0.05;
 
     return normalize(vec3(
-    cos(angle),
-    sin(angle),
-    0.0
-    ));
+                     cos(angle),
+                     sin(angle),
+                     0.0
+                     ));
 }
 
 vec3 applySun(vec3 dir, vec3 sunDir) {
@@ -90,7 +90,7 @@ float hash(vec3 p) {
 vec3 getMoonDir(float time) {
     // Opposite the sun, slower rotation
     float angle = time * 0.02 + 3.14159;// π offset for opposite side
-    return normalize(vec3(cos(angle), sin(angle)*0.5, sin(angle*0.3)));
+    return normalize(vec3(cos(angle), sin(angle) * 0.5, sin(angle * 0.3)));
 }
 
 vec3 applyMoon(vec3 dir, vec3 moonDir) {
@@ -208,7 +208,7 @@ float hash(vec2 p) {
 
 float cubicWeight(float t) {
     t = abs(t);
-    return (t <= 1.0) ? 1.0 - 2.0*t*t + t*t*t : ((t < 2.0) ? 4.0 - 8.0*t + 5.0*t*t - t*t*t : 0.0);
+    return (t <= 1.0) ? 1.0 - 2.0 * t * t + t * t * t : ((t < 2.0) ? 4.0 - 8.0 * t + 5.0 * t * t - t * t * t : 0.0);
 }
 
 float smoothNoiseCubic(vec2 uv) {
@@ -238,7 +238,7 @@ void main() {
         FragColor = texture(blockTexture, TexCoord / TEXTURE_SIZE);
         if (FragColor.a == 0) discard;
 
-        float distance = length(position-cameraPosition);
+        float distance = length(position - cameraPosition);\
         float fogFactor = (fogFar - distance) / (fogFar - fogNear);
         fogFactor = clamp(fogFactor, 0.0, 1.0);
         if (fogFactor == 0) {
@@ -249,17 +249,19 @@ void main() {
         float skyLight = lighting.a;
         float ambient = 0.05;
 
+        vec4 skyColor = texture(skyTexture, gl_FragCoord.xy / screenResolution);
+
         // Combine: block light + skylight
-        vec3 totalLight = blockLight + vec3(skyLight);
+        vec3 totalLight = blockLight + vec3((sin(time / 20) / 2 + 0.5) * skyLight);
         totalLight = max(totalLight, vec3(ambient));
         FragColor.rgb *= totalLight * shadow;
 
         if (blockType == 1u) {
-            float fresnel = 1-abs(dot(vNormal, normalize(faceNormal)));
-            FragColor.a = fresnel*5;
+            float fresnel = 1 - abs(dot(vNormal, normalize(faceNormal)));
+            FragColor.a = fresnel * 5;
         }
         if (fogFactor < 1.0) {
-            FragColor = mix(texture(skyTexture, gl_FragCoord.xy / screenResolution), FragColor, fogFactor);
+            FragColor = mix(skyColor, FragColor, fogFactor);
         }
         // TODO: Mix with filter color too for water and things.
     } else if (meshType == 1u) {
