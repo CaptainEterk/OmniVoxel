@@ -1,6 +1,6 @@
 package omnivoxel.server.client.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.ChunkInfo;
@@ -11,7 +11,6 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk.SingleBlockChunk;
 
-import java.util.Objects;
 import java.util.Set;
 
 public final class ChunkGenerator {
@@ -25,47 +24,31 @@ public final class ChunkGenerator {
         this.worldBoundingBoxes = worldBoundingBoxes;
     }
 
-    private long total = 0;
-    private int count;
-
-    public Chunk<ServerBlock> generateChunk(int cx, int cy, int cz) {
-        Position3D position3D = new Position3D(cx, cy, cz);
-
-        long start = System.currentTimeMillis();
-
-        Chunk<ServerBlock> chunk = new SingleBlockChunk<>(ServerBlock.VOID);
+    public Chunk<ServerBlock> generateChunk(Position3D position3D) {
+        Chunk<ServerBlock> chunk = new SingleBlockChunk<>(ServerBlock.AIR);
         if (worldDataService.shouldGenerateChunk(position3D)) {
-            ChunkInfo chunkInfo = worldDataService.getChunkInfo(position3D);
-            for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-                int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
-                for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
-                    int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
-                    for (int y = 0; y < ConstantGameSettings.CHUNK_HEIGHT; y++) {
-                        int worldY = position3D.y() * ConstantGameSettings.CHUNK_HEIGHT + y;
+            ChunkInfo chunkInfo = worldDataService.getChunkInfo(world, position3D);
+            for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+                int worldX = position3D.x() * ConstantCommonSettings.CHUNK_WIDTH + x;
+                for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                    int worldZ = position3D.z() * ConstantCommonSettings.CHUNK_LENGTH + z;
+                    for (int y = 0; y < ConstantCommonSettings.CHUNK_HEIGHT; y++) {
+                        int worldY = position3D.y() * ConstantCommonSettings.CHUNK_HEIGHT + y;
                         chunk = chunk.setBlock(x, y, z, worldDataService.getBlockAt(x, y, z, worldX, worldY, worldZ, chunkInfo));
                     }
                 }
             }
-        }
-
-        long end = System.currentTimeMillis();
-
-        total += end-start;
-        count++;
-
-        if (count % 100 == 0 && Objects.equals(Thread.currentThread().getName(), "Worker-1")) {
-            System.out.println("time: " + (total/count) + "ms per chunk " + total + " " + count + " " + (end-start));
-            total = 0;
-            count = 0;
+        } else if (world.getChunkHeights(position3D.getPosition2D()) == null) {
+            worldDataService.getChunkInfo(world, position3D);
         }
 
         return chunk;
     }
 
-//    private void generateSurroundingChunks(Position3D position3D, int size) {
-//        for (int x = -size; x <= size; x++) {
-//            for (int y = -size; y <= size; y++) {
-//                for (int z = -size; z <= size; z++) {
+//    private void generateSurroundingChunks(Position3D position3D, int scale) {
+//        for (int x = -scale; x <= scale; x++) {
+//            for (int y = -scale; y <= scale; y++) {
+//                for (int z = -scale; z <= scale; z++) {
 //                    if (x == 0 && y == 0 && z == 0) {
 //                        continue;
 //                    }

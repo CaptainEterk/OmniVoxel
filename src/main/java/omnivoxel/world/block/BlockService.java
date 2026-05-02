@@ -2,20 +2,23 @@ package omnivoxel.world.block;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
-public final class BlockService {
-    private final Map<String, Block> serverBlocksById;
+public final class BlockService<B> {
+    private final Map<String, B> blockByID;
+    private final Function<String, B> blockFactory;
 
-    public BlockService() {
-        serverBlocksById = new HashMap<>();
+    public BlockService(Function<String, B> blockFactory) {
+        this.blockFactory = blockFactory;
+        blockByID = new HashMap<>();
     }
 
-    public Block getBlock(String id) {
-        Block block = serverBlocksById.get(id);
+    public B getBlock(String id) {
+        B block = blockByID.get(id);
 
         if (block == null) {
-            block = new Block(id);
-            serverBlocksById.put(id, block);
+            block = blockFactory.apply(id);
+            blockByID.put(id, block);
         }
 
         return block;

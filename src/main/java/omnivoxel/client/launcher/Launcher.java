@@ -2,11 +2,13 @@ package omnivoxel.client.launcher;
 
 import io.netty.util.ResourceLeakDetector;
 import omnivoxel.client.game.GameLoop;
-import omnivoxel.client.game.camera.Camera;
-import omnivoxel.client.game.camera.Frustum;
-import omnivoxel.client.game.graphics.opengl.window.Window;
+import omnivoxel.client.game.graphics.api.opengl.window.Window;
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
+import omnivoxel.client.game.graphics.camera.Camera;
+import omnivoxel.client.game.graphics.camera.Frustum;
 import omnivoxel.client.game.player.PlayerController;
-import omnivoxel.client.game.settings.Settings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.tick.TickLoop;
 import omnivoxel.client.game.world.ClientWorld;
@@ -14,6 +16,7 @@ import omnivoxel.client.network.Client;
 import omnivoxel.client.network.ClientLauncher;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.util.log.Logger;
+import omnivoxel.world.block.BlockService;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -33,6 +36,7 @@ public class Launcher {
 
         ClientInitializer.SHOW_LOGS = !args.contains("--no-logs");
         ClientInitializer.init();
+        Logger.setShowLogs(ClientInitializer.SHOW_LOGS);
 
         SecureRandom secureRandom = new SecureRandom();
         byte[] clientID = new byte[32];
@@ -44,14 +48,14 @@ public class Launcher {
 
         State state = new State();
         Settings settings = new Settings();
-        settings.load();
+        settings.load(ConstantCommonSettings.CONFIG_LOCATION);
 
         ClientWorld world = new ClientWorld(state);
 
-        Logger logger = new Logger("Client", ClientInitializer.SHOW_LOGS);
+        BlockService<BlockWithMesh> blockService = new BlockService<>((id -> new BlockWithMesh(id, clientWorldDataService.getBlock(id))));
 
-        Client client = new Client(clientID, clientWorldDataService, logger, world);
-        ClientLauncher clientLauncher = new ClientLauncher(logger, connected, client);
+        Client client = new Client(clientID, clientWorldDataService, world, blockService);
+        ClientLauncher clientLauncher = new ClientLauncher(connected, client);
         Thread clientThread = new Thread(clientLauncher, "Client");
         clientThread.start();
 
@@ -59,7 +63,7 @@ public class Launcher {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
         if (connected.await(5L, TimeUnit.SECONDS)) {
-            client.setListeners(world.getEntityMeshDefinitionCache(), world.getQueuedEntityMeshData());
+            client.setListeners(world.getEntityMeshDefinitionCache(), world.getQueuedEntityMeshData(), state);
             AtomicBoolean gameRunning = new AtomicBoolean(true);
             BlockingQueue<Consumer<Window>> contextTasks = new LinkedBlockingDeque<>();
 
@@ -67,14 +71,19 @@ public class Launcher {
 
             GameLoop gameLoop = new GameLoop(camera, world, gameRunning, contextTasks, client, state, settings);
 
-            gameLoop.init();
+            try {
+                gameLoop.init();
 
-            PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, gameLoop.getRenderer().getWindow());
+                PlayerController playerController = new PlayerController(client, camera, settings, contextTasks, state, world, blockService, gameLoop.getRenderer().getWindow());
 
-            Thread tickLoopThread = new Thread(new TickLoop(playerController, gameRunning, contextTasks, client), "Tick Loop");
-            tickLoopThread.start();
+                Thread tickLoopThread = new Thread(new TickLoop(playerController, gameRunning, contextTasks, client), "Tick Loop");
+                tickLoopThread.start();
 
-            gameLoop.run();
+                gameLoop.run();
+            } catch (IOException e) {
+                client.close();
+                throw new RuntimeException(e);
+            }
         }
     }
 }

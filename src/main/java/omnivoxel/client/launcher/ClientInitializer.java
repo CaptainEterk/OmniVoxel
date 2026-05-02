@@ -1,6 +1,6 @@
 package omnivoxel.client.launcher;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,6 +14,6 @@ public class ClientInitializer {
     }
 
     private static void createFileLocations() throws IOException {
-        Files.createDirectories(Path.of(ConstantGameSettings.LOG_LOCATION));
+        Files.createDirectories(Path.of(ConstantCommonSettings.LOG_LOCATION));
     }
 }

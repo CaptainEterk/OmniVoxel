@@ -15,11 +15,11 @@ public record Position2D(int x, int z) {
         return Objects.hash(x(), z());
     }
 
-    public Position2D add(int x, int y, int z) {
+    public Position2D add(int x, int z) {
         return new Position2D(this.x + x, this.z + z);
     }
 
-    public Position2D add(Position3D position3D) {
-        return add(position3D.x(), position3D.y(), position3D.z());
+    public Position2D add(Position2D position2D) {
+        return add(position2D.x(), position2D.z());
     }
 }

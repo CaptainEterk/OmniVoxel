@@ -1,13 +1,13 @@
 package omnivoxel.server.games;
 
-import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.common.BlockShape;
-import omnivoxel.server.ServerLogger;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3D;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3DProvider;
 import omnivoxel.util.game.nodes.*;
+import omnivoxel.util.log.Logger;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -40,7 +40,7 @@ public final class Game {
                 .mapToDouble(gameNode -> checkGameNodeType(gameNode, DoubleGameNode.class).value())
                 .toArray();
         double firstOctave = checkGameNodeType(noise.object().get("first_octave"), DoubleGameNode.class).value();
-        ServerLogger.logger.debug("Registered noise: " + id);
+        Logger.debug("Registered noise: " + id);
         Noise3DProvider.registerNoise(id, new Noise3D(octaves, (int) firstOctave, seed));
     }
 
@@ -57,6 +57,28 @@ public final class Game {
                 boolean transparent = Game.checkGameNodeType(objectStateNode.object().get("transparent"), BooleanGameNode.class).value();
                 boolean transparentMesh = Game.checkGameNodeType(objectStateNode.object().get("transparent_mesh"), BooleanGameNode.class).value();
                 ObjectGameNode texture = Game.checkGameNodeType(objectStateNode.object().get("texture"), ObjectGameNode.class);
+                ArrayGameNode lightEmittingNode = Game.checkGameNodeType(objectStateNode.object().get("light_emitting"), ArrayGameNode.class);
+                byte[] lightEmitting = new byte[3];
+                if (lightEmittingNode != null) {
+                    if (lightEmittingNode.nodes().length != lightEmitting.length) {
+                        throw new IllegalArgumentException("Light emitting property must have a length of EXACTLY " + lightEmitting.length);
+                    }
+                    for (int i = 0; i < lightEmitting.length; i++) {
+                        lightEmitting[i] = (byte) Game.checkGameNodeType(lightEmittingNode.nodes()[i], DoubleGameNode.class).value();
+                    }
+                }
+                ArrayGameNode lightDiffusingNode = Game.checkGameNodeType(objectStateNode.object().get("light_diffusing"), ArrayGameNode.class);
+                byte[] lightDefusing = new byte[4];
+                if (lightDiffusingNode != null) {
+                    if (lightDiffusingNode.nodes().length != lightDefusing.length) {
+                        throw new IllegalArgumentException("Light diffusing property must have a length of EXACTLY " + lightDefusing.length);
+                    }
+                    for (int i = 0; i < lightDefusing.length; i++) {
+                        lightDefusing[i] = (byte) Game.checkGameNodeType(lightDiffusingNode.nodes()[i], DoubleGameNode.class).value();
+                    }
+                } else {
+                    Arrays.fill(lightDefusing, (byte) 15);
+                }
                 String uvMapping = Game.checkGameNodeType(texture.object().get("uv_mapping"), StringGameNode.class).value();
                 double[][] uvCoords = new double[6][];
                 if (Objects.equals(uvMapping, "face")) {
@@ -81,7 +103,7 @@ public final class Game {
                     throw new IllegalArgumentException("\"" + uvMapping + "\" is not a valid uv_mapping");
                 }
 
-                blockService.registerServerBlock(new ServerBlock(ServerBlock.createID(id, blockState), blockShape, uvCoords, transparent, transparentMesh));
+                blockService.registerServerBlock(new ServerBlock(ServerBlock.createID(id, blockState), blockShape, uvCoords, transparent, transparentMesh, lightEmitting, lightDefusing));
             }
         }
     }
@@ -121,6 +143,5 @@ public final class Game {
         blockShapeCache.put(BlockShape.EMPTY_BLOCK_SHAPE_STRING, BlockShape.EMPTY_BLOCK_SHAPE);
 
         blockService.registerServerBlock(ServerBlock.AIR);
-        blockService.registerServerBlock(ServerBlock.VOID);
     }
 }

@@ -1,7 +1,7 @@
 package omnivoxel.server.client.chunk.result.generated;
 
 import omnivoxel.common.annotations.NotNull;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
 
 public class ModifiedGeneratedChunk extends GeneratedChunk {
@@ -35,7 +35,7 @@ public class ModifiedGeneratedChunk extends GeneratedChunk {
 
     @Override
     public GeneratedChunk setBlock(int x, int y, int z, @NotNull ServerBlock block) {
-        if (modificationCount > ConstantServerSettings.CHUNK_MODIFICATION_GENERALIZATION_LIMIT) {
+        if (modificationCount > ConstantCommonSettings.MODIFICATION_GENERALIZATION_LIMIT) {
             return new GeneralGeneratedChunk(this);
         }
         return new ModifiedGeneratedChunk(x, y, z, block, this, modificationCount + 1);

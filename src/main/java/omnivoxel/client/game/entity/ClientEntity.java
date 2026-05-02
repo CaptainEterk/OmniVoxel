@@ -1,7 +1,7 @@
 package omnivoxel.client.game.entity;
 
-import omnivoxel.client.game.graphics.opengl.mesh.EntityMesh;
-import omnivoxel.client.game.graphics.opengl.mesh.meshData.EntityMeshData;
+import omnivoxel.client.game.graphics.api.opengl.mesh.EntityMesh;
+import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.EntityMeshData;
 import omnivoxel.server.entity.EntityType;
 
 public class ClientEntity {

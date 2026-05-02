@@ -1,37 +1,41 @@
 package omnivoxel.client.network;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import omnivoxel.client.game.entity.ClientEntity;
-import omnivoxel.client.game.graphics.opengl.mesh.MeshDataTask;
-import omnivoxel.client.game.graphics.opengl.mesh.definition.EntityMeshDataDefinition;
-import omnivoxel.client.game.graphics.opengl.mesh.generators.MeshDataGenerator;
-import omnivoxel.client.game.graphics.opengl.mesh.meshData.ModelEntityMeshData;
-import omnivoxel.client.game.graphics.opengl.mesh.tasks.ChunkMeshDataTask;
-import omnivoxel.client.game.graphics.opengl.mesh.tasks.EntityMeshDataTask;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.client.game.graphics.api.opengl.mesh.MeshDataTask;
+import omnivoxel.client.game.graphics.api.opengl.mesh.definition.EntityMeshDataDefinition;
+import omnivoxel.client.game.graphics.api.opengl.mesh.generators.MeshDataGenerator;
+import omnivoxel.client.game.graphics.api.opengl.mesh.generators.lighting.ChunkMeshDataLightingGenerator;
+import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ModelEntityMeshData;
+import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.EntityMeshDataTask;
+import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.LightingChunkMeshDataTask;
+import omnivoxel.client.game.graphics.block.BlockWithMesh;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
+import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
-import omnivoxel.client.network.request.ChunkRequest;
-import omnivoxel.client.network.request.CloseRequest;
-import omnivoxel.client.network.request.PlayerUpdateRequest;
-import omnivoxel.client.network.request.Request;
+import omnivoxel.client.network.request.*;
 import omnivoxel.client.network.util.ByteBufUtils;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.network.NetworkService;
+import omnivoxel.common.network.NetworkUser;
+import omnivoxel.common.settings.ConstantNetworkSettings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.entity.EntityType;
 import omnivoxel.util.bytes.ByteUtils;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.log.Logger;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
-import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk2d.Chunk2D;
+import omnivoxel.world.chunk2d.SingleBlockChunk2D;
 import org.joml.Matrix4f;
 
 import java.util.*;
@@ -40,94 +44,41 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 // TODO: Clean this up
-public final class Client {
+public final class Client implements NetworkUser {
     private final Map<String, ClientEntity> entities;
     private final byte[] clientID;
     private final ClientWorldDataService worldDataService;
-    private final Logger logger;
     private final AtomicBoolean clientRunning = new AtomicBoolean(true);
     private final Queue<Position3D> queuedChunkTasks = new LinkedBlockingDeque<>();
     private final ClientWorld world;
-    private final BlockService blockService = new BlockService();
+    private final BlockService<BlockWithMesh> blockService;
     private WorkerThreadPool<MeshDataTask> meshDataGenerators;
+    private WorkerThreadPool<LightingChunkMeshDataTask> lightingGenerators;
     private EventLoopGroup group;
     private Channel channel;
     private long lastFlushedTime = System.currentTimeMillis();
 
-    public Client(byte[] clientID, ClientWorldDataService worldDataService, Logger logger, ClientWorld world) {
+    public Client(byte[] clientID, ClientWorldDataService worldDataService, ClientWorld world, BlockService<BlockWithMesh> blockService) {
         this.clientID = clientID;
         this.worldDataService = worldDataService;
-        this.logger = logger;
         this.world = world;
+        this.blockService = blockService;
         entities = new ConcurrentHashMap<>();
-    }
-
-    private static void sendDoubles(Channel channel, PackageID id, byte[] clientID, double... numbers) {
-        if (channel == null) {
-            System.err.println("[ERROR] Channel is null! Client may not be connected.");
-            return;
-        }
-        if (!channel.isActive()) {
-            System.out.println("[ERROR] Channel is closed! Cannot send data.");
-            return;
-        }
-
-        ByteBuf buffer = Unpooled.buffer();
-        buffer.writeInt(id.ordinal());
-        buffer.writeBytes(clientID);
-        for (double i : numbers) {
-            buffer.writeDouble(i);
-        }
-        flush(channel, buffer);
-    }
-
-    private static void flush(Channel channel, ByteBuf byteBuf) {
-        channel.writeAndFlush(byteBuf).addListener(f -> {
-            if (!f.isSuccess()) {
-                System.err.println("[ERROR] Failed: " + f.cause());
-                f.cause().printStackTrace();
-            }
-        });
     }
 
     public boolean isClientRunning() {
         return clientRunning.get();
     }
 
-    private void sendBytes(Channel channel, PackageID id, byte[]... bytes) {
-        ByteBuf buffer = Unpooled.buffer();
-        buffer.writeInt(id.ordinal());
-        for (byte[] bites : bytes) {
-            buffer.writeBytes(bites);
-        }
-        flush(channel, buffer);
-    }
-
-    private void sendInts(Channel channel, PackageID id, byte[] clientID, int... numbers) {
-        if (channel == null) {
-            logger.error(String.format("Failed to send PackageID.%s because channel is null. Client may not be connected.", id.toString()));
-            return;
-        }
-        if (!channel.isActive()) {
-            close();
-            logger.error("Channel is closed. Cannot send data.");
-            return;
-        }
-
-        ByteBuf buffer = Unpooled.buffer();
-        buffer.writeInt(id.ordinal());
-        buffer.writeBytes(clientID);
-        for (int i : numbers) {
-            buffer.writeInt(i);
-        }
-        flush(channel, buffer);
-    }
-
-    void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) throws InterruptedException {
+    @Override
+    public void handlePackage(ChannelHandlerContext ctx, PackageID packageID, ByteBuf byteBuf) {
         try {
             switch (packageID) {
                 case CHUNK:
                     receiveChunk(byteBuf);
+                    break;
+                case HEIGHTS:
+                    receiveChunkHeights(byteBuf);
                     break;
                 case ENTITY_UPDATE:
                     updateEntity(byteBuf);
@@ -136,7 +87,7 @@ public final class Client {
                 case CLOSE:
                     String playerID = ByteUtils.bytesToHex(ByteUtils.getBytes(byteBuf, 8, 32));
                     entities.remove(playerID);
-                    logger.info("Removed Player: " + playerID);
+                    Logger.info("Removed Player: " + playerID);
                     world.removeEntity(playerID);
                     byteBuf.release();
                     break;
@@ -148,11 +99,10 @@ public final class Client {
                     ByteBufUtils.cacheBlockShapeFromByteBuf(byteBuf);
                     byteBuf.release();
                     break;
-                case REGISTER_BLOCK: {
+                case REGISTER_BLOCK:
                     worldDataService.addBlock(ByteBufUtils.registerBlockFromByteBuf(byteBuf));
                     byteBuf.release();
                     break;
-                }
                 case REPLACE_BLOCK:
                     int replacedBlocks = byteBuf.getInt(8);
                     int index = 12;
@@ -162,15 +112,21 @@ public final class Client {
                         int worldZ = byteBuf.getInt(index + 8);
                         index += 12;
 
-                        // Use floorDiv so negative world coordinates map to correct chunk indices
-                        int chunkX = Math.floorDiv(worldX, ConstantGameSettings.CHUNK_WIDTH);
-                        int chunkY = Math.floorDiv(worldY, ConstantGameSettings.CHUNK_HEIGHT);
-                        int chunkZ = Math.floorDiv(worldZ, ConstantGameSettings.CHUNK_LENGTH);
+                        int chunkX = Math.floorDiv(worldX, ConstantCommonSettings.CHUNK_WIDTH);
+                        int chunkY = Math.floorDiv(worldY, ConstantCommonSettings.CHUNK_HEIGHT);
+                        int chunkZ = Math.floorDiv(worldZ, ConstantCommonSettings.CHUNK_LENGTH);
 
-                        // Local block coordinates inside the chunk (handles negatives correctly)
-                        int x = Math.floorMod(worldX, ConstantGameSettings.CHUNK_WIDTH);
-                        int y = Math.floorMod(worldY, ConstantGameSettings.CHUNK_HEIGHT);
-                        int z = Math.floorMod(worldZ, ConstantGameSettings.CHUNK_LENGTH);
+                        int x = Math.floorMod(worldX, ConstantCommonSettings.CHUNK_WIDTH);
+                        int y = Math.floorMod(worldY, ConstantCommonSettings.CHUNK_HEIGHT);
+                        int z = Math.floorMod(worldZ, ConstantCommonSettings.CHUNK_LENGTH);
+
+                        int highestY = byteBuf.getByte(index);
+                        Position2D chunkPosition2D = new Position2D(chunkX, chunkZ);
+                        Chunk2D<Integer> skylightChunk = world.getChunkHeights(chunkPosition2D);
+                        if (skylightChunk != null) {
+                            world.setChunkHeights(chunkPosition2D, skylightChunk.setBlock(x, z, highestY));
+                        }
+                        index += 4;
 
                         short paletteLength = byteBuf.getShort(index);
                         index += 2;
@@ -187,22 +143,28 @@ public final class Client {
 
                         ClientWorldChunk clientWorldChunk = world.get(chunkPosition, false, false);
                         if (clientWorldChunk != null) {
-                            Chunk<Block> chunkData = clientWorldChunk.getChunkData();
+                            Chunk<BlockWithMesh> chunkData = clientWorldChunk.getChunkData();
 
                             if (chunkData != null) {
-                                Block block = blockService.getBlock(blockID.toString());
+                                BlockWithMesh block = blockService.getBlock(blockID.toString());
                                 if (chunkData.getBlock(x, y, z) != block) {
                                     clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, block));
-                                    meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition));
+                                    lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition));
 
-                                    if (x == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
-                                    if (x == ConstantGameSettings.CHUNK_WIDTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
+                                    if (x == 0)
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
+                                    if (x == ConstantCommonSettings.CHUNK_WIDTH - 1)
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
 
-                                    if (y == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
-                                    if (y == ConstantGameSettings.CHUNK_HEIGHT - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
+                                    if (y == 0)
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
+                                    if (y == ConstantCommonSettings.CHUNK_HEIGHT - 1)
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
 
-                                    if (z == 0) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
-                                    if (z == ConstantGameSettings.CHUNK_LENGTH - 1) meshDataGenerators.submit(new ChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
+                                    if (z == 0)
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
+                                    if (z == ConstantCommonSettings.CHUNK_LENGTH - 1)
+                                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
                                 }
                             }
                         }
@@ -211,7 +173,7 @@ public final class Client {
                     byteBuf.release();
                     break;
                 default:
-                    System.err.println("Unexpected package key: " + packageID);
+                    Logger.error(Logger.Priority.HIGH, "Unexpected package key: " + packageID);
                     byteBuf.release();
                     break;
             }
@@ -235,7 +197,7 @@ public final class Client {
         String entityID = ByteUtils.bytesToHex(entityIDBytes);
         ClientEntity entity = entities.get(entityID);
         if (entity == null) {
-            System.err.println("Received update for unknown entity: " + entityID);
+            Logger.warn(Logger.Priority.NORMAL, "Received update for unknown entity: " + entityID);
             return;
         }
 
@@ -269,30 +231,35 @@ public final class Client {
         }
     }
 
-    private void receiveChunk(ByteBuf byteBuf) throws InterruptedException {
+    private void receiveChunk(ByteBuf byteBuf) {
         int x = byteBuf.getInt(8);
         int y = byteBuf.getInt(12);
         int z = byteBuf.getInt(16);
         Position3D position3D = new Position3D(x, y, z);
 
-        meshDataGenerators.submit(new ChunkMeshDataTask(byteBuf, position3D));
+        world.receivedChunk(position3D);
+
+        lightingGenerators.submit(new LightingChunkMeshDataTask(byteBuf, position3D));
     }
 
-    private void loadPlayer(byte[] playerID, String name) throws InterruptedException {
-        String id = ByteUtils.bytesToHex(playerID);
-        ClientEntity playerEntity = new ClientEntity(name, id, new EntityType(EntityType.Type.PLAYER, name));
-        entities.put(id, playerEntity);
-
-        logger.info("Added player: " + id);
-
-        meshDataGenerators.submit(new EntityMeshDataTask(playerEntity));
+    private void receiveChunkHeights(ByteBuf byteBuf) {
+        int cx = byteBuf.getInt(8);
+        int cz = byteBuf.getInt(12);
+        Chunk2D<Integer> chunkHeights = new SingleBlockChunk2D<>(0);
+        int x = 0, z = 0;
+        for (int i = 0; i < ConstantCommonSettings.BLOCKS_IN_CHUNK_2D; i++) {
+            chunkHeights = chunkHeights.setBlock(x, z, byteBuf.getInt(16 + i * Integer.BYTES));
+            x++;
+            if (x >= ConstantCommonSettings.CHUNK_WIDTH) {
+                x = 0;
+                z++;
+            }
+        }
+        world.setChunkHeights(new Position2D(cx, cz), chunkHeights);
+        byteBuf.release();
     }
 
-    private void newPlayer(ByteBuf byteBuf) throws InterruptedException {
-        loadPlayer(ByteUtils.getBytes(byteBuf, 8, 32), "Other client!!");
-    }
-
-    private void newEntity(ByteBuf byteBuf) throws InterruptedException {
+    private void newEntity(ByteBuf byteBuf) {
         int entityIDLength = byteBuf.getInt(8);
 
         byte[] entityID = new byte[entityIDLength];
@@ -335,12 +302,13 @@ public final class Client {
             return;
         }
         long time = System.currentTimeMillis();
-        if (time - lastFlushedTime > ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME || queuedChunkTasks.size() > ConstantServerSettings.CHUNK_REQUEST_BATCHING_LIMIT) {
+        if (time - lastFlushedTime > ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_TIME || queuedChunkTasks.size() > ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_LIMIT) {
             List<Position3D> queuedChunkTasksBatch = new ArrayList<>();
             while (!queuedChunkTasks.isEmpty()) {
-                queuedChunkTasksBatch.add(queuedChunkTasks.remove());
-                if (queuedChunkTasksBatch.getLast() == null) {
-                    queuedChunkTasksBatch.removeLast();
+                Position3D position3D = queuedChunkTasks.remove();
+                if (position3D != null) {
+                    queuedChunkTasksBatch.add(position3D);
+                } else {
                     break;
                 }
             }
@@ -348,15 +316,15 @@ public final class Client {
                 int[] data = new int[queuedChunkTasksBatch.size() * 3 + 1];
                 data[0] = queuedChunkTasksBatch.size();
                 for (int i = 0; !queuedChunkTasksBatch.isEmpty(); i++) {
-                    Position3D req = queuedChunkTasksBatch.removeLast();
+                    Position3D req = queuedChunkTasksBatch.removeFirst();
 
                     data[i * 3 + 1] = req.x();
                     data[i * 3 + 2] = req.y();
                     data[i * 3 + 3] = req.z();
                 }
-                sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
+                NetworkService.sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
             }
-            lastFlushedTime += ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME;
+            lastFlushedTime += ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_TIME;
         }
     }
 
@@ -367,14 +335,24 @@ public final class Client {
                 queuedChunkTasks.add(position3D);
                 break;
             case CLOSE:
-                sendBytes(channel, PackageID.CLOSE, clientID);
+                NetworkService.sendBytes(channel, PackageID.CLOSE, clientID);
                 break;
             case PLAYER_UPDATE:
-                PlayerUpdateRequest r = (PlayerUpdateRequest) request;
-                sendDoubles(channel, PackageID.PLAYER_UPDATE, clientID, r.x(), r.y(), r.z(), r.pitch(), r.yaw());
+                PlayerUpdateRequest playerUpdateRequest = (PlayerUpdateRequest) request;
+                NetworkService.sendDoubles(channel, PackageID.PLAYER_UPDATE, clientID, playerUpdateRequest.x(), playerUpdateRequest.y(), playerUpdateRequest.z(), playerUpdateRequest.pitch(), playerUpdateRequest.yaw());
+                break;
+            case BLOCK_REPLACE:
+                BlockReplaceRequest blockReplaceRequest = (BlockReplaceRequest) request;
+                byte[] bytes = new byte[Integer.BYTES * 4 + blockReplaceRequest.newBlock().id().length()];
+                ByteUtils.addInt(bytes, blockReplaceRequest.position3D().x(), 0);
+                ByteUtils.addInt(bytes, blockReplaceRequest.position3D().y(), Integer.BYTES);
+                ByteUtils.addInt(bytes, blockReplaceRequest.position3D().z(), Integer.BYTES * 2);
+                ByteUtils.addInt(bytes, blockReplaceRequest.newBlock().id().length(), Integer.BYTES * 3);
+                System.arraycopy(blockReplaceRequest.newBlock().id().getBytes(), 0, bytes, Integer.BYTES * 4, blockReplaceRequest.newBlock().id().length());
+                NetworkService.sendBytes(channel, PackageID.REPLACE_BLOCK, clientID, bytes);
                 break;
             default:
-                System.err.println("Unexpected request type: " + request.getType());
+                Logger.error(Logger.Priority.HIGH, "Unexpected request type: " + request.getType());
         }
     }
 
@@ -391,7 +369,7 @@ public final class Client {
     }
 
     public void close() {
-        logger.debug("Disconnecting from server...");
+        Logger.debug("Disconnecting from server...");
         sendRequest(new CloseRequest());
         try {
             if (channel != null) {
@@ -404,22 +382,36 @@ public final class Client {
                 group.shutdownGracefully();
             }
             clientRunning.set(false);
+            lightingGenerators.shutdown();
             meshDataGenerators.shutdown();
+            lightingGenerators.awaitTermination();
             meshDataGenerators.awaitTermination();
         }
-        logger.info("Client disconnected");
+        Logger.info("Client disconnected");
     }
 
-    public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData) {
+    public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, State state) {
         meshDataGenerators = new WorkerThreadPool<>(
-                ConstantGameSettings.MAX_MESH_GENERATOR_THREADS,
+                ConstantClientSettings.MAX_MESH_GENERATOR_THREADS,
                 () -> new MeshDataGenerator(
                         worldDataService,
                         entityMeshDefinitionCache,
                         queuedEntityMeshData,
                         world,
-                        blockService
+                        blockService,
+                        state
                 )::generateMeshData,
+                true
+        );
+        lightingGenerators = new WorkerThreadPool<>(
+                ConstantClientSettings.MAX_LIGHTING_GENERATOR_THREADS,
+                () -> new ChunkMeshDataLightingGenerator(
+                        world,
+                        worldDataService,
+                        meshDataGenerators,
+                        blockService,
+                        state
+                )::generateLightingMeshData,
                 true
         );
     }

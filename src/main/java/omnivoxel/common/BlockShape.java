@@ -1,6 +1,6 @@
 package omnivoxel.common;
 
-import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

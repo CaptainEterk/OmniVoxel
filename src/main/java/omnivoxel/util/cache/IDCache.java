@@ -77,25 +77,4 @@ public final class IDCache<K, V> {
             throw new RuntimeException("Failed to instantiate " + clazz.getName() + " with args", e);
         }
     }
-
-    // helper to differentiate parameterized constructor cache entries
-    private record ConstructorKey(Class<?> clazz, Class<?>[] params) {
-        private ConstructorKey(Class<?> clazz, Class<?>[] params) {
-            this.clazz = clazz;
-            this.params = params.clone();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof ConstructorKey(Class<?> clazz1, Class<?>[] params1))) return false;
-            if (!clazz.equals(clazz1)) return false;
-            if (params.length != params1.length) return false;
-            for (int i = 0; i < params.length; i++) {
-                if (!params[i].equals(params1[i])) return false;
-            }
-            return true;
-        }
-
-    }
 }

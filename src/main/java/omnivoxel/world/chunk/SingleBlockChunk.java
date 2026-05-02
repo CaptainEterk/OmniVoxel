@@ -17,6 +17,6 @@ public class SingleBlockChunk<B> implements Chunk<B> {
         if (this.block == block) {
             return this;
         }
-        return new BiBlockChunk<>(block).setBlock(x, y, z, block);
+        return new BiBlockChunk<>(this.block).setBlock(x, y, z, block);
     }
 }

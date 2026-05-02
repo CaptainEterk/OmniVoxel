@@ -1,6 +1,7 @@
 package omnivoxel.util.config;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.util.log.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,14 +38,14 @@ public class ConfigFile {
                 result.put(key, props.getProperty(key));
             }
         } catch (IOException e) {
-            System.err.println("Failed to load config '" + configName + "': " + e.getMessage());
+            Logger.error(Logger.Priority.HIGH, "Failed to load config '" + configName + "': " + e.getMessage());
         }
 
         return result;
     }
 
     public void write(Map<String, ?> properties) throws IOException {
-        Files.createDirectories(Path.of(ConstantGameSettings.CONFIG_LOCATION));
+        Files.createDirectories(Path.of(ConstantCommonSettings.CONFIG_LOCATION));
         Path path = getConfigPath();
 
         Properties props = new Properties();

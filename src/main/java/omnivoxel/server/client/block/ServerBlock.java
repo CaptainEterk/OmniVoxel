@@ -5,6 +5,7 @@ import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.client.ServerItem;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Objects;
 
 public record ServerBlock(
@@ -12,13 +13,19 @@ public record ServerBlock(
         String blockShape,
         double[][] uvCoords,
         boolean transparent,
-        boolean transparentMesh
+        boolean transparentMesh,
+        byte[] lightEmitting,
+        byte[] lightDiffusing
 ) implements ServerItem {
     public static final double[][] emptyUVCoords = new double[6][0];
+    private static final byte[] defaultLightDiffusing = new byte[4];
+    // TODO: Don't hardcode omnivoxel:air/default
+    public static final ServerBlock AIR = new ServerBlock("omnivoxel:air/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false, new byte[3], defaultLightDiffusing);
+    public static final ServerBlock VOID = new ServerBlock("omnivoxel:void/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false, new byte[3], defaultLightDiffusing);
 
-    public static final ServerBlock VOID = new ServerBlock("omnivoxel:void/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false);
-    // TODO: Don't hardcore omnivoxel:air/default
-    public static final ServerBlock AIR = new ServerBlock("omnivoxel:air/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false);
+    static {
+        Arrays.fill(defaultLightDiffusing, (byte) 1);
+    }
 
     public ServerBlock {
         if (uvCoords.length != 6) {
@@ -44,7 +51,9 @@ public record ServerBlock(
         int size = 2 + idBytes.length
                 + 2 + shapeBytes.length
                 + 1 + 1
-                + uvCoordByteCount;
+                + uvCoordByteCount
+                + 3
+                + 4;
 
         ByteBuffer buffer = ByteBuffer.allocate(size);
 
@@ -63,6 +72,14 @@ public record ServerBlock(
             for (double uv : uvCoords) {
                 buffer.putDouble(uv);
             }
+        }
+
+        for (int i = 0; i < 3; i++) {
+            buffer.put(lightEmitting[i]);
+        }
+
+        for (int i = 0; i < 4; i++) {
+            buffer.put(lightDiffusing[i]);
         }
 
         return buffer.array();

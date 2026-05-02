@@ -1,6 +1,6 @@
 package omnivoxel.server.world;
 
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.client.chunk.result.ChunkCacheItem;
 
 import java.io.IOException;

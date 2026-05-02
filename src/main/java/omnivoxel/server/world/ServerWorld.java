@@ -1,22 +1,23 @@
 package omnivoxel.server.world;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
+import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk2d.Chunk2D;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerWorld {
     private final Map<Position3D, ChunkValue> chunks;
-    private final Map<Position3D, byte[]> chunkBytes;
+    private final Map<Position2D, Chunk2D<Integer>> chunkHeights;
     private int request = 0;
 
     public ServerWorld() {
         chunks = new ConcurrentHashMap<>();
-        chunkBytes = new ConcurrentHashMap<>();
+        chunkHeights = new ConcurrentHashMap<>();
     }
 
     public void tick() {
@@ -27,15 +28,23 @@ public class ServerWorld {
         request++;
     }
 
+    // TODO: Remove chunkHeights too
     private void checkForOldChunks(Position3D position3D, ChunkValue chunkValue) {
         if (chunkValue.shouldSave(this.request)) {
             chunks.remove(position3D);
         }
     }
 
+    public Chunk2D<Integer> getChunkHeights(Position2D position2D) {
+        return chunkHeights.get(position2D);
+    }
+
+    public void putChunkHeights(Position2D position2D, Chunk2D<Integer> chunkHeights) {
+        this.chunkHeights.put(position2D, chunkHeights);
+    }
+
     public void put(Position3D position3D, Chunk<ServerBlock> chunk) {
-        this.chunks.put(position3D, new ChunkValue(chunk, request));
-        this.chunkBytes.remove(position3D);
+        chunks.put(position3D, new ChunkValue(chunk, request));
     }
 
     public Chunk<ServerBlock> get(Position3D position3D) {
@@ -44,9 +53,9 @@ public class ServerWorld {
     }
 
     public ServerBlock getBlock(Position3D chunkPosition, int x, int y, int z) {
-        final int CW = ConstantGameSettings.CHUNK_WIDTH;
-        final int CH = ConstantGameSettings.CHUNK_HEIGHT;
-        final int CL = ConstantGameSettings.CHUNK_LENGTH;
+        final int CW = ConstantCommonSettings.CHUNK_WIDTH;
+        final int CH = ConstantCommonSettings.CHUNK_HEIGHT;
+        final int CL = ConstantCommonSettings.CHUNK_LENGTH;
 
         int dx = Math.floorDiv(x, CW);
         int dy = Math.floorDiv(y, CH);
@@ -63,14 +72,6 @@ public class ServerWorld {
         return chunk.getBlock(lx, ly, lz);
     }
 
-    public byte[] getBytes(Position3D chunkPosition) {
-        return chunkBytes.get(chunkPosition);
-    }
-
-    public void put(Position3D chunkPosition, byte[] chunkBytes) {
-        this.chunkBytes.put(chunkPosition, chunkBytes);
-    }
-
     private static class ChunkValue {
         private final Chunk<ServerBlock> chunk;
         private int request;
@@ -81,7 +82,7 @@ public class ServerWorld {
         }
 
         public boolean shouldSave(int request) {
-            return request - this.request > ConstantServerSettings.CHUNK_TIME_LIMIT;
+            return request - this.request > ConstantCommonSettings.CHUNK_TICK_TIMEOUT;
         }
 
         public Chunk<ServerBlock> get(int request) {

@@ -1,12 +1,15 @@
 package omnivoxel.client.network.util;
 
 import io.netty.buffer.ByteBuf;
-import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
-import omnivoxel.client.game.graphics.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
+import omnivoxel.client.game.graphics.block.BlockMesh;
+import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
+import omnivoxel.util.log.Logger;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +53,7 @@ public class ByteBufUtils {
         shapeCache.put(id, blockShape);
     }
 
-    public static Block registerBlockFromByteBuf(ByteBuf byteBuf) {
+    public static BlockMesh registerBlockFromByteBuf(ByteBuf byteBuf) {
         int readerIndex = 8;
 
         int idLength = byteBuf.getShort(readerIndex);
@@ -63,6 +66,9 @@ public class ByteBufUtils {
         String blockIDState = new String(idBytes);
 
         String[] ids = blockIDState.split("/");
+        if (ids.length == 1) {
+            ids = new String[]{ids[0], "default"};
+        }
         String modID = ids[0];
 
         final String blockID = modID.contains(":") ? modID.split(":", 2)[1] : modID;
@@ -92,9 +98,23 @@ public class ByteBufUtils {
             allUVCoords[f] = uvCoords;
         }
 
+        byte[] lightEmitting = new byte[3];
+
+        for (int i = 0; i < lightEmitting.length; i++) {
+            lightEmitting[i] = byteBuf.getByte(readerIndex++);
+        }
+
+        byte[] lightDiffusing = new byte[4];
+
+        for (int i = 0; i < lightDiffusing.length; i++) {
+            lightDiffusing[i] = byteBuf.getByte(readerIndex++);
+        }
+
+        Logger.info("Registering block: " + blockIDState + " " + Arrays.toString(lightEmitting) + " " + Arrays.toString(lightDiffusing));
+
         shapeCache.put(blockShape.id(), blockShape);
 
-        return new Block(ids[1]) {
+        return new BlockMesh(ids[1]) {
             @Override
             public String getID() {
                 return blockID;
@@ -106,18 +126,28 @@ public class ByteBufUtils {
             }
 
             @Override
-            public BlockShape getShape(Block top, Block bottom, Block north, Block south, Block east, Block west) {
+            public BlockShape getShape(BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west) {
                 return blockShape;
             }
 
             @Override
-            public boolean shouldRenderFace(BlockFace face, Block adjacentBlock) {
-                return !modID.equals("omnivoxel:air") && !adjacentBlock.getModID().equals(modID) && adjacentBlock.isTransparent();
+            public boolean shouldRenderFace(BlockFace face, BlockMesh adjacentBlockMesh) {
+                return !modID.equals("omnivoxel:air") && !adjacentBlockMesh.getModID().equals(modID) && adjacentBlockMesh.isTransparent();
             }
 
             @Override
             public int[] getUVCoordinates(BlockFace blockFace) {
                 return allUVCoords[blockFace.ordinal()];
+            }
+
+            @Override
+            public byte getLightDiffuse(LightChannels channel) {
+                return lightDiffusing[channel.ordinal()];
+            }
+
+            @Override
+            public byte getLightEmitting(LightChannels channel) {
+                return lightEmitting[channel.ordinal()];
             }
 
             @Override

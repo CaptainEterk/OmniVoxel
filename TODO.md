@@ -2,7 +2,7 @@
 
 - [ ] Mod support
     - [ ] Custom textures
-    - [ ] Custom blocks
+    - [ ] Custom blockMeshes
     - [ ] Custom entities
     - [ ] World Generation
         - [ ] Structures
@@ -23,4 +23,4 @@
 - [ ] Gameplay
     - [X] Collision Detection (player)
     - [ ] Collision Detection (entities)
-- [ ] __\[HELPER\]__ Outlining blocks/chunks
+- [ ] __\[HELPER\]__ Outlining blockMeshes/chunks

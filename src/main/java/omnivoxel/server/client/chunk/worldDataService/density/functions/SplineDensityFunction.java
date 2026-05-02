@@ -36,10 +36,6 @@ public class SplineDensityFunction extends DensityFunction {
             double loc = (Game.checkGameNodeType(o.object().get("location"), DoubleGameNode.class)).value();
             double der = (Game.checkGameNodeType(o.object().get("derivative"), DoubleGameNode.class)).value();
 
-            if (o.object().get("value") instanceof ObjectGameNode objectGameNode1 && objectGameNode1.object().get("type") == null) {
-                System.out.println(objectGameNode1.object());
-            }
-
             DensityFunction valueFn = ServerWorldDataService.getDensityFunction(o.object().get("value"), seed);
 
             points.add(new Point(loc, valueFn, der));

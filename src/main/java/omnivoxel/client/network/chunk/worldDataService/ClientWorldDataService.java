@@ -1,24 +1,24 @@
 package omnivoxel.client.network.chunk.worldDataService;
 
-import omnivoxel.client.game.graphics.opengl.mesh.block.Block;
+import omnivoxel.client.game.graphics.block.BlockMesh;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 // TODO: Merge with BlockService
 public class ClientWorldDataService {
-    private final Map<String, Block> blocks;
+    private final Map<String, BlockMesh> blocks;
 
     public ClientWorldDataService() {
-        blocks = new ConcurrentHashMap<>();
+        blocks = new HashMap<>();
     }
 
-    public Block getBlock(String blockModID) {
+    public BlockMesh getBlock(String blockModID) {
         return blocks.get(blockModID);
     }
 
-    public void addBlock(Block block) {
-        blocks.put(block.getModID() + "/" + block.getState(), block);
+    public void addBlock(BlockMesh blockMesh) {
+        blocks.put(blockMesh.getModID() + "/" + blockMesh.getState(), blockMesh);
     }
 }

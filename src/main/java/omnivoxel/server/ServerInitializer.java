@@ -1,6 +1,7 @@
 package omnivoxel.server;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,8 +14,7 @@ public class ServerInitializer {
     }
 
     private static void createFileLocations() throws IOException {
-        Files.createDirectories(Path.of(ConstantGameSettings.LOG_LOCATION));
-        Files.createDirectories(Path.of(ConstantGameSettings.GAME_LOCATION));
+        Files.createDirectories(Path.of(ConstantCommonSettings.LOG_LOCATION));
         Files.createDirectories(Path.of(ConstantServerSettings.WORLD_SAVE_LOCATION));
         Path chunkSaveLocation = Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION);
         clearDirectory(chunkSaveLocation);

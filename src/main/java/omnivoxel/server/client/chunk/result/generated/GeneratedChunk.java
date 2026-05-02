@@ -1,11 +1,12 @@
 package omnivoxel.server.client.chunk.result.generated;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.annotations.NotNull;
+import omnivoxel.common.network.NetworkService;
 import omnivoxel.server.BlockIDCount;
+import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
-import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.client.chunk.result.ChunkResult;
 import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk.SingleBlockChunk;
@@ -14,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class GeneratedChunk {
-    public static ChunkResult emptyChunk = null;
+    private static ChunkResult emptyChunk = null;
 
     // TODO: Move this to something similar to ChunkIO
     public static ChunkResult getResult(GeneratedChunk generatedChunk, ServerClient client) {
@@ -27,18 +28,18 @@ public abstract class GeneratedChunk {
 
         Chunk<ServerBlock> chunkOut = new SingleBlockChunk<>(ServerBlock.AIR);
         List<ServerBlock> palette = new ArrayList<>();
-        int[] chunk = new int[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+        int[] chunk = new int[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
         int chunkByteOffset = 0;
-        for (int x = -1; x < ConstantGameSettings.CHUNK_WIDTH + 1; x++) {
-            for (int z = -1; z < ConstantGameSettings.CHUNK_LENGTH + 1; z++) {
-                for (int y = -1; y < ConstantGameSettings.CHUNK_HEIGHT + 1; y++) {
+        for (int x = -1; x < ConstantCommonSettings.CHUNK_WIDTH + 1; x++) {
+            for (int z = -1; z < ConstantCommonSettings.CHUNK_LENGTH + 1; z++) {
+                for (int y = -1; y < ConstantCommonSettings.CHUNK_HEIGHT + 1; y++) {
                     ServerBlock block = generatedChunk.getBlock(x, y, z);
                     if (!palette.contains(block)) {
                         palette.add(block);
                     }
-                    if (x > 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                            y > 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                            z > 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                    if (x > 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                            y > 0 && y < ConstantCommonSettings.CHUNK_HEIGHT &&
+                            z > 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
                         chunkOut = chunkOut.setBlock(x, y, z, block);
                     }
                     chunk[chunkByteOffset] = palette.indexOf(block);
@@ -51,7 +52,7 @@ public abstract class GeneratedChunk {
             // TODO: This shouldn't handle anything server/client related
             palette.forEach(serverBlock -> {
                 if (client.registerBlockID(serverBlock.id())) {
-                    ChunkIO.sendBlock(client.getCTX(), serverBlock);
+                    NetworkService.sendBytes(client.getCTX().channel(), PackageID.REGISTER_BLOCK, null, serverBlock.getBytes());
                 }
             });
         }
