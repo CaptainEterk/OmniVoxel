@@ -11,6 +11,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.network.NetworkHandler;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
@@ -23,9 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerLauncher {
-    // TODO: Use a config file
-    private static final int PORT = 1515;
-    private static final String IP = "0.0.0.0";
 
     public static void main(String[] args) throws IOException {
         new ServerLauncher().run(100L);
@@ -33,6 +32,11 @@ public class ServerLauncher {
 
     public void run(long seed) throws IOException {
         Logger.setMinPriority(Logger.Priority.NORMAL);
+
+        Settings settings = new Settings();
+        settings.load(ConstantCommonSettings.CONFIG_LOCATION);
+        int port = settings.getIntSetting("port", 1515);
+        String ip = settings.getSetting("ip", "0.0.0.0");
 
         ServerInitializer.init();
 
@@ -44,9 +48,8 @@ public class ServerLauncher {
         ServerWorld world = new ServerWorld();
 
         try {
-            // TODO: Make a wrapper class around clients
             Map<String, ServerClient> clients = new ConcurrentHashMap<>();
-            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients));
+            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients), settings);
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
 
@@ -64,8 +67,8 @@ public class ServerLauncher {
                         }
                     });
 
-            ChannelFuture future = serverBootstrap.bind(IP, PORT).sync();
-            Logger.info("Server started at " + IP + ":" + PORT);
+            ChannelFuture future = serverBootstrap.bind(ip, port).sync();
+            Logger.info("Server started at " + ip + ":" + port);
 
             future.channel().closeFuture().sync();
         } catch (InterruptedException e) {

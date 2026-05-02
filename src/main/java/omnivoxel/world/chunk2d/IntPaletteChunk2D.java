@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk2d;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.IndexCalculator;
 
 import java.util.ArrayList;
@@ -20,10 +20,10 @@ public class IntPaletteChunk2D<B> implements Chunk2D<B> {
     }
 
     private int[] extractBlocks(Chunk2D<B> chunk) {
-        int[] blocks = new int[ConstantGameSettings.BLOCKS_IN_CHUNK_2D];
+        int[] blocks = new int[ConstantCommonSettings.BLOCKS_IN_CHUNK_2D];
 
-        for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
+        for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
                 B block = chunk.getBlock(x, z);
 
                 Integer index = paletteIndex.get(block);

@@ -1,6 +1,6 @@
 package omnivoxel.server.client.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.ChunkInfo;
@@ -28,12 +28,12 @@ public final class ChunkGenerator {
         Chunk<ServerBlock> chunk = new SingleBlockChunk<>(ServerBlock.AIR);
         if (worldDataService.shouldGenerateChunk(position3D)) {
             ChunkInfo chunkInfo = worldDataService.getChunkInfo(world, position3D);
-            for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-                int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
-                for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
-                    int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
-                    for (int y = 0; y < ConstantGameSettings.CHUNK_HEIGHT; y++) {
-                        int worldY = position3D.y() * ConstantGameSettings.CHUNK_HEIGHT + y;
+            for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+                int worldX = position3D.x() * ConstantCommonSettings.CHUNK_WIDTH + x;
+                for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                    int worldZ = position3D.z() * ConstantCommonSettings.CHUNK_LENGTH + z;
+                    for (int y = 0; y < ConstantCommonSettings.CHUNK_HEIGHT; y++) {
+                        int worldY = position3D.y() * ConstantCommonSettings.CHUNK_HEIGHT + y;
                         chunk = chunk.setBlock(x, y, z, worldDataService.getBlockAt(x, y, z, worldX, worldY, worldZ, chunkInfo));
                     }
                 }

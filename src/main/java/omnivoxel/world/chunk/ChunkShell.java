@@ -1,44 +1,44 @@
 package omnivoxel.world.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 // TODO: Memory optimizations
 public class ChunkShell<B> implements Chunk<B> {
-    private final Object[] minX = new Object[ConstantGameSettings.CHUNK_HEIGHT * ConstantGameSettings.CHUNK_LENGTH];
-    private final Object[] maxX = new Object[ConstantGameSettings.CHUNK_HEIGHT * ConstantGameSettings.CHUNK_LENGTH];
+    private final Object[] minX = new Object[ConstantCommonSettings.CHUNK_HEIGHT * ConstantCommonSettings.CHUNK_LENGTH];
+    private final Object[] maxX = new Object[ConstantCommonSettings.CHUNK_HEIGHT * ConstantCommonSettings.CHUNK_LENGTH];
 
-    private final Object[] minY = new Object[ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH];
-    private final Object[] maxY = new Object[ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH];
+    private final Object[] minY = new Object[ConstantCommonSettings.CHUNK_WIDTH * ConstantCommonSettings.CHUNK_LENGTH];
+    private final Object[] maxY = new Object[ConstantCommonSettings.CHUNK_WIDTH * ConstantCommonSettings.CHUNK_LENGTH];
 
-    private final Object[] minZ = new Object[ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_HEIGHT];
-    private final Object[] maxZ = new Object[ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_HEIGHT];
+    private final Object[] minZ = new Object[ConstantCommonSettings.CHUNK_WIDTH * ConstantCommonSettings.CHUNK_HEIGHT];
+    private final Object[] maxZ = new Object[ConstantCommonSettings.CHUNK_WIDTH * ConstantCommonSettings.CHUNK_HEIGHT];
 
     // May return null if one of the sides has not been initialized
     @SuppressWarnings("unchecked")
     @Override
     public B getBlock(int x, int y, int z) {
         if (x == 0) {
-            return (B) minX[y * ConstantGameSettings.CHUNK_LENGTH + z];
+            return (B) minX[y * ConstantCommonSettings.CHUNK_LENGTH + z];
         }
 
-        if (x == ConstantGameSettings.CHUNK_WIDTH - 1) {
-            return (B) maxX[y * ConstantGameSettings.CHUNK_LENGTH + z];
+        if (x == ConstantCommonSettings.CHUNK_WIDTH - 1) {
+            return (B) maxX[y * ConstantCommonSettings.CHUNK_LENGTH + z];
         }
 
         if (y == 0) {
-            return (B) minY[x * ConstantGameSettings.CHUNK_LENGTH + z];
+            return (B) minY[x * ConstantCommonSettings.CHUNK_LENGTH + z];
         }
 
-        if (y == ConstantGameSettings.CHUNK_HEIGHT - 1) {
-            return (B) maxY[x * ConstantGameSettings.CHUNK_LENGTH + z];
+        if (y == ConstantCommonSettings.CHUNK_HEIGHT - 1) {
+            return (B) maxY[x * ConstantCommonSettings.CHUNK_LENGTH + z];
         }
 
         if (z == 0) {
-            return (B) minZ[x * ConstantGameSettings.CHUNK_HEIGHT + y];
+            return (B) minZ[x * ConstantCommonSettings.CHUNK_HEIGHT + y];
         }
 
-        if (z == ConstantGameSettings.CHUNK_LENGTH - 1) {
-            return (B) maxZ[x * ConstantGameSettings.CHUNK_HEIGHT + y];
+        if (z == ConstantCommonSettings.CHUNK_LENGTH - 1) {
+            return (B) maxZ[x * ConstantCommonSettings.CHUNK_HEIGHT + y];
         }
 
         throw new IllegalArgumentException("Attempted to access interior block of ChunkShell");
@@ -48,32 +48,32 @@ public class ChunkShell<B> implements Chunk<B> {
     public Chunk<B> setBlock(int x, int y, int z, B block) {
 
         if (x == 0) {
-            minX[y * ConstantGameSettings.CHUNK_LENGTH + z] = block;
+            minX[y * ConstantCommonSettings.CHUNK_LENGTH + z] = block;
             return this;
         }
 
-        if (x == ConstantGameSettings.CHUNK_WIDTH - 1) {
-            maxX[y * ConstantGameSettings.CHUNK_LENGTH + z] = block;
+        if (x == ConstantCommonSettings.CHUNK_WIDTH - 1) {
+            maxX[y * ConstantCommonSettings.CHUNK_LENGTH + z] = block;
             return this;
         }
 
         if (y == 0) {
-            minY[x * ConstantGameSettings.CHUNK_LENGTH + z] = block;
+            minY[x * ConstantCommonSettings.CHUNK_LENGTH + z] = block;
             return this;
         }
 
-        if (y == ConstantGameSettings.CHUNK_HEIGHT - 1) {
-            maxY[x * ConstantGameSettings.CHUNK_LENGTH + z] = block;
+        if (y == ConstantCommonSettings.CHUNK_HEIGHT - 1) {
+            maxY[x * ConstantCommonSettings.CHUNK_LENGTH + z] = block;
             return this;
         }
 
         if (z == 0) {
-            minZ[x * ConstantGameSettings.CHUNK_HEIGHT + y] = block;
+            minZ[x * ConstantCommonSettings.CHUNK_HEIGHT + y] = block;
             return this;
         }
 
-        if (z == ConstantGameSettings.CHUNK_LENGTH - 1) {
-            maxZ[x * ConstantGameSettings.CHUNK_HEIGHT + y] = block;
+        if (z == ConstantCommonSettings.CHUNK_LENGTH - 1) {
+            maxZ[x * ConstantCommonSettings.CHUNK_HEIGHT + y] = block;
             return this;
         }
 

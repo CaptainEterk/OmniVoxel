@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 import java.util.Objects;
 
@@ -11,23 +11,23 @@ public class BiBlockChunk<B> implements Chunk<B> {
 
     public BiBlockChunk(B block) {
         this.block1 = block;
-        blocks = new int[ConstantGameSettings.CHUNK_WIDTH * ConstantGameSettings.CHUNK_LENGTH];
+        blocks = new int[ConstantCommonSettings.CHUNK_WIDTH * ConstantCommonSettings.CHUNK_LENGTH];
     }
 
     @Override
     public B getBlock(int x, int y, int z) {
-        return (blocks[z * ConstantGameSettings.CHUNK_WIDTH + x] & (1 << y)) != 0 ? this.block2 : block1;
+        return (blocks[z * ConstantCommonSettings.CHUNK_WIDTH + x] & (1 << y)) != 0 ? this.block2 : block1;
     }
 
     @Override
     public Chunk<B> setBlock(int x, int y, int z, B block) {
         if (Objects.equals(this.block1, block)) {
-            blocks[z * ConstantGameSettings.CHUNK_WIDTH + x] &= ~(1 << y);
+            blocks[z * ConstantCommonSettings.CHUNK_WIDTH + x] &= ~(1 << y);
         } else if (this.block2 == null) {
             this.block2 = block;
-            blocks[z * ConstantGameSettings.CHUNK_WIDTH + x] |= (1 << y);
+            blocks[z * ConstantCommonSettings.CHUNK_WIDTH + x] |= (1 << y);
         } else if (Objects.equals(this.block2, block)) {
-            blocks[z * ConstantGameSettings.CHUNK_WIDTH + x] |= (1 << y);
+            blocks[z * ConstantCommonSettings.CHUNK_WIDTH + x] |= (1 << y);
         } else {
             return new ModifiedChunk<>(x, y, z, block, this);
         }

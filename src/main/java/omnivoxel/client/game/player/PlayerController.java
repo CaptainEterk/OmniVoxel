@@ -7,8 +7,6 @@ import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.client.game.input.KeyInput;
 import omnivoxel.client.game.input.MouseButtonInput;
 import omnivoxel.client.game.input.MouseInput;
-import omnivoxel.client.game.settings.ConstantGameSettings;
-import omnivoxel.client.game.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -16,6 +14,8 @@ import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.BlockReplaceRequest;
 import omnivoxel.client.network.request.PlayerUpdateRequest;
 import omnivoxel.common.annotations.NotNull;
+import omnivoxel.common.settings.ConstantClientSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
@@ -32,9 +32,9 @@ import java.util.function.Consumer;
 
 public class PlayerController {
     private static final double GRAVITY = 0.8f;
-    private static final double JUMP_VELOCITY = 12f * ConstantGameSettings.TARGET_TPS;
-    private static final double AIR_RESISTANCE = 0.91f * ConstantGameSettings.TARGET_TPS;
-    private static final double GROUND_FRICTION = 0.546f * ConstantGameSettings.TARGET_TPS;
+    private static final double JUMP_VELOCITY = 12f * ConstantClientSettings.TARGET_TPS;
+    private static final double AIR_RESISTANCE = 0.91f * ConstantClientSettings.TARGET_TPS;
+    private static final double GROUND_FRICTION = 0.546f * ConstantClientSettings.TARGET_TPS;
     private static final byte COLLISION_X = 0b001;
     private static final byte COLLISION_Y = 2;
     private static final byte COLLISION_Z = 4;
@@ -159,7 +159,7 @@ public class PlayerController {
     }
 
     public void tick(double deltaTime) {
-        double tickDelta = deltaTime * ConstantGameSettings.TARGET_TPS;
+        double tickDelta = deltaTime * ConstantClientSettings.TARGET_TPS;
 
         state.setItem("deltaTime", deltaTime);
 
@@ -349,19 +349,19 @@ public class PlayerController {
             return;
         }
 
-        double stepDeltaTime = deltaTime / ConstantGameSettings.COLLISION_STEPS;
+        int collisionSteps = settings.getIntSetting("collision_steps", 5);
+        int collisionCount = settings.getIntSetting("collision_refining_count", 2);
+
+        double stepDeltaTime = deltaTime / collisionSteps;
         byte collisionDone = 0;
 
-        for (int i = 0; i < ConstantGameSettings.COLLISION_STEPS; i++) {
-
-            // ---- Y axis ----
+        for (int i = 0; i < collisionSteps; i++) {
             if ((collisionDone & COLLISION_Y) == 0) {
                 double targetY = y + velocityY * stepDeltaTime;
                 if (isSolidAt(x, targetY, z)) {
-                    // Binary search between current and target
                     double low = y;
                     double high = targetY;
-                    for (int iter = 0; iter < ConstantGameSettings.COLLISION_COUNT; iter++) {
+                    for (int iter = 0; iter < collisionCount; iter++) {
                         double mid = (low + high) * 0.5;
                         if (isSolidAt(x, mid, z)) {
                             high = mid;
@@ -369,7 +369,7 @@ public class PlayerController {
                             low = mid;
                         }
                     }
-                    y = low; // set to last non-solid
+                    y = low;
                     if (velocityY < 0) {
                         onGround = true;
                     }
@@ -382,13 +382,12 @@ public class PlayerController {
                 }
             }
 
-            // ---- X axis ----
             if ((collisionDone & COLLISION_X) == 0) {
                 double targetX = x + velocityX * stepDeltaTime;
                 if (isSolidAt(targetX, y, z)) {
                     double low = x;
                     double high = targetX;
-                    for (int iter = 0; iter < ConstantGameSettings.COLLISION_COUNT; iter++) {
+                    for (int iter = 0; iter < collisionCount; iter++) {
                         double mid = (low + high) * 0.5;
                         if (isSolidAt(mid, y, z)) {
                             high = mid;
@@ -405,13 +404,12 @@ public class PlayerController {
                 }
             }
 
-            // ---- Z axis ----
             if ((collisionDone & COLLISION_Z) == 0) {
                 double targetZ = z + velocityZ * stepDeltaTime;
                 if (isSolidAt(x, y, targetZ)) {
                     double low = z;
                     double high = targetZ;
-                    for (int iter = 0; iter < ConstantGameSettings.COLLISION_COUNT; iter++) {
+                    for (int iter = 0; iter < collisionCount; iter++) {
                         double mid = (low + high) * 0.5;
                         if (isSolidAt(x, y, mid)) {
                             high = mid;
@@ -449,7 +447,7 @@ public class PlayerController {
             this.yaw = camera.getYaw();
         }
 
-        double speed = 4.317f * ConstantGameSettings.TARGET_TPS;
+        double speed = 4.317f * ConstantClientSettings.TARGET_TPS;
         if (!fly) {
             if (onGround && keyInput.isKeyPressed(GLFW.GLFW_KEY_SPACE)) {
                 velocityY = (float) (JUMP_VELOCITY * deltaTime);

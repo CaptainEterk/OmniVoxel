@@ -1,7 +1,7 @@
 package omnivoxel.client.game.graphics.api.opengl.mesh;
 
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.face.BlockFace;
 
 public class ShapeHelper {
@@ -12,9 +12,9 @@ public class ShapeHelper {
     private static final int BITMASK_13 = 0x1FFF;
 
     public static int[] packVertexData(Vertex vertex, int r, int g, int b, int s, BlockFace blockFace, int u, int v, int type) {
-        int ix = (int) (vertex.px() * (MAX_PACKED_VALUE / ConstantGameSettings.CHUNK_WIDTH));
-        int iy = (int) (vertex.py() * (MAX_PACKED_VALUE / ConstantGameSettings.CHUNK_HEIGHT));
-        int iz = (int) (vertex.pz() * (MAX_PACKED_VALUE / ConstantGameSettings.CHUNK_LENGTH));
+        int ix = (int) (vertex.px() * (MAX_PACKED_VALUE / ConstantCommonSettings.CHUNK_WIDTH));
+        int iy = (int) (vertex.py() * (MAX_PACKED_VALUE / ConstantCommonSettings.CHUNK_HEIGHT));
+        int iz = (int) (vertex.pz() * (MAX_PACKED_VALUE / ConstantCommonSettings.CHUNK_LENGTH));
 
         int packedPosition = (ix << 22) | (iy << 12) | (iz << 2);
 

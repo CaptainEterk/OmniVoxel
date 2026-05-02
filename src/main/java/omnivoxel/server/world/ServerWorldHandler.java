@@ -1,6 +1,6 @@
 package omnivoxel.server.world;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.block.ServerBlockAndPosition;
@@ -24,12 +24,12 @@ public class ServerWorldHandler {
 
     public void replaceBlock(int worldX, int worldY, int worldZ, ServerBlock block, ServerClient client) {
         if (canModify(worldX, worldY, worldZ, client)) {
-            int chunkX = worldX / ConstantGameSettings.CHUNK_WIDTH;
-            int chunkY = worldY / ConstantGameSettings.CHUNK_HEIGHT;
-            int chunkZ = worldZ / ConstantGameSettings.CHUNK_LENGTH;
-            int x = Math.floorMod(worldX, ConstantGameSettings.CHUNK_WIDTH);
-            int y = Math.floorMod(worldY, ConstantGameSettings.CHUNK_HEIGHT);
-            int z = Math.floorMod(worldZ, ConstantGameSettings.CHUNK_LENGTH);
+            int chunkX = worldX / ConstantCommonSettings.CHUNK_WIDTH;
+            int chunkY = worldY / ConstantCommonSettings.CHUNK_HEIGHT;
+            int chunkZ = worldZ / ConstantCommonSettings.CHUNK_LENGTH;
+            int x = Math.floorMod(worldX, ConstantCommonSettings.CHUNK_WIDTH);
+            int y = Math.floorMod(worldY, ConstantCommonSettings.CHUNK_HEIGHT);
+            int z = Math.floorMod(worldZ, ConstantCommonSettings.CHUNK_LENGTH);
             Position3D position3D = new Position3D(chunkX, chunkY, chunkZ);
             Chunk<ServerBlock> chunk = world.get(position3D);
             if (chunk != null) {

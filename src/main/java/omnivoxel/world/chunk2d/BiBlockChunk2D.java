@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk2d;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 import java.util.Objects;
 
@@ -11,7 +11,7 @@ public class BiBlockChunk2D<B> implements Chunk2D<B> {
 
     public BiBlockChunk2D(B block) {
         this.block1 = block;
-        blocks = new int[ConstantGameSettings.CHUNK_LENGTH];
+        blocks = new int[ConstantCommonSettings.CHUNK_LENGTH];
     }
 
     @Override

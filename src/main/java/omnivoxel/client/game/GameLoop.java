@@ -9,7 +9,7 @@ import omnivoxel.client.game.graphics.menu.MenuRenderer;
 import omnivoxel.client.game.graphics.menu.MenuSystem;
 import omnivoxel.client.game.graphics.menu.components.LayoutComponent;
 import omnivoxel.client.game.graphics.menu.position.ComponentPositionOrigin;
-import omnivoxel.client.game.settings.Settings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.Client;

@@ -2,10 +2,12 @@ package omnivoxel.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import omnivoxel.client.game.settings.ConstantGameSettings;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.common.network.NetworkUser;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.block.ServerBlockAndPosition;
@@ -38,22 +40,23 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Server implements NetworkUser {
     private static final int HANDSHAKE_ID = 0;
-    private static final int TPS = 20;
     private final Map<String, ServerClient> clients;
     private final WorkerThreadPool<ChunkTask> workerThreadPool;
     private final ServerWorld world;
     private final Map<String, BlockShape> blockShapeCache;
     private final ServerBlockService blockService;
     private final ServerWorldHandler worldHandler;
+    private final Settings settings;
 
-    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, ServerWorldHandler worldHandler) throws InterruptedException, IOException {
+    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, ServerWorldHandler worldHandler, Settings settings) throws InterruptedException, IOException {
         this.clients = clients;
         this.world = world;
         this.blockShapeCache = blockShapeCache;
         this.blockService = blockService;
         this.worldHandler = worldHandler;
+        this.settings = settings;
 
-        GameNode gameNode = GameParser.parseNode(Files.readString(Path.of("game/main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of("game/constants.json")), null), ArrayGameNode.class));
+        GameNode gameNode = GameParser.parseNode(Files.readString(Path.of(ConstantServerSettings.GAME_LOCATION + "main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of(ConstantServerSettings.GAME_LOCATION + "constants.json")), null), ArrayGameNode.class));
 
         if (gameNode instanceof ObjectGameNode objectGameNode) {
             Set<WorldBoundingBox> worldBoundingBoxes = ConcurrentHashMap.newKeySet();
@@ -177,18 +180,17 @@ public class Server implements NetworkUser {
 
     public void run() {
         try {
-            final long tickIntervalNanos = 1_000_000_000L / TPS;
+            final long tickIntervalNanos = 1_000_000_000L / settings.getIntSetting("tps", 20);
 
             int tick = 0;
             while (true) {
                 long startNano = System.nanoTime();
 
-                // TODO: Turn into a setting
-                if (tick % 10 == 0) {
+                if (tick % settings.getIntSetting("chunk_caching_batch_td", 10) == 0) {
                     ChunkCacheHandler.cacheAll();
                 }
 
-                if (tick % TPS == 0) {
+                if (tick % settings.getIntSetting("lost_client_td", 20) == 0) {
                     Set<String> values = clients.keySet();
                     values.forEach(id -> {
                         if (!NetworkService.checkChannel(clients.get(id).getCTX().channel())) {
@@ -246,11 +248,11 @@ public class Server implements NetworkUser {
                 byte[] blockBytes = block.serverBlock().getBlockBytes();
                 byte[] out = new byte[16 + blockBytes.length];
 
-                int chunkX = Math.floorDiv(block.x(), ConstantGameSettings.CHUNK_WIDTH);
-                int chunkZ = Math.floorDiv(block.z(), ConstantGameSettings.CHUNK_LENGTH);
+                int chunkX = Math.floorDiv(block.x(), ConstantCommonSettings.CHUNK_WIDTH);
+                int chunkZ = Math.floorDiv(block.z(), ConstantCommonSettings.CHUNK_LENGTH);
 
-                int x = Math.floorMod(block.x(), ConstantGameSettings.CHUNK_WIDTH);
-                int z = Math.floorMod(block.z(), ConstantGameSettings.CHUNK_LENGTH);
+                int x = Math.floorMod(block.x(), ConstantCommonSettings.CHUNK_WIDTH);
+                int z = Math.floorMod(block.z(), ConstantCommonSettings.CHUNK_LENGTH);
 
                 ByteUtils.addInt(out, block.x(), 0);
                 ByteUtils.addInt(out, block.y(), 4);

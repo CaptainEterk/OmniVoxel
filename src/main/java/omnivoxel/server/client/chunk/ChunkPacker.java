@@ -1,6 +1,6 @@
 package omnivoxel.server.client.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.result.generated.EmptyGeneratedChunk;
 import omnivoxel.server.client.chunk.result.generated.GeneratedChunk;
@@ -29,13 +29,13 @@ public final class ChunkPacker {
 
         GeneratedChunk padded = new EmptyGeneratedChunk();
 
-        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y++) {
-                for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
+        for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int y = -1; y <= ConstantCommonSettings.CHUNK_HEIGHT; y++) {
+                for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z++) {
 
-                    int cx = (x < 0) ? -1 : (x == ConstantGameSettings.CHUNK_WIDTH ? 1 : 0);
-                    int cy = (y < 0) ? -1 : (y == ConstantGameSettings.CHUNK_HEIGHT ? 1 : 0);
-                    int cz = (z < 0) ? -1 : (z == ConstantGameSettings.CHUNK_LENGTH ? 1 : 0);
+                    int cx = (x < 0) ? -1 : (x == ConstantCommonSettings.CHUNK_WIDTH ? 1 : 0);
+                    int cy = (y < 0) ? -1 : (y == ConstantCommonSettings.CHUNK_HEIGHT ? 1 : 0);
+                    int cz = (z < 0) ? -1 : (z == ConstantCommonSettings.CHUNK_LENGTH ? 1 : 0);
 
                     Chunk<ServerBlock> src = neighbors[cx + 1][cy + 1][cz + 1];
                     if (src == null) {
@@ -43,9 +43,9 @@ public final class ChunkPacker {
                         continue;
                     }
 
-                    int bx = (x + ConstantGameSettings.CHUNK_WIDTH) % ConstantGameSettings.CHUNK_WIDTH;
-                    int by = (y + ConstantGameSettings.CHUNK_HEIGHT) % ConstantGameSettings.CHUNK_HEIGHT;
-                    int bz = (z + ConstantGameSettings.CHUNK_LENGTH) % ConstantGameSettings.CHUNK_LENGTH;
+                    int bx = (x + ConstantCommonSettings.CHUNK_WIDTH) % ConstantCommonSettings.CHUNK_WIDTH;
+                    int by = (y + ConstantCommonSettings.CHUNK_HEIGHT) % ConstantCommonSettings.CHUNK_HEIGHT;
+                    int bz = (z + ConstantCommonSettings.CHUNK_LENGTH) % ConstantCommonSettings.CHUNK_LENGTH;
 
                     ServerBlock block = src.getBlock(bx, by, bz);
                     padded.setBlock(x, y, z, block);

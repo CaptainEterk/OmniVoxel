@@ -1,6 +1,6 @@
 package omnivoxel.util.config;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.log.Logger;
 
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class ConfigFile {
     }
 
     public void write(Map<String, ?> properties) throws IOException {
-        Files.createDirectories(Path.of(ConstantGameSettings.CONFIG_LOCATION));
+        Files.createDirectories(Path.of(ConstantCommonSettings.CONFIG_LOCATION));
         Path path = getConfigPath();
 
         Properties props = new Properties();

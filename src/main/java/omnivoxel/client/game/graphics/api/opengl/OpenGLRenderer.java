@@ -17,14 +17,12 @@ import omnivoxel.client.game.graphics.camera.Camera;
 import omnivoxel.client.game.graphics.menu.MenuSystem;
 import omnivoxel.client.game.position.DistanceChunk;
 import omnivoxel.client.game.position.PositionedChunk;
-import omnivoxel.client.game.settings.ConstantGameSettings;
-import omnivoxel.client.game.settings.Settings;
+import omnivoxel.common.settings.*;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.Client;
 import omnivoxel.common.annotations.NotNull;
-import omnivoxel.server.ConstantServerSettings;
 import omnivoxel.util.executor.ExecutorCollection;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.time.PeriodicTimeExecutor;
@@ -93,7 +91,7 @@ public class OpenGLRenderer implements Renderer {
     @Override
     public void init() throws IOException {
         // Creates an OpenGL window
-        this.window = WindowFactory.createWindow(settings.getIntSetting("width", 500), settings.getIntSetting("height", 500), ConstantGameSettings.DEFAULT_WINDOW_TITLE, contextTasks);
+        this.window = WindowFactory.createWindow(settings.getIntSetting("width", 500), settings.getIntSetting("height", 500), ConstantClientSettings.DEFAULT_WINDOW_TITLE, contextTasks);
 
         initShader();
 
@@ -141,8 +139,8 @@ public class OpenGLRenderer implements Renderer {
         this.textShaderProgram = shaderProgramHandler.getShaderProgram("text");
         this.shaderProgram.bind();
         this.shaderProgram.setUniform("fogColor", 0.0f, 0.61568627451f, 1.0f, 1.0f);
-        this.shaderProgram.setUniform("fogFar", settings.getFloatSetting("render_distance", 100) - ConstantGameSettings.CHUNK_SIZE);
-        this.shaderProgram.setUniform("fogNear", (settings.getFloatSetting("render_distance", 100) - ConstantGameSettings.CHUNK_SIZE) / 10 * 9);
+        this.shaderProgram.setUniform("fogFar", settings.getFloatSetting("render_distance", 100) - ConstantCommonSettings.CHUNK_SIZE);
+        this.shaderProgram.setUniform("fogNear", (settings.getFloatSetting("render_distance", 100) - ConstantCommonSettings.CHUNK_SIZE) / 10 * 9);
         this.shaderProgram.setUniform("blockTexture", 0);
         this.shaderProgram.unbind();
 
@@ -330,7 +328,7 @@ public class OpenGLRenderer implements Renderer {
             state.setItem("shouldUpdateView", false);
         }
 
-        if (world.chunkRequestCount() < ConstantServerSettings.INFLIGHT_REQUESTS_MINIMUM) {
+        if (world.chunkRequestCount() < ConstantNetworkSettings.INFLIGHT_REQUESTS_MINIMUM) {
             state.setItem("shouldUpdateVisibleMeshes", true);
         }
 
@@ -451,7 +449,7 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void bufferizeChunks() {
-        state.setItem("bufferizing_chunk_count", world.bufferizeQueued(meshGenerator, System.nanoTime() + ConstantGameSettings.BUFFERIZE_END_TIME_LIMIT_MS * 1_000_000));
+        state.setItem("bufferizing_chunk_count", world.bufferizeQueued(meshGenerator, System.nanoTime() + ConstantClientSettings.BUFFERIZE_END_TIME_LIMIT_MS * 1_000_000));
     }
 
     private void cleanupOpenGL() {
@@ -534,7 +532,7 @@ public class OpenGLRenderer implements Renderer {
     // TODO: Remove this replace it with GUI rendering
     private void renderDebugText() {
         if (state.getItem("seeDebug", Boolean.class)) {
-            String leftDebugText = ConstantGameSettings.DEFAULT_WINDOW_TITLE + "\n" + String.format(
+            String leftDebugText = ConstantClientSettings.DEFAULT_WINDOW_TITLE + "\n" + String.format(
                     """
                             FPS: %d
                             Position: %.2f %.2f %.2f
@@ -671,18 +669,18 @@ public class OpenGLRenderer implements Renderer {
     private @NotNull List<DistanceChunk> calculateRenderedChunks(int renderDistance) {
         int frustumBias = settings.getIntSetting("frustum_bias", 10);
 
-        int chunkX = Math.round((float) renderDistance / ConstantGameSettings.CHUNK_WIDTH) + 1;
-        int chunkY = Math.round((float) renderDistance / ConstantGameSettings.CHUNK_HEIGHT) + 1;
-        int chunkZ = Math.round((float) renderDistance / ConstantGameSettings.CHUNK_LENGTH) + 1;
+        int chunkX = Math.round((float) renderDistance / ConstantCommonSettings.CHUNK_WIDTH) + 1;
+        int chunkY = Math.round((float) renderDistance / ConstantCommonSettings.CHUNK_HEIGHT) + 1;
+        int chunkZ = Math.round((float) renderDistance / ConstantCommonSettings.CHUNK_LENGTH) + 1;
 
-        int rdChunks = renderDistance / ConstantGameSettings.CHUNK_SIZE + 1;
+        int rdChunks = renderDistance / ConstantCommonSettings.CHUNK_SIZE + 1;
         int squaredRenderDistance = rdChunks * rdChunks;
         Map<Integer, Set<DistanceChunk>> positionedChunks = new HashMap<>();
         int highestBucketDistance = 0;
 
-        int ccx = (int) -Math.floor(camera.getX() / ConstantGameSettings.CHUNK_WIDTH);
-        int ccy = (int) -Math.floor(camera.getY() / ConstantGameSettings.CHUNK_HEIGHT);
-        int ccz = (int) -Math.floor(camera.getZ() / ConstantGameSettings.CHUNK_LENGTH);
+        int ccx = (int) -Math.floor(camera.getX() / ConstantCommonSettings.CHUNK_WIDTH);
+        int ccy = (int) -Math.floor(camera.getY() / ConstantCommonSettings.CHUNK_HEIGHT);
+        int ccz = (int) -Math.floor(camera.getZ() / ConstantCommonSettings.CHUNK_LENGTH);
         int count = 0;
 
         for (int x = -chunkX; x <= chunkX; x++) {
@@ -724,12 +722,12 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void attemptFreeChunks() {
-        int ccx = (int) Math.floor(camera.getX() / ConstantGameSettings.CHUNK_WIDTH);
-        int ccy = (int) Math.floor(camera.getY() / ConstantGameSettings.CHUNK_HEIGHT);
-        int ccz = (int) Math.floor(camera.getZ() / ConstantGameSettings.CHUNK_LENGTH);
+        int ccx = (int) Math.floor(camera.getX() / ConstantCommonSettings.CHUNK_WIDTH);
+        int ccy = (int) Math.floor(camera.getY() / ConstantCommonSettings.CHUNK_HEIGHT);
+        int ccz = (int) Math.floor(camera.getZ() / ConstantCommonSettings.CHUNK_LENGTH);
 
         int renderDistance = settings.getIntSetting("render_distance", 100);
-        int rdChunks = renderDistance / ConstantGameSettings.CHUNK_SIZE + 1;
+        int rdChunks = renderDistance / ConstantCommonSettings.CHUNK_SIZE + 1;
         int squaredRenderDistance = rdChunks * rdChunks;
 
         world.freeAllChunksNotInAndNotRecentlyAccessed(position3D -> {

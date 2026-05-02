@@ -1,6 +1,6 @@
 package omnivoxel.util.game;
 
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.games.Game;
 import omnivoxel.util.game.nodes.*;
 

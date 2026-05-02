@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.IndexCalculator;
 
 public class PaddedChunkResult<B> implements Chunk<B> {
@@ -8,7 +8,7 @@ public class PaddedChunkResult<B> implements Chunk<B> {
 
     @SuppressWarnings("unchecked")
     public PaddedChunkResult() {
-        this.blocks = (B[]) new Object[ConstantGameSettings.BLOCKS_IN_CHUNK];
+        this.blocks = (B[]) new Object[ConstantCommonSettings.BLOCKS_IN_CHUNK];
     }
 
     @Override

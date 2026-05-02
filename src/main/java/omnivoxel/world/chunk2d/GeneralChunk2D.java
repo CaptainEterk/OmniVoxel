@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk2d;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.IndexCalculator;
 
 public class GeneralChunk2D<B> implements Chunk2D<B> {
@@ -8,7 +8,7 @@ public class GeneralChunk2D<B> implements Chunk2D<B> {
 
     @SuppressWarnings("unchecked")
     public GeneralChunk2D() {
-        this.blocks = (B[]) new Object[ConstantGameSettings.BLOCKS_IN_CHUNK_2D];
+        this.blocks = (B[]) new Object[ConstantCommonSettings.BLOCKS_IN_CHUNK_2D];
     }
 
     public GeneralChunk2D(Chunk2D<B> chunk) {
@@ -17,9 +17,9 @@ public class GeneralChunk2D<B> implements Chunk2D<B> {
 
     @SuppressWarnings("unchecked")
     private B[] extractBlocks(Chunk2D<B> chunk) {
-        B[] blocks = (B[]) new Object[ConstantGameSettings.BLOCKS_IN_CHUNK_2D];
-        for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
+        B[] blocks = (B[]) new Object[ConstantCommonSettings.BLOCKS_IN_CHUNK_2D];
+        for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
                 blocks[IndexCalculator.calculateBlockIndex2D(x, z)] = chunk.getBlock(x, z);
 
             }

@@ -1,7 +1,6 @@
 package omnivoxel.server.client.chunk.result.generated;
 
-import io.netty.channel.ChannelHandlerContext;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.server.BlockIDCount;
@@ -29,18 +28,18 @@ public abstract class GeneratedChunk {
 
         Chunk<ServerBlock> chunkOut = new SingleBlockChunk<>(ServerBlock.AIR);
         List<ServerBlock> palette = new ArrayList<>();
-        int[] chunk = new int[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+        int[] chunk = new int[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
         int chunkByteOffset = 0;
-        for (int x = -1; x < ConstantGameSettings.CHUNK_WIDTH + 1; x++) {
-            for (int z = -1; z < ConstantGameSettings.CHUNK_LENGTH + 1; z++) {
-                for (int y = -1; y < ConstantGameSettings.CHUNK_HEIGHT + 1; y++) {
+        for (int x = -1; x < ConstantCommonSettings.CHUNK_WIDTH + 1; x++) {
+            for (int z = -1; z < ConstantCommonSettings.CHUNK_LENGTH + 1; z++) {
+                for (int y = -1; y < ConstantCommonSettings.CHUNK_HEIGHT + 1; y++) {
                     ServerBlock block = generatedChunk.getBlock(x, y, z);
                     if (!palette.contains(block)) {
                         palette.add(block);
                     }
-                    if (x > 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                            y > 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                            z > 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                    if (x > 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                            y > 0 && y < ConstantCommonSettings.CHUNK_HEIGHT &&
+                            z > 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
                         chunkOut = chunkOut.setBlock(x, y, z, block);
                     }
                     chunk[chunkByteOffset] = palette.indexOf(block);

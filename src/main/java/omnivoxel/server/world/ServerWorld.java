@@ -1,7 +1,6 @@
 package omnivoxel.server.world;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
@@ -54,9 +53,9 @@ public class ServerWorld {
     }
 
     public ServerBlock getBlock(Position3D chunkPosition, int x, int y, int z) {
-        final int CW = ConstantGameSettings.CHUNK_WIDTH;
-        final int CH = ConstantGameSettings.CHUNK_HEIGHT;
-        final int CL = ConstantGameSettings.CHUNK_LENGTH;
+        final int CW = ConstantCommonSettings.CHUNK_WIDTH;
+        final int CH = ConstantCommonSettings.CHUNK_HEIGHT;
+        final int CL = ConstantCommonSettings.CHUNK_LENGTH;
 
         int dx = Math.floorDiv(x, CW);
         int dy = Math.floorDiv(y, CH);
@@ -83,7 +82,7 @@ public class ServerWorld {
         }
 
         public boolean shouldSave(int request) {
-            return request - this.request > ConstantServerSettings.CHUNK_TIME_LIMIT;
+            return request - this.request > ConstantCommonSettings.CHUNK_TICK_TIMEOUT;
         }
 
         public Chunk<ServerBlock> get(int request) {

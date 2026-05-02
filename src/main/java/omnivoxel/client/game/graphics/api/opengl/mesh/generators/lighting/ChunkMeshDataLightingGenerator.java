@@ -11,7 +11,7 @@ import omnivoxel.client.game.graphics.light.channel.GeneralLightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.client.game.graphics.light.channel.SingleLightChannel;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -153,7 +153,7 @@ public class ChunkMeshDataLightingGenerator {
     }
 
     private void loadChunkLights(LightChannels channel, Position3D chunkPos, Chunk<BlockWithMesh> chunk) {
-        int chunkYOffset = chunkPos.y() * ConstantGameSettings.CHUNK_HEIGHT;
+        int chunkYOffset = chunkPos.y() * ConstantCommonSettings.CHUNK_HEIGHT;
 
         Chunk2D<Integer> chunkHeights = channel == LightChannels.SKYLIGHT ? world.getChunkHeights(chunkPos.getPosition2D()) : null;
         if (channel == LightChannels.SKYLIGHT && chunkHeights == null) {
@@ -161,9 +161,9 @@ public class ChunkMeshDataLightingGenerator {
             return;
         }
 
-        for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
-                for (int y = ConstantGameSettings.CHUNK_HEIGHT - 1; y >= 0; y--) {
+        for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                for (int y = ConstantCommonSettings.CHUNK_HEIGHT - 1; y >= 0; y--) {
                     if (channel == LightChannels.SKYLIGHT) {
                         int highestY = chunkHeights.getBlock(x, z);
                         if (chunkYOffset + y >= highestY) {
@@ -211,9 +211,9 @@ public class ChunkMeshDataLightingGenerator {
                         chunkLights.add(nx, ny, nz, newLight);
                     }
                 } else {
-                    int ox = nx < 0 ? nx + ConstantGameSettings.CHUNK_WIDTH : (nx >= ConstantGameSettings.CHUNK_WIDTH ? nx - ConstantGameSettings.CHUNK_WIDTH : nx);
-                    int oy = ny < 0 ? ny + ConstantGameSettings.CHUNK_HEIGHT : (ny >= ConstantGameSettings.CHUNK_HEIGHT ? ny - ConstantGameSettings.CHUNK_HEIGHT : ny);
-                    int oz = nz < 0 ? nz + ConstantGameSettings.CHUNK_LENGTH : (nz >= ConstantGameSettings.CHUNK_LENGTH ? nz - ConstantGameSettings.CHUNK_LENGTH : nz);
+                    int ox = nx < 0 ? nx + ConstantCommonSettings.CHUNK_WIDTH : (nx >= ConstantCommonSettings.CHUNK_WIDTH ? nx - ConstantCommonSettings.CHUNK_WIDTH : nx);
+                    int oy = ny < 0 ? ny + ConstantCommonSettings.CHUNK_HEIGHT : (ny >= ConstantCommonSettings.CHUNK_HEIGHT ? ny - ConstantCommonSettings.CHUNK_HEIGHT : ny);
+                    int oz = nz < 0 ? nz + ConstantCommonSettings.CHUNK_LENGTH : (nz >= ConstantCommonSettings.CHUNK_LENGTH ? nz - ConstantCommonSettings.CHUNK_LENGTH : nz);
                     borderLightQueues.get(channel).get(direction).add(ox, oy, oz, newLight);
                 }
             }
@@ -223,9 +223,9 @@ public class ChunkMeshDataLightingGenerator {
     private List<LightingChunkMeshDataTask> propagateLighting(Position3D chunkPos, LightChannels channel) {
         List<LightingChunkMeshDataTask> meshDataTasks = null;
 
-        final int W = ConstantGameSettings.CHUNK_WIDTH;
-        final int H = ConstantGameSettings.CHUNK_HEIGHT;
-        final int L = ConstantGameSettings.CHUNK_LENGTH;
+        final int W = ConstantCommonSettings.CHUNK_WIDTH;
+        final int H = ConstantCommonSettings.CHUNK_HEIGHT;
+        final int L = ConstantCommonSettings.CHUNK_LENGTH;
 
         for (Direction dir : Direction.VALUES) {
             LightNodeQueue overflowQueue = borderLightQueues.get(channel).get(dir);
@@ -291,7 +291,7 @@ public class ChunkMeshDataLightingGenerator {
     ) {
         clearQueues();
 
-        byte[] lightChannel = new byte[ConstantGameSettings.BLOCKS_IN_CHUNK];
+        byte[] lightChannel = new byte[ConstantCommonSettings.BLOCKS_IN_CHUNK];
 
         loadChunkLights(channel, chunkPos, clientWorldChunk.getChunkData());
 

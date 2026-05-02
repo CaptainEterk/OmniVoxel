@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.IndexCalculator;
 
 import java.util.ArrayList;
@@ -20,11 +20,11 @@ public class IntPaletteChunk<B> implements Chunk<B> {
     }
 
     private int[] extractBlocks(Chunk<B> chunk) {
-        int[] blocks = new int[ConstantGameSettings.BLOCKS_IN_CHUNK];
+        int[] blocks = new int[ConstantCommonSettings.BLOCKS_IN_CHUNK];
 
-        for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
-                for (int y = 0; y < ConstantGameSettings.CHUNK_HEIGHT; y++) {
+        for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                for (int y = 0; y < ConstantCommonSettings.CHUNK_HEIGHT; y++) {
 
                     B block = chunk.getBlock(x, y, z);
 

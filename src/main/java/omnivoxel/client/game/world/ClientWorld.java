@@ -9,11 +9,12 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.GeneralEntityMesh
 import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.MeshData;
 import omnivoxel.client.game.graphics.api.opengl.mesh.util.MeshGenerator;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.ChunkRequest;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantNetworkSettings;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
@@ -87,14 +88,14 @@ public class ClientWorld {
                 clientWorldChunk.touch(tick);
             }
             boolean isShell = clientWorldChunk.getChunkData() instanceof ChunkShell<BlockWithMesh>;
-            boolean expired = tick - clientWorldChunk.getLastFetchedTick() > ConstantGameSettings.CHUNK_TICK_TIMEOUT;
+            boolean expired = tick - clientWorldChunk.getLastFetchedTick() > ConstantCommonSettings.CHUNK_TICK_TIMEOUT;
 
             if (shell || (!isShell && !expired)) {
                 return clientWorldChunk;
             }
         }
         if (requesting && request) {
-            if (chunkRequests.size() < ConstantServerSettings.INFLIGHT_REQUESTS_MAXIMUM && chunkRequests.add(position3D)) {
+            if (chunkRequests.size() < ConstantNetworkSettings.INFLIGHT_REQUESTS_MAXIMUM && chunkRequests.add(position3D)) {
                 client.sendRequest(new ChunkRequest(position3D));
             }
         } else {
@@ -120,7 +121,7 @@ public class ClientWorld {
             if (bufferizing) {
                 count++;
             }
-        } while (bufferizing && count < ConstantGameSettings.BUFFERIZE_CHUNKS_PER_FRAME && System.nanoTime() < endTime);
+        } while (bufferizing && count < ConstantClientSettings.BUFFERIZE_CHUNKS_PER_FRAME && System.nanoTime() < endTime);
         state.setItem("bufferizing_queue_size", nonBufferizedChunks.size());
         return count;
     }
@@ -216,7 +217,7 @@ public class ClientWorld {
 
             ClientWorldChunk chunk = chunks.get(pos);
 
-            if (tick - chunk.getLastFetchedTick() < ConstantGameSettings.CHUNK_TICK_TIMEOUT) continue;
+            if (tick - chunk.getLastFetchedTick() < ConstantCommonSettings.CHUNK_TICK_TIMEOUT) continue;
 
             if (neighborRecentlyFetched(pos)) continue;
 
@@ -243,7 +244,7 @@ public class ClientWorld {
 
     private boolean recentlyFetched(Position3D pos) {
         ClientWorldChunk neighbor = chunks.get(pos);
-        return neighbor != null && tick - neighbor.getLastFetchedTick() < (long) ConstantGameSettings.CHUNK_TICK_TIMEOUT || chunkRequests.contains(pos);
+        return neighbor != null && tick - neighbor.getLastFetchedTick() < (long) ConstantCommonSettings.CHUNK_TICK_TIMEOUT || chunkRequests.contains(pos);
     }
 
     private void freeChunk(ChunkMesh mesh) {

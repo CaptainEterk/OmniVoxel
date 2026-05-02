@@ -1,6 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.image;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 
@@ -18,10 +18,10 @@ public class ImageLoader {
             IntBuffer heightBuffer = stack.mallocInt(1);
             IntBuffer channelsBuffer = stack.mallocInt(1);
 
-            imageBuffer = STBImage.stbi_load(ConstantGameSettings.DATA_LOCATION + path, widthBuffer, heightBuffer, channelsBuffer, 4);
+            imageBuffer = STBImage.stbi_load(ConstantClientSettings.DATA_LOCATION + path, widthBuffer, heightBuffer, channelsBuffer, 4);
             if (imageBuffer == null) {
                 throw new RuntimeException(
-                        "Failed to load texture file " + ConstantGameSettings.DATA_LOCATION + path + "\n" + STBImage.stbi_failure_reason());
+                        "Failed to load texture file " + ConstantClientSettings.DATA_LOCATION + path + "\n" + STBImage.stbi_failure_reason());
             }
 
             width = widthBuffer.get();

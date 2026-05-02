@@ -2,7 +2,7 @@ package omnivoxel.client.game.graphics.api.opengl.window;
 
 import omnivoxel.client.game.graphics.api.opengl.image.Image;
 import omnivoxel.client.game.graphics.api.opengl.image.ImageLoader;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.util.log.Logger;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -93,7 +93,7 @@ public final class WindowFactory {
         */
         GLCapabilities caps = GL.createCapabilities();
 
-        if (ConstantGameSettings.OPENGL_DEBUG) {
+        if (ConstantClientSettings.OPENGL_DEBUG) {
             if (caps.GL_KHR_debug) {
                 GL11C.glEnable(GL43C.GL_DEBUG_OUTPUT);
                 GL11C.glEnable(GL43C.GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -106,7 +106,13 @@ public final class WindowFactory {
                             " severity=" + severity +
                             " msg=" + msg);
                 }, 0L);
+
+                Logger.info("OpenGL debug logging enabled");
+            } else {
+                Logger.info("OpenGL debug logging enabled, but unavailable");
             }
+        } else {
+            Logger.info("OpenGL debug logging disabled");
         }
 
         // Mouse motion

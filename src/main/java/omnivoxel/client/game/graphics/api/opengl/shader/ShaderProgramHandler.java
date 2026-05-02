@@ -1,6 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.shader;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.util.log.Logger;
 import org.lwjgl.opengl.GL30C;
 
@@ -32,7 +32,7 @@ public class ShaderProgramHandler {
         for (Map.Entry<String, Integer> entry : shaderPaths.entrySet()) {
             String path = entry.getKey();
             Integer type = entry.getValue();
-            String contents = Files.readString(Path.of(ConstantGameSettings.DATA_LOCATION + path));
+            String contents = Files.readString(Path.of(ConstantClientSettings.DATA_LOCATION + path));
 
             int shaderID = glCreateShader(type);
             if (shaderID == 0) {

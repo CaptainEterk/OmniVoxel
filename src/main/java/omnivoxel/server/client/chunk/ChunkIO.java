@@ -2,8 +2,8 @@ package omnivoxel.server.client.chunk;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import omnivoxel.client.game.settings.ConstantGameSettings;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.util.bytes.ByteUtils;
@@ -50,13 +50,13 @@ public class ChunkIO {
 
             Chunk<ServerBlock> chunk = new BiBlockChunk<>(ServerBlock.AIR);
 
-            int W = ConstantGameSettings.CHUNK_WIDTH;
-            int H = ConstantGameSettings.CHUNK_HEIGHT;
-            int L = ConstantGameSettings.CHUNK_LENGTH;
+            int W = ConstantCommonSettings.CHUNK_WIDTH;
+            int H = ConstantCommonSettings.CHUNK_HEIGHT;
+            int L = ConstantCommonSettings.CHUNK_LENGTH;
 
             int x = 0, y = 0, z = 0;
 
-            int totalBlocks = ConstantGameSettings.BLOCKS_IN_CHUNK;
+            int totalBlocks = ConstantCommonSettings.BLOCKS_IN_CHUNK;
             for (int i = 0; i < totalBlocks; ) {
                 int blockID = byteBuf.getInt(index);
                 int blockCount = byteBuf.getInt(index + 4);
@@ -88,7 +88,7 @@ public class ChunkIO {
     }
 
     public static byte[] encodeIntegerChunk2D(Chunk2D<Integer> chunk2D) {
-        int size = ConstantGameSettings.BLOCKS_IN_CHUNK_2D;
+        int size = ConstantCommonSettings.BLOCKS_IN_CHUNK_2D;
         byte[] bytes = new byte[size * Integer.BYTES];
 
         int bx = 0, bz = 0;
@@ -100,7 +100,7 @@ public class ChunkIO {
             ByteUtils.addInt(bytes, value, offset);
 
             bx++;
-            if (bx >= ConstantGameSettings.CHUNK_WIDTH) {
+            if (bx >= ConstantCommonSettings.CHUNK_WIDTH) {
                 bx = 0;
                 bz++;
             }

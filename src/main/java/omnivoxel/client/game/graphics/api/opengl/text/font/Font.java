@@ -1,6 +1,6 @@
 package omnivoxel.client.game.graphics.api.opengl.text.font;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
 import org.lwjgl.opengl.GL11C;
 import org.lwjgl.stb.STBTTBakedChar;
 import org.lwjgl.stb.STBTruetype;
@@ -17,7 +17,7 @@ public record Font(STBTTBakedChar.Buffer charData, int textureID, int bitmapWidt
     private static final int FONT_SIZE = 32;
 
     public static Font create(String fontName) throws IOException {
-        byte[] bytes = Files.readAllBytes(Paths.get(ConstantGameSettings.DATA_LOCATION + "assets/fonts/" + fontName));
+        byte[] bytes = Files.readAllBytes(Paths.get(ConstantClientSettings.DATA_LOCATION + "assets/fonts/" + fontName));
         ByteBuffer buffer = MemoryUtil.memAlloc(bytes.length);
         buffer.put(bytes);
         buffer.flip();

@@ -9,7 +9,7 @@ import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.light.ChunkLightingData;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
@@ -64,9 +64,9 @@ public class ChunkMeshDataGenerator {
         Map<UniqueVertex, Integer> vertexIndexMap = new HashMap<>();
         Map<UniqueVertex, Integer> transparentVertexIndexMap = new HashMap<>();
 
-        for (int x = 0; x < ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = 0; z < ConstantGameSettings.CHUNK_LENGTH; z++) {
-                for (int y = 0; y < ConstantGameSettings.CHUNK_HEIGHT; y++) {
+        for (int x = 0; x < ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                for (int y = 0; y < ConstantCommonSettings.CHUNK_HEIGHT; y++) {
                     int index = IndexCalculator.calculateBlockIndexPadded(x, y, z);
                     BlockMesh blockMesh = blockMeshes[index];
                     if (blockMesh != null) {
@@ -250,19 +250,19 @@ public class ChunkMeshDataGenerator {
             return null;
         }
 
-        int W = ConstantGameSettings.CHUNK_WIDTH;
-        int H = ConstantGameSettings.CHUNK_HEIGHT;
-        int L = ConstantGameSettings.CHUNK_LENGTH;
+        int W = ConstantCommonSettings.CHUNK_WIDTH;
+        int H = ConstantCommonSettings.CHUNK_HEIGHT;
+        int L = ConstantCommonSettings.CHUNK_LENGTH;
 
-        BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+        BlockMesh[] blockMeshes = new BlockMesh[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
 
-        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y++) {
-                for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
+        for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int y = -1; y <= ConstantCommonSettings.CHUNK_HEIGHT; y++) {
+                for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z++) {
                     int outOfBounds = 0;
-                    if (x < 0 || x == ConstantGameSettings.CHUNK_WIDTH) outOfBounds++;
-                    if (y < 0 || y == ConstantGameSettings.CHUNK_HEIGHT) outOfBounds++;
-                    if (z < 0 || z == ConstantGameSettings.CHUNK_LENGTH) outOfBounds++;
+                    if (x < 0 || x == ConstantCommonSettings.CHUNK_WIDTH) outOfBounds++;
+                    if (y < 0 || y == ConstantCommonSettings.CHUNK_HEIGHT) outOfBounds++;
+                    if (z < 0 || z == ConstantCommonSettings.CHUNK_LENGTH) outOfBounds++;
 
                     if (outOfBounds > 1) {
                         continue;

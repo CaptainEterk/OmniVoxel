@@ -1,6 +1,6 @@
 package omnivoxel.util.log;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -157,11 +157,11 @@ public final class Logger {
     }
 
     private static void writeDebug(String source) {
-        writeFile(Path.of(ConstantGameSettings.LOG_LOCATION + sanitize(source) + "_debug.log"), getQueue(DEBUG_LOGS, source));
+        writeFile(Path.of(ConstantCommonSettings.LOG_LOCATION + sanitize(source) + "_debug.log"), getQueue(DEBUG_LOGS, source));
     }
 
     private static void writeInfo(String source) {
-        writeFile(Path.of(ConstantGameSettings.LOG_LOCATION + sanitize(source) + ".log"), getQueue(INFO_LOGS, source));
+        writeFile(Path.of(ConstantCommonSettings.LOG_LOCATION + sanitize(source) + ".log"), getQueue(INFO_LOGS, source));
     }
 
     private static void write(String source) {

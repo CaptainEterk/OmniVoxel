@@ -1,6 +1,6 @@
 package omnivoxel.server.client.chunk.result.generated;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.util.IndexCalculator;
@@ -9,7 +9,7 @@ public class GeneralGeneratedChunk extends GeneratedChunk {
     private final ServerBlock[] blocks;
 
     public GeneralGeneratedChunk() {
-        blocks = new ServerBlock[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+        blocks = new ServerBlock[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
     }
 
     public GeneralGeneratedChunk(GeneratedChunk chunk) {
@@ -17,10 +17,10 @@ public class GeneralGeneratedChunk extends GeneratedChunk {
     }
 
     private ServerBlock[] extractBlocks(GeneratedChunk chunk) {
-        ServerBlock[] blocks = new ServerBlock[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
-        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
-                for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y++) {
+        ServerBlock[] blocks = new ServerBlock[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
+        for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                for (int y = -1; y <= ConstantCommonSettings.CHUNK_HEIGHT; y++) {
                     blocks[IndexCalculator.calculateBlockIndexPadded(x, y, z)] = chunk.getBlock(x, y, z);
                 }
             }

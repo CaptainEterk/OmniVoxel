@@ -1,4 +1,4 @@
-package omnivoxel.client.game.settings;
+package omnivoxel.common.settings;
 
 public record Setting(String key, String value) {
 }

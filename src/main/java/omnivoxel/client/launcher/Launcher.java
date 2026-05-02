@@ -7,7 +7,8 @@ import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.camera.Camera;
 import omnivoxel.client.game.graphics.camera.Frustum;
 import omnivoxel.client.game.player.PlayerController;
-import omnivoxel.client.game.settings.Settings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.tick.TickLoop;
 import omnivoxel.client.game.world.ClientWorld;
@@ -47,7 +48,7 @@ public class Launcher {
 
         State state = new State();
         Settings settings = new Settings();
-        settings.load();
+        settings.load(ConstantCommonSettings.CONFIG_LOCATION);
 
         ClientWorld world = new ClientWorld(state);
 

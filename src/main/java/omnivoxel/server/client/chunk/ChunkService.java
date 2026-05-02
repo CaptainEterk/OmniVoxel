@@ -1,6 +1,6 @@
 package omnivoxel.server.client.chunk;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;
@@ -79,19 +79,19 @@ public class ChunkService {
         }
 
         GeneratedChunk builtChunk = new EmptyGeneratedChunk();
-        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
-                for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y++) {
-                    int cx = x < 0 ? -1 : (x == ConstantGameSettings.CHUNK_WIDTH ? 1 : 0);
-                    int cy = y < 0 ? -1 : (y == ConstantGameSettings.CHUNK_HEIGHT ? 1 : 0);
-                    int cz = z < 0 ? -1 : (z == ConstantGameSettings.CHUNK_LENGTH ? 1 : 0);
+        for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                for (int y = -1; y <= ConstantCommonSettings.CHUNK_HEIGHT; y++) {
+                    int cx = x < 0 ? -1 : (x == ConstantCommonSettings.CHUNK_WIDTH ? 1 : 0);
+                    int cy = y < 0 ? -1 : (y == ConstantCommonSettings.CHUNK_HEIGHT ? 1 : 0);
+                    int cz = z < 0 ? -1 : (z == ConstantCommonSettings.CHUNK_LENGTH ? 1 : 0);
 
                     int chunkIndex = (cx + 1) * 9 + (cz + 1) * 3 + (cy + 1);
                     Chunk<ServerBlock> chunk = chunks[chunkIndex];
 
-                    int lx = x < 0 ? ConstantGameSettings.CHUNK_WIDTH - 1 : (x == ConstantGameSettings.CHUNK_WIDTH ? 0 : x);
-                    int ly = y < 0 ? ConstantGameSettings.CHUNK_HEIGHT - 1 : (y == ConstantGameSettings.CHUNK_HEIGHT ? 0 : y);
-                    int lz = z < 0 ? ConstantGameSettings.CHUNK_LENGTH - 1 : (z == ConstantGameSettings.CHUNK_LENGTH ? 0 : z);
+                    int lx = x < 0 ? ConstantCommonSettings.CHUNK_WIDTH - 1 : (x == ConstantCommonSettings.CHUNK_WIDTH ? 0 : x);
+                    int ly = y < 0 ? ConstantCommonSettings.CHUNK_HEIGHT - 1 : (y == ConstantCommonSettings.CHUNK_HEIGHT ? 0 : y);
+                    int lz = z < 0 ? ConstantCommonSettings.CHUNK_LENGTH - 1 : (z == ConstantCommonSettings.CHUNK_LENGTH ? 0 : z);
 
                     builtChunk = builtChunk.setBlock(x, y, z, chunk.getBlock(lx, ly, lz));
                 }

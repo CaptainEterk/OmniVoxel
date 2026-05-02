@@ -1,9 +1,9 @@
 package omnivoxel.server.client.chunk.worldDataService;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.annotations.NotNull;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.block.BlockFunction;
@@ -114,13 +114,13 @@ public final class ServerWorldDataService {
         this.chunkMaxY = chunkMaxYNode == null ? null : (int) chunkMaxYNode.value();
         this.chunkMaxZ = chunkMaxZNode == null ? null : (int) chunkMaxZNode.value();
 
-        blockMinX = chunkMinX == null ? null : chunkMinX * ConstantGameSettings.CHUNK_WIDTH;
-        blockMinY = chunkMinY == null ? null : chunkMinY * ConstantGameSettings.CHUNK_HEIGHT;
-        blockMinZ = chunkMinZ == null ? null : chunkMinZ * ConstantGameSettings.CHUNK_LENGTH;
+        blockMinX = chunkMinX == null ? null : chunkMinX * ConstantCommonSettings.CHUNK_WIDTH;
+        blockMinY = chunkMinY == null ? null : chunkMinY * ConstantCommonSettings.CHUNK_HEIGHT;
+        blockMinZ = chunkMinZ == null ? null : chunkMinZ * ConstantCommonSettings.CHUNK_LENGTH;
 
-        blockMaxX = chunkMaxX == null ? null : (chunkMaxX + 1) * ConstantGameSettings.CHUNK_WIDTH;
-        blockMaxY = chunkMaxY == null ? null : (chunkMaxY + 1) * ConstantGameSettings.CHUNK_HEIGHT;
-        blockMaxZ = chunkMaxZ == null ? null : (chunkMaxZ + 1) * ConstantGameSettings.CHUNK_LENGTH;
+        blockMaxX = chunkMaxX == null ? null : (chunkMaxX + 1) * ConstantCommonSettings.CHUNK_WIDTH;
+        blockMaxY = chunkMaxY == null ? null : (chunkMaxY + 1) * ConstantCommonSettings.CHUNK_HEIGHT;
+        blockMaxZ = chunkMaxZ == null ? null : (chunkMaxZ + 1) * ConstantCommonSettings.CHUNK_LENGTH;
 
         DoubleGameNode depthSectionsNode = Game.checkGameNodeType(worldGeneratorNode.object().get("depth_sections"), DoubleGameNode.class);
 
@@ -238,12 +238,12 @@ public final class ServerWorldDataService {
     }
 
     public ChunkInfo getChunkInfo(ServerWorld world, Position3D position3D) {
-        int chunkMinWorldY = position3D.y() * ConstantGameSettings.CHUNK_HEIGHT;
-        int chunkMaxWorldY = chunkMinWorldY + ConstantGameSettings.CHUNK_HEIGHT - 1;
+        int chunkMinWorldY = position3D.y() * ConstantCommonSettings.CHUNK_HEIGHT;
+        int chunkMaxWorldY = chunkMinWorldY + ConstantCommonSettings.CHUNK_HEIGHT - 1;
 
-        int paddedX = ConstantGameSettings.CHUNK_WIDTH + 2;
-        int paddedY = ConstantGameSettings.CHUNK_HEIGHT + 2;
-        int paddedZ = ConstantGameSettings.CHUNK_LENGTH + 2;
+        int paddedX = ConstantCommonSettings.CHUNK_WIDTH + 2;
+        int paddedY = ConstantCommonSettings.CHUNK_HEIGHT + 2;
+        int paddedZ = ConstantCommonSettings.CHUNK_LENGTH + 2;
 
         int sx = Math.floorDiv(paddedX + STEP - 1, STEP) + 1;
         int sy = Math.floorDiv(paddedY + STEP - 1, STEP) + 1;
@@ -251,14 +251,14 @@ public final class ServerWorldDataService {
 
         double[] sparse = new double[sx * sy * sz];
 
-        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x += STEP) {
-            int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
+        for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x += STEP) {
+            int worldX = position3D.x() * ConstantCommonSettings.CHUNK_WIDTH + x;
 
-            for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z += STEP) {
-                int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
+            for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z += STEP) {
+                int worldZ = position3D.z() * ConstantCommonSettings.CHUNK_LENGTH + z;
 
-                for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y += STEP) {
-                    int worldY = position3D.y() * ConstantGameSettings.CHUNK_HEIGHT + y;
+                for (int y = -1; y <= ConstantCommonSettings.CHUNK_HEIGHT; y += STEP) {
+                    int worldY = position3D.y() * ConstantCommonSettings.CHUNK_HEIGHT + y;
 
                     int ix = (x + 1) / STEP;
                     int iy = (y + 1) / STEP;
@@ -271,11 +271,11 @@ public final class ServerWorldDataService {
             }
         }
 
-        double[] densityCache = new double[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+        double[] densityCache = new double[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
 
-        for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
-            for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
-                for (int y = -1; y <= ConstantGameSettings.CHUNK_HEIGHT; y++) {
+        for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x++) {
+            for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                for (int y = -1; y <= ConstantCommonSettings.CHUNK_HEIGHT; y++) {
 
                     int gx = (x + 1) / STEP;
                     int gy = (y + 1) / STEP;
@@ -313,17 +313,17 @@ public final class ServerWorldDataService {
         }
 
         Position2D position2D = position3D.getPosition2D();
-        int[] heights = new int[ConstantGameSettings.PADDED_WIDTH * ConstantGameSettings.PADDED_LENGTH];
+        int[] heights = new int[ConstantCommonSettings.PADDED_WIDTH * ConstantCommonSettings.PADDED_LENGTH];
         Chunk2D<Integer> chunkHeights = world.getChunkHeights(position2D);
         boolean cachedHeights = chunkHeights != null;
         chunkHeights = cachedHeights ? chunkHeights : new SingleBlockChunk2D<>(0);
         if (chunkMaxY != null && chunkMinY != null) {
-            for (int x = -1; x <= ConstantGameSettings.CHUNK_WIDTH; x++) {
-                int worldX = position3D.x() * ConstantGameSettings.CHUNK_WIDTH + x;
-                for (int z = -1; z <= ConstantGameSettings.CHUNK_LENGTH; z++) {
-                    int worldZ = position3D.z() * ConstantGameSettings.CHUNK_LENGTH + z;
+            for (int x = -1; x <= ConstantCommonSettings.CHUNK_WIDTH; x++) {
+                int worldX = position3D.x() * ConstantCommonSettings.CHUNK_WIDTH + x;
+                for (int z = -1; z <= ConstantCommonSettings.CHUNK_LENGTH; z++) {
+                    int worldZ = position3D.z() * ConstantCommonSettings.CHUNK_LENGTH + z;
                     for (int worldY = blockMaxY; worldY > blockMinY; worldY--) {
-                        boolean in = x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH && z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH;
+                        boolean in = x >= 0 && x < ConstantCommonSettings.CHUNK_WIDTH && z >= 0 && z < ConstantCommonSettings.CHUNK_LENGTH;
                         double heightDensity;
                         if (cachedHeights && in) {
                             heightDensity = 1;

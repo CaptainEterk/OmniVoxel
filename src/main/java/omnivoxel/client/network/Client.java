@@ -13,7 +13,8 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ModelEntityMeshDa
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.EntityMeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.LightingChunkMeshDataTask;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -22,7 +23,7 @@ import omnivoxel.client.network.request.*;
 import omnivoxel.client.network.util.ByteBufUtils;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.common.network.NetworkUser;
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantNetworkSettings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.entity.EntityType;
 import omnivoxel.util.bytes.ByteUtils;
@@ -111,13 +112,13 @@ public final class Client implements NetworkUser {
                         int worldZ = byteBuf.getInt(index + 8);
                         index += 12;
 
-                        int chunkX = Math.floorDiv(worldX, ConstantGameSettings.CHUNK_WIDTH);
-                        int chunkY = Math.floorDiv(worldY, ConstantGameSettings.CHUNK_HEIGHT);
-                        int chunkZ = Math.floorDiv(worldZ, ConstantGameSettings.CHUNK_LENGTH);
+                        int chunkX = Math.floorDiv(worldX, ConstantCommonSettings.CHUNK_WIDTH);
+                        int chunkY = Math.floorDiv(worldY, ConstantCommonSettings.CHUNK_HEIGHT);
+                        int chunkZ = Math.floorDiv(worldZ, ConstantCommonSettings.CHUNK_LENGTH);
 
-                        int x = Math.floorMod(worldX, ConstantGameSettings.CHUNK_WIDTH);
-                        int y = Math.floorMod(worldY, ConstantGameSettings.CHUNK_HEIGHT);
-                        int z = Math.floorMod(worldZ, ConstantGameSettings.CHUNK_LENGTH);
+                        int x = Math.floorMod(worldX, ConstantCommonSettings.CHUNK_WIDTH);
+                        int y = Math.floorMod(worldY, ConstantCommonSettings.CHUNK_HEIGHT);
+                        int z = Math.floorMod(worldZ, ConstantCommonSettings.CHUNK_LENGTH);
 
                         int highestY = byteBuf.getByte(index);
                         Position2D chunkPosition2D = new Position2D(chunkX, chunkZ);
@@ -152,17 +153,17 @@ public final class Client implements NetworkUser {
 
                                     if (x == 0)
                                         lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0)));
-                                    if (x == ConstantGameSettings.CHUNK_WIDTH - 1)
+                                    if (x == ConstantCommonSettings.CHUNK_WIDTH - 1)
                                         lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(1, 0, 0)));
 
                                     if (y == 0)
                                         lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, -1, 0)));
-                                    if (y == ConstantGameSettings.CHUNK_HEIGHT - 1)
+                                    if (y == ConstantCommonSettings.CHUNK_HEIGHT - 1)
                                         lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 1, 0)));
 
                                     if (z == 0)
                                         lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, -1)));
-                                    if (z == ConstantGameSettings.CHUNK_LENGTH - 1)
+                                    if (z == ConstantCommonSettings.CHUNK_LENGTH - 1)
                                         lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, 1)));
                                 }
                             }
@@ -246,10 +247,10 @@ public final class Client implements NetworkUser {
         int cz = byteBuf.getInt(12);
         Chunk2D<Integer> chunkHeights = new SingleBlockChunk2D<>(0);
         int x = 0, z = 0;
-        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_2D; i++) {
+        for (int i = 0; i < ConstantCommonSettings.BLOCKS_IN_CHUNK_2D; i++) {
             chunkHeights = chunkHeights.setBlock(x, z, byteBuf.getInt(16 + i * Integer.BYTES));
             x++;
-            if (x >= ConstantGameSettings.CHUNK_WIDTH) {
+            if (x >= ConstantCommonSettings.CHUNK_WIDTH) {
                 x = 0;
                 z++;
             }
@@ -301,7 +302,7 @@ public final class Client implements NetworkUser {
             return;
         }
         long time = System.currentTimeMillis();
-        if (time - lastFlushedTime > ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME || queuedChunkTasks.size() > ConstantServerSettings.CHUNK_REQUEST_BATCHING_LIMIT) {
+        if (time - lastFlushedTime > ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_TIME || queuedChunkTasks.size() > ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_LIMIT) {
             List<Position3D> queuedChunkTasksBatch = new ArrayList<>();
             while (!queuedChunkTasks.isEmpty()) {
                 Position3D position3D = queuedChunkTasks.remove();
@@ -323,7 +324,7 @@ public final class Client implements NetworkUser {
                 }
                 NetworkService.sendInts(channel, PackageID.CHUNK_REQUEST, clientID, data);
             }
-            lastFlushedTime += ConstantServerSettings.CHUNK_REQUEST_BATCHING_TIME;
+            lastFlushedTime += ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_TIME;
         }
     }
 
@@ -391,7 +392,7 @@ public final class Client implements NetworkUser {
 
     public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, State state) {
         meshDataGenerators = new WorkerThreadPool<>(
-                ConstantGameSettings.MAX_MESH_GENERATOR_THREADS,
+                ConstantClientSettings.MAX_MESH_GENERATOR_THREADS,
                 () -> new MeshDataGenerator(
                         worldDataService,
                         entityMeshDefinitionCache,
@@ -403,7 +404,7 @@ public final class Client implements NetworkUser {
                 true
         );
         lightingGenerators = new WorkerThreadPool<>(
-                ConstantGameSettings.MAX_LIGHTING_GENERATOR_THREADS,
+                ConstantClientSettings.MAX_LIGHTING_GENERATOR_THREADS,
                 () -> new ChunkMeshDataLightingGenerator(
                         world,
                         worldDataService,

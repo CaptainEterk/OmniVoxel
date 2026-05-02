@@ -1,6 +1,6 @@
 package omnivoxel.world.chunk2d;
 
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 public class ModifiedChunk2D<B> implements Chunk2D<B> {
     private final int x;
@@ -31,7 +31,7 @@ public class ModifiedChunk2D<B> implements Chunk2D<B> {
 
     @Override
     public Chunk2D<B> setBlock(int x, int z, B block) {
-        if (modificationCount > ConstantServerSettings.MODIFICATION_GENERALIZATION_LIMIT) {
+        if (modificationCount > ConstantCommonSettings.MODIFICATION_GENERALIZATION_LIMIT) {
             return new ShortPaletteChunk2D<>(this).setBlock(x, z, block);
         }
         return new ModifiedChunk2D<>(x, z, block, this, modificationCount + 1);

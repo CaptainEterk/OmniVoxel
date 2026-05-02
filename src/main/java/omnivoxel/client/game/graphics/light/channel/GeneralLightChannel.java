@@ -1,6 +1,6 @@
 package omnivoxel.client.game.graphics.light.channel;
 
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 public class GeneralLightChannel implements LightChannel {
     private final byte[] channel;
@@ -10,8 +10,8 @@ public class GeneralLightChannel implements LightChannel {
     }
 
     public GeneralLightChannel(LightChannel lightChannel) {
-        channel = new byte[ConstantGameSettings.BLOCKS_IN_CHUNK];
-        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK; i++) {
+        channel = new byte[ConstantCommonSettings.BLOCKS_IN_CHUNK];
+        for (int i = 0; i < ConstantCommonSettings.BLOCKS_IN_CHUNK; i++) {
             channel[i] = lightChannel.getLighting(i);
         }
     }

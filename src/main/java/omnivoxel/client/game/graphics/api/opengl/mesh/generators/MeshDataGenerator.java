@@ -14,7 +14,7 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
-import omnivoxel.client.game.settings.ConstantGameSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class MeshDataGenerator {
-    private static final BlockMesh[] blockMeshes = new BlockMesh[ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED];
+    private static final BlockMesh[] blockMeshes = new BlockMesh[ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED];
     private static BlockWithMesh AIR = null;
     private final ChunkMeshDataGenerator chunkMeshDataGenerator;
     private final EntityMeshDataGenerator entityMeshDataGenerator;
@@ -127,7 +127,7 @@ public final class MeshDataGenerator {
 
         int x = -1, y = -1, z = -1;
 
-        for (int i = 0; i < ConstantGameSettings.BLOCKS_IN_CHUNK_PADDED; ) {
+        for (int i = 0; i < ConstantCommonSettings.BLOCKS_IN_CHUNK_PADDED; ) {
             int blockID = byteBuf.getInt(index);
             int blockCount = byteBuf.getInt(index + 4);
             index += 8;
@@ -138,57 +138,57 @@ public final class MeshDataGenerator {
                 int paddedIndex = i + j;
                 blockMeshes[paddedIndex] = blockMesh;
 
-                if (x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                if (x >= 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantCommonSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
 
                     center = center.setBlock(x, y, z,
                             blockService.getBlock(palette[blockID].id()));
-                } else if (x == -1 && y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                } else if (x == -1 && y >= 0 && y < ConstantCommonSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
 
                     negX = negX.setBlock(
-                            ConstantGameSettings.CHUNK_WIDTH - 1,
+                            ConstantCommonSettings.CHUNK_WIDTH - 1,
                             y,
                             z,
                             blockService.getBlock(palette[blockID].id()));
-                } else if (x == ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                } else if (x == ConstantCommonSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantCommonSettings.CHUNK_HEIGHT &&
+                        z >= 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
 
                     posX = posX.setBlock(
                             0,
                             y,
                             z,
                             blockService.getBlock(palette[blockID].id()));
-                } else if (z == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
+                } else if (z == -1 && x >= 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantCommonSettings.CHUNK_HEIGHT) {
 
                     negZ = negZ.setBlock(
                             x,
                             y,
-                            ConstantGameSettings.CHUNK_LENGTH - 1,
+                            ConstantCommonSettings.CHUNK_LENGTH - 1,
                             blockService.getBlock(palette[blockID].id()));
-                } else if (z == ConstantGameSettings.CHUNK_LENGTH &&
-                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        y >= 0 && y < ConstantGameSettings.CHUNK_HEIGHT) {
+                } else if (z == ConstantCommonSettings.CHUNK_LENGTH &&
+                        x >= 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                        y >= 0 && y < ConstantCommonSettings.CHUNK_HEIGHT) {
 
                     posZ = posZ.setBlock(
                             x,
                             y,
                             0,
                             blockService.getBlock(palette[blockID].id()));
-                } else if (y == -1 && x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                } else if (y == -1 && x >= 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                        z >= 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
 
                     negY = negY.setBlock(
                             x,
-                            ConstantGameSettings.CHUNK_HEIGHT - 1,
+                            ConstantCommonSettings.CHUNK_HEIGHT - 1,
                             z,
                             blockService.getBlock(palette[blockID].id()));
-                } else if (y == ConstantGameSettings.CHUNK_HEIGHT &&
-                        x >= 0 && x < ConstantGameSettings.CHUNK_WIDTH &&
-                        z >= 0 && z < ConstantGameSettings.CHUNK_LENGTH) {
+                } else if (y == ConstantCommonSettings.CHUNK_HEIGHT &&
+                        x >= 0 && x < ConstantCommonSettings.CHUNK_WIDTH &&
+                        z >= 0 && z < ConstantCommonSettings.CHUNK_LENGTH) {
 
                     posY = posY.setBlock(
                             x,
@@ -198,11 +198,11 @@ public final class MeshDataGenerator {
                 }
 
                 y++;
-                if (y > ConstantGameSettings.CHUNK_HEIGHT) {
+                if (y > ConstantCommonSettings.CHUNK_HEIGHT) {
                     y = -1;
                     z++;
 
-                    if (z > ConstantGameSettings.CHUNK_LENGTH) {
+                    if (z > ConstantCommonSettings.CHUNK_LENGTH) {
                         z = -1;
                         x++;
                     }

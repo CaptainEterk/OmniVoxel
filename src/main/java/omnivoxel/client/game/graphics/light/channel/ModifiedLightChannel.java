@@ -1,6 +1,6 @@
 package omnivoxel.client.game.graphics.light.channel;
 
-import omnivoxel.server.ConstantServerSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 public class ModifiedLightChannel implements LightChannel {
     private final int index;
@@ -30,7 +30,7 @@ public class ModifiedLightChannel implements LightChannel {
             light = newLight;
             return this;
         } else {
-            if (modificationCount < ConstantServerSettings.MODIFICATION_GENERALIZATION_LIMIT) {
+            if (modificationCount < ConstantCommonSettings.MODIFICATION_GENERALIZATION_LIMIT) {
                 return new ModifiedLightChannel(idx, newLight, this, modificationCount + 1);
             }
             return new GeneralLightChannel(this).setLighting(idx, newLight);
