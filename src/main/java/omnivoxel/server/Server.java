@@ -166,15 +166,18 @@ public class Server implements NetworkUser {
             blockShapeCache.forEach((id, blockShape) -> NetworkService.sendBytes(serverClient.getCTX().channel(), PackageID.REGISTER_BLOCK_SHAPE, null, blockShape.getBytes()));
 
             blockHitboxCache.forEach((id, blockHitboxes) -> {
-                        byte[] bytes = new byte[Float.BYTES * 6 * blockHitboxes.length + Integer.BYTES * 2 + id.length()];
+                        byte[] bytes = new byte[(Float.BYTES * 6 + Integer.BYTES + 2) * blockHitboxes.length + Integer.BYTES * 2 + id.length()];
                         ByteUtils.addInt(bytes, id.length(), 0);
 
                         System.arraycopy(id.getBytes(), 0, bytes, Integer.BYTES, id.length());
 
                         ByteUtils.addInt(bytes, blockHitboxes.length, Integer.BYTES + id.length());
 
+                        int idx = id.length() + Integer.BYTES * 2;
                         for (int i = 0; i < blockHitboxes.length; i++) {
-                            System.arraycopy(blockHitboxes[i].getBytes(), 0, bytes, i * Float.BYTES + Integer.BYTES * 2 + id.length(), Float.BYTES * 6);
+                            byte[] hitboxBytes = blockHitboxes[i].getBytes();
+                            System.arraycopy(hitboxBytes, 0, bytes, idx, hitboxBytes.length);
+                            idx += hitboxBytes.length;
                         }
 
                         NetworkService.sendBytes(serverClient.getCTX().channel(), PackageID.REGISTER_BLOCK_HITBOX, null, bytes);

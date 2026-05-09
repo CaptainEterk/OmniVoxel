@@ -73,7 +73,11 @@ public class ByteBufUtils {
             float maxY = byteBuf.readFloat();
             float maxZ = byteBuf.readFloat();
 
-            hitboxes[i] = new BlockHitbox(minX, minY, minZ, maxX, maxY, maxZ);
+            boolean isVolume = byteBuf.readBoolean();
+            boolean isGround = byteBuf.readBoolean();
+            float gravity = byteBuf.readFloat();
+
+            hitboxes[i] = new BlockHitbox(minX, minY, minZ, maxX, maxY, maxZ, new BlockHitbox.BlockHitboxVolumeProperties(isVolume, gravity, isGround));
         }
 
         Logger.info("Registering block hitbox: " + id);
@@ -119,10 +123,8 @@ public class ByteBufUtils {
         readerIndex += hitboxIDLength;
 
         final String hitboxID = new String(hitboxIDBytes);
-        final BlockHitbox[] hitbox = hitboxCache.get(hitboxID);
-        if (hitbox == null) {
-            Logger.warn("Cannot find hitbox: " + hitboxID);
-        }
+        final BlockHitbox[] hitbox = hitboxCache.getOrDefault(hitboxID, BlockHitbox.EMPTY_BLOCK_HITBOX);
+        hitboxCache.put(hitboxID, hitbox);
 
         boolean transparent = byteBuf.getByte(readerIndex++) == 1;
         boolean transparentMesh = byteBuf.getByte(readerIndex++) == 1;

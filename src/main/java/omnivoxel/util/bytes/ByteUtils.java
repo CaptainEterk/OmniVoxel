@@ -29,10 +29,7 @@ public class ByteUtils {
 
     public static void addFloat(byte @NotNull [] bytes, float f, int index) {
         int i = Float.floatToIntBits(f);
-        bytes[index] = (byte) (i >> 24);
-        bytes[index + 1] = (byte) (i >> 16);
-        bytes[index + 2] = (byte) (i >> 8);
-        bytes[index + 3] = (byte) (i);
+        addInt(bytes, i, index);
     }
 
     public static void addInt(byte @NotNull [] bytes, int i, int index) {

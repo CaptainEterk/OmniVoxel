@@ -52,7 +52,7 @@ public class PlayerController {
     private final BlockService<BlockWithMesh> blockService;
     private final Hitbox hitbox;
     private final Window window;
-
+    private double speed;
     @NotNull
     private MovementMode movementMode = MovementMode.FALL_COLLIDE;
 
@@ -100,7 +100,9 @@ public class PlayerController {
         }
     }
 
-    private boolean isSolidAt(double wx, double wy, double wz) {
+    private void updateBlockMovementModifiers(double wx, double wy, double wz) {
+        speed = 1;
+
         double minX = wx + hitbox.minX();
         double maxX = wx + hitbox.maxX();
         double minY = wy + hitbox.minY();
@@ -115,9 +117,65 @@ public class PlayerController {
         int blockMinZ = (int) Math.floor(minZ);
         int blockMaxZ = (int) Math.ceil(maxZ);
 
-        float lx = (float) (wx - Math.floor(wx));
-        float ly = (float) (wy - Math.floor(wy));
-        float lz = (float) (wz - Math.floor(wz));
+        for (int bx = blockMinX; bx <= blockMaxX; bx++) {
+            for (int by = blockMinY; by <= blockMaxY; by++) {
+                for (int bz = blockMinZ; bz <= blockMaxZ; bz++) {
+                    int chunkX = IndexCalculator.chunkX(bx);
+                    int chunkY = IndexCalculator.chunkY(by);
+                    int chunkZ = IndexCalculator.chunkZ(bz);
+
+                    int localX = IndexCalculator.localX(bx);
+                    int localY = IndexCalculator.localY(by);
+                    int localZ = IndexCalculator.localZ(bz);
+
+                    if (cachedChunkPos == null || cachedChunk == null ||
+                            cachedChunkPos.x() != chunkX ||
+                            cachedChunkPos.y() != chunkY ||
+                            cachedChunkPos.z() != chunkZ) {
+                        cachedChunkPos = new Position3D(chunkX, chunkY, chunkZ);
+                        ClientWorldChunk clientWorldChunk = world.get(cachedChunkPos, false, false);
+                        if (clientWorldChunk == null) return;
+
+                        cachedChunk = clientWorldChunk.getChunkData();
+                        if (cachedChunk == null) return;
+                    }
+
+                    Block block = cachedChunk.getBlock(localX, localY, localZ);
+                    if (block != null) {
+                        BlockMesh blockMesh = blockService.getBlock(block.id()).blockMesh();
+                        BlockHitbox[] blockHitbox = blockMesh.getHitbox();
+                        for (BlockHitbox bh : blockHitbox) {
+                            if (bh.isColliding(hitbox, (float) wx - bx, (float) wy - by, (float) wz - bz)) {
+                                if (bh.volumeProperties().isVolume()) {
+                                    if (speed > bh.volumeProperties().speed()) {
+                                        speed = bh.volumeProperties().speed();
+                                    }
+                                    if (!onGround && bh.volumeProperties().isGround()) {
+                                        onGround = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isSolidAt(double wx, double wy, double wz) {
+        double minX = wx + hitbox.minX();
+        double maxX = wx + hitbox.maxX();
+        double minY = wy + hitbox.minY();
+        double maxY = wy + hitbox.maxY();
+        double minZ = wz + hitbox.minZ();
+        double maxZ = wz + hitbox.maxZ();
+
+        int blockMinX = (int) Math.floor(minX);
+        int blockMaxX = (int) Math.ceil(maxX);
+        int blockMinY = (int) Math.floor(minY);
+        int blockMaxY = (int) Math.ceil(maxY);
+        int blockMinZ = (int) Math.floor(minZ);
+        int blockMaxZ = (int) Math.ceil(maxZ);
 
         for (int bx = blockMinX; bx <= blockMaxX; bx++) {
             for (int by = blockMinY; by <= blockMaxY; by++) {
@@ -148,7 +206,9 @@ public class PlayerController {
                         BlockHitbox[] blockHitbox = blockMesh.getHitbox();
                         for (BlockHitbox bh : blockHitbox) {
                             if (bh.isColliding(hitbox, (float) wx - bx, (float) wy - by, (float) wz - bz)) {
-                                return true;
+                                if (!bh.volumeProperties().isVolume()) {
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -161,6 +221,10 @@ public class PlayerController {
 
     public void tick(double deltaTime) {
         double tickDelta = deltaTime * ConstantClientSettings.TARGET_TPS;
+
+        if (movementMode == MovementMode.FALL_COLLIDE) {
+            updateBlockMovementModifiers(x, y, z);
+        }
 
         state.setItem("deltaTime", deltaTime);
 
@@ -245,10 +309,10 @@ public class PlayerController {
 
         double frictionFactor;
         if (movementMode == MovementMode.FALL_COLLIDE) {
-            frictionFactor = (float) ((onGround ? GROUND_FRICTION : AIR_RESISTANCE) * deltaTime);
+            frictionFactor = (float) (((onGround ? GROUND_FRICTION : AIR_RESISTANCE) * speed) * deltaTime);
             velocityX *= frictionFactor;
             velocityZ *= frictionFactor;
-            velocityY *= 0.98f;
+            velocityY *= 0.98f*speed;
         } else {
             frictionFactor = (float) (AIR_RESISTANCE * deltaTime);
             velocityX *= frictionFactor;

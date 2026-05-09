@@ -3,18 +3,16 @@ package omnivoxel.common.block.hitbox;
 import omnivoxel.client.game.hitbox.Hitbox;
 import omnivoxel.util.bytes.ByteUtils;
 
-public record BlockHitbox(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+public record BlockHitbox(float minX, float minY, float minZ, float maxX, float maxY, float maxZ,
+                          BlockHitboxVolumeProperties volumeProperties) {
     public static final String EMPTY_BLOCK_HITBOX_STRING = "omnivoxel:empty";
     public static final BlockHitbox[] EMPTY_BLOCK_HITBOX = new BlockHitbox[0];
 
     public byte[] getBytes() {
-        byte[] bytes = new byte[Float.BYTES * 6];
-        ByteUtils.addFloat(bytes, minX, 0);
-        ByteUtils.addFloat(bytes, minY, 4);
-        ByteUtils.addFloat(bytes, minZ, 8);
-        ByteUtils.addFloat(bytes, maxX, 12);
-        ByteUtils.addFloat(bytes, maxY, 16);
-        ByteUtils.addFloat(bytes, maxZ, 20);
+        byte[] volumeBytes = volumeProperties.getBytes();
+        byte[] bytes = new byte[Float.BYTES * 6 + volumeBytes.length];
+        ByteUtils.addFloats(bytes, 0, minX, minY, minZ, maxX, maxY, maxZ);
+        System.arraycopy(volumeBytes, 0, bytes, Float.BYTES * 6, volumeBytes.length);
         return bytes;
     }
 
@@ -115,5 +113,15 @@ public record BlockHitbox(float minX, float minY, float minZ, float maxX, float 
         return maxAX > minBX && minAX < maxBX &&
                 maxAY > minBY && minAY < maxBY &&
                 maxAZ > minBZ && minAZ < maxBZ;
+    }
+
+    public record BlockHitboxVolumeProperties(boolean isVolume, float speed, boolean isGround) {
+        public byte[] getBytes() {
+            byte[] bytes = new byte[2 + Float.BYTES];
+            bytes[0] = (byte) (isVolume ? 1 : 0);
+            bytes[1] = (byte) (isGround ? 1 : 0);
+            ByteUtils.addFloat(bytes, speed, 2);
+            return bytes;
+        }
     }
 }

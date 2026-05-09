@@ -161,6 +161,19 @@ public final class Game {
                 ObjectGameNode objectGameNode = Game.checkGameNodeType(nodes[i], ObjectGameNode.class);
                 ArrayGameNode minHitbox = Game.checkGameNodeType(objectGameNode.object().get("min"), ArrayGameNode.class);
                 ArrayGameNode maxHitbox = Game.checkGameNodeType(objectGameNode.object().get("max"), ArrayGameNode.class);
+
+                BooleanGameNode isVolumeNode = Game.checkGameNodeType(objectGameNode.object().get("volume"), BooleanGameNode.class);
+                boolean isVolume = isVolumeNode != null && isVolumeNode.value();
+                float speed;
+                if (isVolume) {
+                    speed = (float) Game.checkGameNodeType(objectGameNode.object().get("speed"), DoubleGameNode.class).value();
+                } else {
+                    speed = 0;
+                }
+
+                BooleanGameNode isGroundNode = Game.checkGameNodeType(objectGameNode.object().get("ground"), BooleanGameNode.class);
+                boolean isGround = isGroundNode != null && isGroundNode.value();
+
                 double minX = Game.checkGameNodeType(minHitbox.nodes()[0], DoubleGameNode.class).value();
                 double minY = Game.checkGameNodeType(minHitbox.nodes()[1], DoubleGameNode.class).value();
                 double minZ = Game.checkGameNodeType(minHitbox.nodes()[2], DoubleGameNode.class).value();
@@ -169,8 +182,9 @@ public final class Game {
                 double maxY = Game.checkGameNodeType(maxHitbox.nodes()[1], DoubleGameNode.class).value();
                 double maxZ = Game.checkGameNodeType(maxHitbox.nodes()[2], DoubleGameNode.class).value();
                 hitboxes[i] = new BlockHitbox(
-                        (float) minX,
-                        (float) minY, (float) minZ, (float) maxX, (float) maxY, (float) maxZ
+                        (float) minX, (float) minY, (float) minZ,
+                        (float) maxX, (float) maxY, (float) maxZ,
+                        new BlockHitbox.BlockHitboxVolumeProperties(isVolume, speed, isGround)
                 );
             }
 

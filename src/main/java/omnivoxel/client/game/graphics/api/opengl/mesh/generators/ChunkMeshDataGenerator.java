@@ -177,7 +177,7 @@ public class ChunkMeshDataGenerator {
         int[] faceIndices = shape.indices()[blockFace.ordinal()];
 
         // TODO: Remove all hardcoding
-        int blockType = Objects.equals(blockMesh.getModID(), "core:water_source_block") ? 1 : 0;
+        int blockType = Objects.equals(blockMesh.getModID()+"/"+blockMesh.getState(), "core:water_source_block/top") ? 1 : 0;
 
         for (int idx : faceIndices) {
             Vertex pointPosition = faceVertices[idx];
