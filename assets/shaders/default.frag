@@ -29,6 +29,7 @@ uniform float fogNear;
 uniform float time;
 
 uniform sampler2D blockTexture;
+uniform float skyIntensity;
 
 // SKY SHADER
 vec3 skyColor(vec3 dir, vec3 sunDir) {
@@ -251,10 +252,19 @@ void main() {
 
         vec4 skyColor = texture(skyTexture, gl_FragCoord.xy / screenResolution);
 
-        // Combine: block light + skylight
-        vec3 totalLight = blockLight + vec3((sin(time / 20) / 2 + 0.5) * skyLight);
+        vec3 sunDir = getSunDir(time);
+
+        float NdotL = max(dot(normalize(faceNormal), sunDir), 0.0);
+
+        // soften so it doesn't go pitch black
+        float diffuse = mix(0.2, 1.0, NdotL);
+
+        // apply only to skylight
+        float directionalSky = skyLight * skyIntensity * diffuse;
+
+        vec3 totalLight = blockLight + vec3(directionalSky);
         totalLight = max(totalLight, vec3(ambient));
-        FragColor.rgb *= totalLight * shadow;
+        FragColor.rgb *= totalLight;
 
         if (blockType == 1u) {
             float fresnel = 1 - abs(dot(vNormal, normalize(faceNormal)));

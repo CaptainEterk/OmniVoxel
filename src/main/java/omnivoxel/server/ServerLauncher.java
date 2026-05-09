@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.network.NetworkHandler;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.Settings;
@@ -31,7 +32,7 @@ public class ServerLauncher {
     }
 
     public void run(long seed) throws IOException {
-        Logger.setMinPriority(Logger.Priority.NORMAL);
+//        Logger.setMinPriority(Logger.Priority.NORMAL);
 
         Settings settings = new Settings();
         settings.load(ConstantCommonSettings.CONFIG_LOCATION);
@@ -44,12 +45,13 @@ public class ServerLauncher {
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
         Map<String, BlockShape> blockShapeCache = new HashMap<>();
+        Map<String, BlockHitbox[]> blockHitboxCache = new HashMap<>();
 
         ServerWorld world = new ServerWorld();
 
         try {
             Map<String, ServerClient> clients = new ConcurrentHashMap<>();
-            Server server = new Server(clients, seed, world, blockShapeCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients), settings);
+            Server server = new Server(clients, seed, world, blockShapeCache, blockHitboxCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients), settings);
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
 

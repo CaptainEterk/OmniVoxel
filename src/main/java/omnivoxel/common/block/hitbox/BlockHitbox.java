@@ -1,30 +1,54 @@
-package omnivoxel.world.block.hitbox;
+package omnivoxel.common.block.hitbox;
 
 import omnivoxel.client.game.hitbox.Hitbox;
+import omnivoxel.util.bytes.ByteUtils;
 
-public class FullBlockHitbox implements BlockHitbox {
-    @Override
-    public boolean isColliding(int bx, int by, int bz, Hitbox hitbox) {
-        return hitboxIntersectsAABB(hitbox, bx, by, bz, bx + 1, by + 1, bz + 1);
+public record BlockHitbox(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+    public static final String EMPTY_BLOCK_HITBOX_STRING = "omnivoxel:empty";
+    public static final BlockHitbox[] EMPTY_BLOCK_HITBOX = new BlockHitbox[0];
+
+    public byte[] getBytes() {
+        byte[] bytes = new byte[Float.BYTES * 6];
+        ByteUtils.addFloat(bytes, minX, 0);
+        ByteUtils.addFloat(bytes, minY, 4);
+        ByteUtils.addFloat(bytes, minZ, 8);
+        ByteUtils.addFloat(bytes, maxX, 12);
+        ByteUtils.addFloat(bytes, maxY, 16);
+        ByteUtils.addFloat(bytes, maxZ, 20);
+        return bytes;
     }
 
-    @Override
-    public String getHitboxID() {
-        return "omnivoxel:hitbox/full_block";
+    public boolean isColliding(Hitbox hitbox, float ox, float oy, float oz) {
+        return hitboxIntersectsAABB(
+                hitbox.minX() + ox,
+                hitbox.minY() + oy,
+                hitbox.minZ() + oz,
+
+                hitbox.maxX() + ox,
+                hitbox.maxY() + oy,
+                hitbox.maxZ() + oz,
+
+                minX,
+                minY,
+                minZ,
+
+                maxX,
+                maxY,
+                maxZ
+        );
     }
 
-    @Override
     public boolean intersectsRay(double originX, double originY, double originZ,
                                  double dirX, double dirY, double dirZ,
                                  int x, int y, int z) {
 
-        double minX = x;
-        double minY = y;
-        double minZ = z;
+        double minX = x + this.minX;
+        double minY = y + this.minY;
+        double minZ = z + this.minZ;
 
-        double maxX = x + 1.0;
-        double maxY = y + 1.0;
-        double maxZ = z + 1.0;
+        double maxX = x + this.maxX;
+        double maxY = y + this.maxY;
+        double maxZ = z + this.maxZ;
 
         double tmin = Double.NEGATIVE_INFINITY;
         double tmax = Double.POSITIVE_INFINITY;
@@ -81,9 +105,15 @@ public class FullBlockHitbox implements BlockHitbox {
         return tmax >= Math.max(tmin, 0.0);
     }
 
-    private boolean hitboxIntersectsAABB(Hitbox h, float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
-        return h.maxX() > minX && h.minX() < maxX &&
-                h.maxY() > minY && h.minY() < maxY &&
-                h.maxZ() > minZ && h.minZ() < maxZ;
+    private boolean hitboxIntersectsAABB(
+            float minAX, float minAY, float minAZ,
+            float maxAX, float maxAY, float maxAZ,
+
+            float minBX, float minBY, float minBZ,
+            float maxBX, float maxBY, float maxBZ
+    ) {
+        return maxAX > minBX && minAX < maxBX &&
+                maxAY > minBY && minAY < maxBY &&
+                maxAZ > minBZ && minAZ < maxBZ;
     }
 }

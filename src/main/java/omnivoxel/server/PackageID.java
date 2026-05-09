@@ -16,6 +16,7 @@ public enum PackageID {
     SERVER_INFO,
     REGISTER_BLOCK,
     REGISTER_BLOCK_SHAPE,
+    REGISTER_BLOCK_HITBOX,
     REPLACE_BLOCK,
     HEIGHTS,
 
@@ -26,5 +27,5 @@ public enum PackageID {
     PLAYER_UPDATE,
 
     // Server -> Client
-    ENTITY_UPDATE,
+    ENTITY_UPDATE
 }

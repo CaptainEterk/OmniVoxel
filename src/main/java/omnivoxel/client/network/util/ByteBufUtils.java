@@ -5,6 +5,7 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.util.log.Logger;
 
@@ -15,9 +16,10 @@ import java.util.Map;
 
 public class ByteBufUtils {
     private static final Map<String, BlockShape> shapeCache = new HashMap<>();
+    private static final Map<String, BlockHitbox[]> hitboxCache = new HashMap<>();
 
     public static void cacheBlockShapeFromByteBuf(ByteBuf byteBuf) {
-        byteBuf.skipBytes(8);
+        byteBuf.readerIndex(8);
         int idLen = byteBuf.readUnsignedShort();
         byte[] idBytes = new byte[idLen];
         byteBuf.readBytes(idBytes);
@@ -29,14 +31,14 @@ public class ByteBufUtils {
 
         for (int face = 0; face < 6; face++) {
             int vCount = byteBuf.readUnsignedShort();
-            Vertex[] verts = new Vertex[vCount];
+            Vertex[] vertexArray = new Vertex[vCount];
             for (int i = 0; i < vCount; i++) {
                 float x = byteBuf.readFloat();
                 float y = byteBuf.readFloat();
                 float z = byteBuf.readFloat();
-                verts[i] = new Vertex(x, y, z);
+                vertexArray[i] = new Vertex(x, y, z);
             }
-            vertices[face] = verts;
+            vertices[face] = vertexArray;
 
             int iCount = byteBuf.readUnsignedShort();
             int[] idx = new int[iCount];
@@ -51,6 +53,32 @@ public class ByteBufUtils {
         BlockShape blockShape = new BlockShape(id, vertices, indices, solid);
 
         shapeCache.put(id, blockShape);
+    }
+
+    public static void cacheBlockHitboxFromByteBuf(ByteBuf byteBuf) {
+        byteBuf.readerIndex(8);
+        int idLen = byteBuf.readInt();
+        byte[] idBytes = new byte[idLen];
+        byteBuf.readBytes(idBytes);
+        String id = new String(idBytes, StandardCharsets.UTF_8);
+
+        int hitboxCount = byteBuf.readInt();
+        BlockHitbox[] hitboxes = new BlockHitbox[hitboxCount];
+        for (int i = 0; i < hitboxCount; i++) {
+            float minX = byteBuf.readFloat();
+            float minY = byteBuf.readFloat();
+            float minZ = byteBuf.readFloat();
+
+            float maxX = byteBuf.readFloat();
+            float maxY = byteBuf.readFloat();
+            float maxZ = byteBuf.readFloat();
+
+            hitboxes[i] = new BlockHitbox(minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        Logger.info("Registering block hitbox: " + id);
+
+        hitboxCache.put(id, hitboxes);
     }
 
     public static BlockMesh registerBlockFromByteBuf(ByteBuf byteBuf) {
@@ -82,6 +110,19 @@ public class ByteBufUtils {
 
         final String shapeID = new String(shapeIDBytes);
         final BlockShape blockShape = shapeCache.getOrDefault(shapeID, BlockShape.DEFAULT_BLOCK_SHAPE);
+
+        int hitboxIDLength = byteBuf.getShort(readerIndex);
+
+        readerIndex += 2;
+        byte[] hitboxIDBytes = new byte[hitboxIDLength];
+        byteBuf.getBytes(readerIndex, hitboxIDBytes);
+        readerIndex += hitboxIDLength;
+
+        final String hitboxID = new String(hitboxIDBytes);
+        final BlockHitbox[] hitbox = hitboxCache.get(hitboxID);
+        if (hitbox == null) {
+            Logger.warn("Cannot find hitbox: " + hitboxID);
+        }
 
         boolean transparent = byteBuf.getByte(readerIndex++) == 1;
         boolean transparentMesh = byteBuf.getByte(readerIndex++) == 1;
@@ -125,11 +166,18 @@ public class ByteBufUtils {
                 return modID;
             }
 
+            // TODO: Add rules for block shape
             @Override
             public BlockShape getShape(BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west) {
                 return blockShape;
             }
 
+            @Override
+            public BlockHitbox[] getHitbox() {
+                return hitbox;
+            }
+
+            // TODO: Make "transparent" face dependent
             @Override
             public boolean shouldRenderFace(BlockFace face, BlockMesh adjacentBlockMesh) {
                 return !modID.equals("omnivoxel:air") && !adjacentBlockMesh.getModID().equals(modID) && adjacentBlockMesh.isTransparent();

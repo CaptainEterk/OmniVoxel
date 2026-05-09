@@ -21,7 +21,7 @@ public class ServerClient extends MobEntity implements ServerItem {
     private final Queue<ServerBlockAndPosition> replacedBlocks = new ArrayDeque<>();
 
     public ServerClient(String clientID, ChannelHandlerContext ctx) {
-        super(clientID, new Hitbox(0, 0, 0, 1, 2, 1, 2, 3, 2));
+        super(clientID, new Hitbox(0, 0, 0, 1, 2, 1));
         this.clientID = clientID;
         this.ctx = ctx;
         playerID = new byte[32];

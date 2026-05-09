@@ -69,10 +69,10 @@ void decodeData(uint data1, uint data2, uint data3, out uint x, out uint y, out 
     blockType = (data2 >> 0u) & BITMASK_13;
 
     // Data 3
-    r = (data3 >> 24u) & BITMASK_6;
-    g = (data3 >> 18u) & BITMASK_6;
-    b = (data3 >> 12u) & BITMASK_6;
-    s = (data3 >> 6u) & BITMASK_6;
+    r = (data3 >> 28u) & BITMASK_4;
+    g = (data3 >> 24u) & BITMASK_4;
+    b = (data3 >> 20u) & BITMASK_4;
+    s = (data3 >> 16u) & BITMASK_4;
 }
 
 void main() {
@@ -91,10 +91,10 @@ void main() {
         shadow = (normal < 6u) ? SHADOWS[normal] : 1.0;
 
         // Lighting
-        float rf = float(r) / float(BITMASK_6);
-        float gf = float(g) / float(BITMASK_6);
-        float bf = float(b) / float(BITMASK_6);
-        float sf = float(s) / float(BITMASK_6);
+        float rf = float(r) / float(BITMASK_4);
+        float gf = float(g) / float(BITMASK_4);
+        float bf = float(b) / float(BITMASK_4);
+        float sf = float(s) / float(BITMASK_4);
         lighting = vec4(rf, gf, bf, sf);
 
         vec3 toCameraVector = cameraPosition-xyz;

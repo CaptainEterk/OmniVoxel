@@ -5,7 +5,6 @@ import omnivoxel.common.annotations.NotNull;
 import omnivoxel.server.client.ServerItem;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Objects;
 
 public record ServerBlock(
@@ -15,17 +14,11 @@ public record ServerBlock(
         boolean transparent,
         boolean transparentMesh,
         byte[] lightEmitting,
-        byte[] lightDiffusing
+        byte[] lightDiffusing,
+        String blockHitbox
 ) implements ServerItem {
-    public static final double[][] emptyUVCoords = new double[6][0];
-    private static final byte[] defaultLightDiffusing = new byte[4];
     // TODO: Don't hardcode omnivoxel:air/default
-    public static final ServerBlock AIR = new ServerBlock("omnivoxel:air/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false, new byte[3], defaultLightDiffusing);
-    public static final ServerBlock VOID = new ServerBlock("omnivoxel:void/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, emptyUVCoords, true, false, new byte[3], defaultLightDiffusing);
-
-    static {
-        Arrays.fill(defaultLightDiffusing, (byte) 1);
-    }
+    public static final ServerBlock AIR = new ServerBlock("omnivoxel:air/default", BlockShape.EMPTY_BLOCK_SHAPE_STRING, new double[6][0], true, false, new byte[3], new byte[]{1, 1, 1, 1}, "omnivoxel:empty");
 
     public ServerBlock {
         if (uvCoords.length != 6) {
@@ -41,6 +34,7 @@ public record ServerBlock(
     public byte @NotNull [] getBytes() {
         byte[] idBytes = id.getBytes();
         byte[] shapeBytes = blockShape == null ? new byte[0] : blockShape.getBytes();
+        byte[] hitboxBytes = blockHitbox == null ? new byte[0] : blockHitbox.getBytes();
 
         int uvCoordByteCount = 0;
         for (double[] uvCoords : this.uvCoords) {
@@ -50,6 +44,7 @@ public record ServerBlock(
 
         int size = 2 + idBytes.length
                 + 2 + shapeBytes.length
+                + 2 + hitboxBytes.length
                 + 1 + 1
                 + uvCoordByteCount
                 + 3
@@ -62,6 +57,9 @@ public record ServerBlock(
 
         buffer.putShort((short) shapeBytes.length);
         buffer.put(shapeBytes);
+
+        buffer.putShort((short) hitboxBytes.length);
+        buffer.put(hitboxBytes);
 
         buffer.put((byte) (transparent ? 1 : 0));
 

@@ -35,10 +35,10 @@ public class ShapeHelper {
         int bPacked = b & BITMASK_6;
         int sPacked = s & BITMASK_6;
 
-        int packedLighting = (rPacked << 26)
-                | (gPacked << 20)
-                | (bPacked << 14)
-                | (sPacked << 8);
+        int packedLighting = (rPacked << 28)
+                | (gPacked << 24)
+                | (bPacked << 20)
+                | (sPacked << 16);
 
         return new int[]{packedPosition, packedNormalTextureType, packedLighting};
     }

@@ -6,6 +6,9 @@ import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
+import omnivoxel.server.client.chunk.result.ChunkCacheItem;
+import omnivoxel.server.world.ChunkCacheHandler;
+import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.bytes.ByteUtils;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.BiBlockChunk;
@@ -13,8 +16,13 @@ import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk2d.Chunk2D;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ChunkIO {
     public static final ServerBlockService BLOCK_SERVICE = new ServerBlockService();
@@ -87,6 +95,99 @@ public class ChunkIO {
         }
     }
 
+    public static byte[] encode(Chunk<ServerBlock> chunk) {
+        if (chunk == null) {
+            return null;
+        }
+
+        ByteBuf byteBuf = Unpooled.buffer();
+
+        try {
+            byteBuf.writeLong(0L);
+            byteBuf.writeLong(0L);
+            byteBuf.writeInt(0);
+
+            Map<ServerBlock, Integer> paletteMap = new LinkedHashMap<>();
+            List<ServerBlock> paletteList = new ArrayList<>();
+
+            int totalBlocks = ConstantCommonSettings.BLOCKS_IN_CHUNK;
+
+            for (int i = 0; i < totalBlocks; i++) {
+
+                int x = IndexCalculator.x(i);
+                int y = IndexCalculator.y(i);
+                int z = IndexCalculator.z(i);
+
+                ServerBlock block = chunk.getBlock(x, y, z);
+
+                if (!paletteMap.containsKey(block)) {
+                    paletteMap.put(block, paletteList.size());
+                    paletteList.add(block);
+                }
+            }
+
+            // ------------------------------------------------------------
+            // Palette
+            // ------------------------------------------------------------
+
+            byteBuf.writeShort(paletteList.size());
+
+            for (ServerBlock block : paletteList) {
+
+                String blockID = block.id();
+                byte[] idBytes = blockID.getBytes(StandardCharsets.UTF_8);
+
+                byteBuf.writeShort(idBytes.length);
+                byteBuf.writeBytes(idBytes);
+            }
+
+            // ------------------------------------------------------------
+            // RLE block stream
+            // ------------------------------------------------------------
+
+            int currentPaletteID = -1;
+            int runLength = 0;
+
+            for (int i = 0; i < totalBlocks; i++) {
+
+                int x = IndexCalculator.x(i);
+                int y = IndexCalculator.y(i);
+                int z = IndexCalculator.z(i);
+
+                ServerBlock block = chunk.getBlock(x, y, z);
+
+                int paletteID = paletteMap.get(block);
+
+                if (paletteID == currentPaletteID) {
+                    runLength++;
+                    continue;
+                }
+
+                if (runLength > 0) {
+                    byteBuf.writeInt(currentPaletteID);
+                    byteBuf.writeInt(runLength);
+                }
+
+                currentPaletteID = paletteID;
+                runLength = 1;
+            }
+
+            // flush final run
+            if (runLength > 0) {
+                byteBuf.writeInt(currentPaletteID);
+                byteBuf.writeInt(runLength);
+            }
+
+            byte[] out = new byte[byteBuf.readableBytes()];
+            byteBuf.getBytes(0, out);
+
+            return out;
+
+        } finally {
+            byteBuf.release();
+        }
+    }
+
     public static byte[] encodeIntegerChunk2D(Chunk2D<Integer> chunk2D) {
         int size = ConstantCommonSettings.BLOCKS_IN_CHUNK_2D;
         byte[] bytes = new byte[size * Integer.BYTES];
@@ -107,5 +208,9 @@ public class ChunkIO {
         }
 
         return bytes;
+    }
+
+    public static void write(Position3D position3D, Chunk<ServerBlock> chunk) {
+        ChunkCacheHandler.queueCache(new ChunkCacheItem(position3D, encode(chunk)));
     }
 }

@@ -5,6 +5,7 @@ import omnivoxel.client.game.graphics.api.opengl.OpenGLRenderer;
 import omnivoxel.client.game.graphics.api.opengl.text.TextRenderer;
 import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import omnivoxel.client.game.graphics.camera.Camera;
+import omnivoxel.client.game.graphics.camera.CameraCullingService;
 import omnivoxel.client.game.graphics.menu.MenuRenderer;
 import omnivoxel.client.game.graphics.menu.MenuSystem;
 import omnivoxel.client.game.graphics.menu.components.LayoutComponent;
@@ -49,7 +50,8 @@ public final class GameLoop {
                 client,
                 gameRunning,
                 contextTasks,
-                new MenuSystem(new MenuRenderer(mainComponent), textRenderer)
+                new MenuSystem(new MenuRenderer(mainComponent), textRenderer),
+                new CameraCullingService(camera)
         );
     }
 

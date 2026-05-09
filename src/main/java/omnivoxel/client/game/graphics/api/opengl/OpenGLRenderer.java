@@ -14,15 +14,19 @@ import omnivoxel.client.game.graphics.api.opengl.texture.TextureLoader;
 import omnivoxel.client.game.graphics.api.opengl.window.Window;
 import omnivoxel.client.game.graphics.api.opengl.window.WindowFactory;
 import omnivoxel.client.game.graphics.camera.Camera;
+import omnivoxel.client.game.graphics.camera.CameraCullingService;
 import omnivoxel.client.game.graphics.menu.MenuSystem;
 import omnivoxel.client.game.position.DistanceChunk;
 import omnivoxel.client.game.position.PositionedChunk;
-import omnivoxel.common.settings.*;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.Client;
 import omnivoxel.common.annotations.NotNull;
+import omnivoxel.common.settings.ConstantClientSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantNetworkSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.util.executor.ExecutorCollection;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.util.time.PeriodicTimeExecutor;
@@ -53,6 +57,7 @@ public class OpenGLRenderer implements Renderer {
     private final AtomicBoolean gameRunning;
     private final Queue<Consumer<Window>> contextTasks;
     private final MenuSystem menuSystem;
+    private final CameraCullingService cameraCullingService;
     // TODO: Remove all TEMP
     // Window
     private Window window;
@@ -75,7 +80,7 @@ public class OpenGLRenderer implements Renderer {
     private Timer timer;
     private FullscreenQuad fullscreenQuad;
 
-    public OpenGLRenderer(State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem) {
+    public OpenGLRenderer(State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem, CameraCullingService cameraCullingService) {
         this.state = state;
         this.settings = settings;
         this.textRenderer = textRenderer;
@@ -85,6 +90,7 @@ public class OpenGLRenderer implements Renderer {
         this.gameRunning = gameRunning;
         this.contextTasks = contextTasks;
         this.menuSystem = menuSystem;
+        this.cameraCullingService = cameraCullingService;
     }
 
     // TODO: Create a constructor for as much of this as possible
@@ -267,6 +273,11 @@ public class OpenGLRenderer implements Renderer {
 
         shaderProgram.bind();
         shaderProgram.setUniformUnsigned("meshType", 2);
+        float angle = (float) (GLFW.glfwGetTime() / 120 * Math.PI * 2);
+        float sunY = (float) Math.sin(angle);
+
+        float skyIntensity = Math.max(0f, sunY);
+        shaderProgram.setUniform("skyIntensity", skyIntensity);
         fullscreenQuad.render();
 
         GL11C.glEnable(GL11C.GL_CULL_FACE);
@@ -314,7 +325,7 @@ public class OpenGLRenderer implements Renderer {
             Matrix4f viewMatrix = new Matrix4f().rotate((float) camera.getPitch(), 1, 0, 0).rotate((float) camera.getYaw(), 0, 1, 0);
             Matrix4f cameraViewMatrix = new Matrix4f(viewMatrix).translate((float) -camera.getX(), (float) -camera.getY(), (float) -camera.getZ());
 
-            camera.updateFrustum(projectionMatrix, new Matrix4f(viewMatrix).translate((float) -camera.getX(), (float) -camera.getY(), (float) -camera.getZ()));
+            camera.updateFrustum(projectionMatrix, cameraViewMatrix);
             shaderProgram.setUniform("projection", projectionMatrix);
             shaderProgram.setUniform("view", cameraViewMatrix);
             shaderProgram.setUniform("cameraView", cameraViewMatrix);
@@ -554,6 +565,7 @@ public class OpenGLRenderer implements Renderer {
                             \t- On Ground: %b
                             \t- Friction Factor: %.2f
                             \t- Movement Mode: %s
+                            \t- Selected Block: %s
                             Pipelines:
                             \t- Queued Meshes: %d
                             \t- Queued Mesh Data's: %d
@@ -606,6 +618,7 @@ public class OpenGLRenderer implements Renderer {
                     state.getItem("on_ground", Boolean.class),
                     state.getItem("friction_factor", Double.class),
                     state.getItem("movement_mode", String.class),
+                    state.getItem("selected_block", String.class),
                     0,
                     0,
                     0,
@@ -722,22 +735,12 @@ public class OpenGLRenderer implements Renderer {
     }
 
     private void attemptFreeChunks() {
-        int ccx = (int) Math.floor(camera.getX() / ConstantCommonSettings.CHUNK_WIDTH);
-        int ccy = (int) Math.floor(camera.getY() / ConstantCommonSettings.CHUNK_HEIGHT);
-        int ccz = (int) Math.floor(camera.getZ() / ConstantCommonSettings.CHUNK_LENGTH);
-
         int renderDistance = settings.getIntSetting("render_distance", 100);
         int rdChunks = renderDistance / ConstantCommonSettings.CHUNK_SIZE + 1;
         int squaredRenderDistance = rdChunks * rdChunks;
 
-        world.freeAllChunksNotInAndNotRecentlyAccessed(position3D -> {
-            int dx = position3D.x() - ccx;
-            int dy = position3D.y() - ccy;
-            int dz = position3D.z() - ccz;
-            int distance = dx * dx + dy * dy + dz * dz;
-
-            return distance < squaredRenderDistance;
-        });
+        cameraCullingService.calculateChunkPosition();
+        world.freeAllChunksNotInAndNotRecentlyAccessed(position3D -> !cameraCullingService.shouldDistanceCullChunk(position3D, squaredRenderDistance));
         state.setItem("shouldAttemptFreeChunks", false);
     }
 

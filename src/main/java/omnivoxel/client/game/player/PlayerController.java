@@ -1,6 +1,7 @@
 package omnivoxel.client.game.player;
 
 import omnivoxel.client.game.graphics.api.opengl.window.Window;
+import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.camera.Camera;
 import omnivoxel.client.game.hitbox.Hitbox;
@@ -14,19 +15,17 @@ import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.BlockReplaceRequest;
 import omnivoxel.client.network.request.PlayerUpdateRequest;
 import omnivoxel.common.annotations.NotNull;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.common.settings.Settings;
-import omnivoxel.util.cache.IDCache;
+import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.Block;
 import omnivoxel.world.block.BlockService;
-import omnivoxel.world.block.hitbox.BlockHitbox;
-import omnivoxel.world.block.hitbox.FullBlockHitbox;
 import omnivoxel.world.chunk.Chunk;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Consumer;
 
@@ -39,15 +38,17 @@ public class PlayerController {
     private static final byte COLLISION_Y = 2;
     private static final byte COLLISION_Z = 4;
     private static final byte COLLISION_DONE = 0b111;
-
+    private static final String[] blocks = new String[]{
+            "core:red_light_block/default",
+            "core:green_light_block/default",
+            "core:blue_light_block/default"
+    };
     private final Client client;
     private final Camera camera;
     private final Settings settings;
     private final BlockingQueue<Consumer<Window>> contextTasks;
     private final State state;
     private final ClientWorld world;
-    private final IDCache<String, String> blockHitbox;
-    private final IDCache<String, BlockHitbox> blockHitboxCache;
     private final BlockService<BlockWithMesh> blockService;
     private final Hitbox hitbox;
     private final Window window;
@@ -75,6 +76,8 @@ public class PlayerController {
     private Position3D cachedChunkPos = new Position3D(0, 0, 0);
     private Chunk<BlockWithMesh> cachedChunk;
     private boolean onGround = false;
+    private int selectedBlock = 0;
+    private boolean selectingBlockDown;
 
     public PlayerController(Client client, Camera camera, Settings settings, BlockingQueue<Consumer<Window>> contextTasks, State state, ClientWorld world, BlockService<BlockWithMesh> blockService, Window window) {
         this.client = client;
@@ -86,9 +89,7 @@ public class PlayerController {
         this.state = state;
         this.world = world;
         this.window = window;
-        blockHitbox = new IDCache<>(new HashMap<>());
-        blockHitboxCache = new IDCache<>(new HashMap<>());
-        hitbox = new Hitbox(-0.4f, -1.5f, -0.4f, 0.4f, 0.4f, 0.4f, 2, 2, 3);
+        hitbox = new Hitbox(-0.4f, -1.5f, -0.4f, 0.4f, 0.3f, 0.4f);
     }
 
     private static double intBound(double s, double ds) {
@@ -108,22 +109,26 @@ public class PlayerController {
         double maxZ = wz + hitbox.maxZ();
 
         int blockMinX = (int) Math.floor(minX);
-        int blockMaxX = (int) Math.floor(maxX);
+        int blockMaxX = (int) Math.ceil(maxX);
         int blockMinY = (int) Math.floor(minY);
-        int blockMaxY = (int) Math.floor(maxY);
+        int blockMaxY = (int) Math.ceil(maxY);
         int blockMinZ = (int) Math.floor(minZ);
-        int blockMaxZ = (int) Math.floor(maxZ);
+        int blockMaxZ = (int) Math.ceil(maxZ);
+
+        float lx = (float) (wx - Math.floor(wx));
+        float ly = (float) (wy - Math.floor(wy));
+        float lz = (float) (wz - Math.floor(wz));
 
         for (int bx = blockMinX; bx <= blockMaxX; bx++) {
             for (int by = blockMinY; by <= blockMaxY; by++) {
                 for (int bz = blockMinZ; bz <= blockMaxZ; bz++) {
-                    int chunkX = bx >> 5;
-                    int chunkY = by >> 5;
-                    int chunkZ = bz >> 5;
+                    int chunkX = IndexCalculator.chunkX(bx);
+                    int chunkY = IndexCalculator.chunkY(by);
+                    int chunkZ = IndexCalculator.chunkZ(bz);
 
-                    int localX = bx & 31;
-                    int localY = by & 31;
-                    int localZ = bz & 31;
+                    int localX = IndexCalculator.localX(bx);
+                    int localY = IndexCalculator.localY(by);
+                    int localZ = IndexCalculator.localZ(bz);
 
                     if (cachedChunkPos == null || cachedChunk == null ||
                             cachedChunkPos.x() != chunkX ||
@@ -138,15 +143,11 @@ public class PlayerController {
                     }
 
                     Block block = cachedChunk.getBlock(localX, localY, localZ);
-                    // TODO: Don't hardcode anything, use a hitbox for each block
-                    if (block != null && !"omnivoxel:air/default".equals(block.id())) {
-                        BlockHitbox blockHitboxImpl = blockHitboxCache.get(
-                                blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
-                                FullBlockHitbox.class
-                        );
-
-                        if (blockHitboxImpl != null) {
-                            if (blockHitboxImpl.isColliding(0, 0, 0, hitbox)) {
+                    if (block != null) {
+                        BlockMesh blockMesh = blockService.getBlock(block.id()).blockMesh();
+                        BlockHitbox[] blockHitbox = blockMesh.getHitbox();
+                        for (BlockHitbox bh : blockHitbox) {
+                            if (bh.isColliding(hitbox, (float) wx - bx, (float) wy - by, (float) wz - bz)) {
                                 return true;
                             }
                         }
@@ -179,30 +180,51 @@ public class PlayerController {
                 leftMouseDown = false;
             }
 
+            if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_MIDDLE)) {
+                if (!selectingBlockDown) {
+                    selectedBlock++;
+                    selectedBlock %= blocks.length;
+                    state.setItem("selected_block", blocks[selectedBlock]);
+                }
+                selectingBlockDown = true;
+            } else {
+                selectingBlockDown = false;
+            }
+
             if (mouseButtonInput.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
                 if (!rightMouseDown) {
-//                    rightMouseDown = true;
+                    rightMouseDown = true;
                     Position3D observedBlock = findObservedBlock(true);
                     if (observedBlock != null) {
-                        int chunkX = observedBlock.x() >> 5;
-                        int chunkY = observedBlock.y() >> 5;
-                        int chunkZ = observedBlock.z() >> 5;
+                        int chunkX = IndexCalculator.chunkX(observedBlock.x());
+                        int chunkY = IndexCalculator.chunkY(observedBlock.y());
+                        int chunkZ = IndexCalculator.chunkZ(observedBlock.z());
 
-                        int localX = observedBlock.x() & 31;
-                        int localY = observedBlock.y() & 31;
-                        int localZ = observedBlock.z() & 31;
+                        int localX = IndexCalculator.localX(observedBlock.x());
+                        int localY = IndexCalculator.localY(observedBlock.y());
+                        int localZ = IndexCalculator.localZ(observedBlock.z());
 
                         Block block = world.get(new Position3D(chunkX, chunkY, chunkZ), false, false).getChunkData().getBlock(localX, localY, localZ);
-                        BlockHitbox blockHitbox = blockHitboxCache.get(
-                                this.blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
-                                FullBlockHitbox.class
-                        );
+                        BlockMesh blockMesh = blockService.getBlock(block.id()).blockMesh();
+                        BlockHitbox[] blockHitbox = blockMesh.getHitbox();
 
-                        assert blockHitbox != null;
-                        if (!blockHitbox.isColliding(observedBlock.x(), observedBlock.y(), observedBlock.z(), hitbox)) {
-                            client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock("core:red_light_block/default")));
-                        } else {
+                        float lx = (float) (x - Math.floor(x));
+                        float ly = (float) (y - Math.floor(y));
+                        float lz = (float) (z - Math.floor(z));
+
+                        boolean isColliding = false;
+                        for (BlockHitbox bh : blockHitbox) {
+
+                            if (bh.isColliding(hitbox, lx, ly, lz)) {
+                                isColliding = true;
+                                break;
+                            }
+                        }
+
+                        if (isColliding) {
                             Logger.warn(Logger.Priority.NORMAL, "Cannot place block inside player!");
+                        } else {
+                            client.sendRequest(new BlockReplaceRequest(observedBlock, blockService.getBlock(blocks[selectedBlock])));
                         }
                     }
                 }
@@ -287,13 +309,13 @@ public class PlayerController {
         Position3D lastAir = null;
 
         while (dist <= maxDistance) {
-            int chunkX = x >> 5;
-            int chunkY = y >> 5;
-            int chunkZ = z >> 5;
+            int chunkX = IndexCalculator.chunkX(x);
+            int chunkY = IndexCalculator.chunkY(y);
+            int chunkZ = IndexCalculator.chunkZ(z);
 
-            int localX = x & 31;
-            int localY = y & 31;
-            int localZ = z & 31;
+            int localX = IndexCalculator.localX(x);
+            int localY = IndexCalculator.localY(y);
+            int localZ = IndexCalculator.localZ(z);
 
             ClientWorldChunk clientWorldChunk = world.get(new Position3D(chunkX, chunkY, chunkZ), false, false);
             if (clientWorldChunk == null) return null;
@@ -303,12 +325,17 @@ public class PlayerController {
             if (block == null || "omnivoxel:air/default".equals(block.id())) {
                 lastAir = new Position3D(x, y, z);
             } else {
-                BlockHitbox blockHitboxImpl = blockHitboxCache.get(
-                        blockHitbox.get(block.id(), String.class, new Class[]{String.class}, new Object[]{"core:hitbox/full_block"}),
-                        FullBlockHitbox.class
-                );
+                BlockMesh blockMesh = blockService.getBlock(block.id()).blockMesh();
+                BlockHitbox[] blockHitbox = blockMesh.getHitbox();
+                boolean intersects = false;
+                for (BlockHitbox bh : blockHitbox) {
+                    if (bh.intersectsRay(originX, originY, originZ, dirX, dirY, dirZ, x, y, z)) {
+                        intersects = true;
+                        break;
+                    }
+                }
 
-                if (blockHitboxImpl != null && blockHitboxImpl.intersectsRay(originX, originY, originZ, dirX, dirY, dirZ, x, y, z)) {
+                if (intersects) {
                     if (getBlockOn) {
                         return lastAir;
                     }

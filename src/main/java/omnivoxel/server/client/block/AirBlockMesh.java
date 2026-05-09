@@ -3,10 +3,12 @@ package omnivoxel.server.client.block;
 import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.face.BlockFace;
 
 public final class AirBlockMesh extends BlockMesh {
     private final static int[][] emptyUVCoords = new int[6][0];
+    private final static BlockHitbox[] emptyHitboxes = new BlockHitbox[0];
 
     @Override
     public String getID() {
@@ -21,6 +23,11 @@ public final class AirBlockMesh extends BlockMesh {
     @Override
     public BlockShape getShape(BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west) {
         return BlockShape.EMPTY_BLOCK_SHAPE;
+    }
+
+    @Override
+    public BlockHitbox[] getHitbox() {
+        return emptyHitboxes;
     }
 
     @Override
@@ -51,5 +58,10 @@ public final class AirBlockMesh extends BlockMesh {
     @Override
     public boolean isTransparent() {
         return true;
+    }
+
+    @Override
+    public boolean shouldRenderTransparentMesh() {
+        return false;
     }
 }

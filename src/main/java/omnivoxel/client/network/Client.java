@@ -99,6 +99,10 @@ public final class Client implements NetworkUser {
                     ByteBufUtils.cacheBlockShapeFromByteBuf(byteBuf);
                     byteBuf.release();
                     break;
+                case REGISTER_BLOCK_HITBOX:
+                    ByteBufUtils.cacheBlockHitboxFromByteBuf(byteBuf);
+                    byteBuf.release();
+                    break;
                 case REGISTER_BLOCK:
                     worldDataService.addBlock(ByteBufUtils.registerBlockFromByteBuf(byteBuf));
                     byteBuf.release();

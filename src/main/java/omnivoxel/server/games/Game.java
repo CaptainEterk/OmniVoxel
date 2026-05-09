@@ -2,6 +2,7 @@ package omnivoxel.server.games;
 
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.noise.Noise3D;
@@ -54,6 +55,7 @@ public final class Game {
                 ObjectGameNode objectStateNode = Game.checkGameNodeType(stateNode, ObjectGameNode.class);
                 String blockState = Game.checkGameNodeType(objectStateNode.object().get("id"), StringGameNode.class).value();
                 String blockShape = Game.checkGameNodeType(objectStateNode.object().get("block_shape"), StringGameNode.class).value();
+                String blockHitbox = Game.checkGameNodeType(objectStateNode.object().get("block_hitbox"), StringGameNode.class).value();
                 boolean transparent = Game.checkGameNodeType(objectStateNode.object().get("transparent"), BooleanGameNode.class).value();
                 boolean transparentMesh = Game.checkGameNodeType(objectStateNode.object().get("transparent_mesh"), BooleanGameNode.class).value();
                 ObjectGameNode texture = Game.checkGameNodeType(objectStateNode.object().get("texture"), ObjectGameNode.class);
@@ -103,12 +105,14 @@ public final class Game {
                     throw new IllegalArgumentException("\"" + uvMapping + "\" is not a valid uv_mapping");
                 }
 
-                blockService.registerServerBlock(new ServerBlock(ServerBlock.createID(id, blockState), blockShape, uvCoords, transparent, transparentMesh, lightEmitting, lightDefusing));
+                blockService.registerServerBlock(new ServerBlock(ServerBlock.createID(id, blockState), blockShape, uvCoords, transparent, transparentMesh, lightEmitting, lightDefusing, blockHitbox));
             }
         }
+
+        blockService.registerServerBlock(ServerBlock.AIR);
     }
 
-    public static void loadBlockShapes(String gameID, ObjectGameNode worldGeneratorNode, ServerBlockService blockService, Map<String, BlockShape> blockShapeCache) {
+    public static void loadBlockShapes(String gameID, ObjectGameNode worldGeneratorNode, Map<String, BlockShape> blockShapeCache) {
         ArrayGameNode blocks_shapes = Game.checkGameNodeType(worldGeneratorNode.object().get("block_shapes"), ArrayGameNode.class);
         for (GameNode node : blocks_shapes.nodes()) {
             ObjectGameNode blockShapeObjectGameNode = Game.checkGameNodeType(node, ObjectGameNode.class);
@@ -141,7 +145,38 @@ public final class Game {
         }
 
         blockShapeCache.put(BlockShape.EMPTY_BLOCK_SHAPE_STRING, BlockShape.EMPTY_BLOCK_SHAPE);
+    }
 
-        blockService.registerServerBlock(ServerBlock.AIR);
+    public static void loadBlockHitboxes(String gameID, ObjectGameNode worldGeneratorNode, Map<String, BlockHitbox[]> blockHitboxCache) {
+        ArrayGameNode blockShapes = Game.checkGameNodeType(worldGeneratorNode.object().get("block_hitboxes"), ArrayGameNode.class);
+        for (GameNode node : blockShapes.nodes()) {
+            ObjectGameNode hitboxNode = Game.checkGameNodeType(node, ObjectGameNode.class);
+            String id = Game.checkGameNodeType(hitboxNode.object().get("id"), StringGameNode.class).value();
+
+            ArrayGameNode hitboxesNode = Game.checkGameNodeType(hitboxNode.object().get("hitboxes"), ArrayGameNode.class);
+
+            BlockHitbox[] hitboxes = new BlockHitbox[hitboxesNode.nodes().length];
+            GameNode[] nodes = hitboxesNode.nodes();
+            for (int i = 0; i < nodes.length; i++) {
+                ObjectGameNode objectGameNode = Game.checkGameNodeType(nodes[i], ObjectGameNode.class);
+                ArrayGameNode minHitbox = Game.checkGameNodeType(objectGameNode.object().get("min"), ArrayGameNode.class);
+                ArrayGameNode maxHitbox = Game.checkGameNodeType(objectGameNode.object().get("max"), ArrayGameNode.class);
+                double minX = Game.checkGameNodeType(minHitbox.nodes()[0], DoubleGameNode.class).value();
+                double minY = Game.checkGameNodeType(minHitbox.nodes()[1], DoubleGameNode.class).value();
+                double minZ = Game.checkGameNodeType(minHitbox.nodes()[2], DoubleGameNode.class).value();
+
+                double maxX = Game.checkGameNodeType(maxHitbox.nodes()[0], DoubleGameNode.class).value();
+                double maxY = Game.checkGameNodeType(maxHitbox.nodes()[1], DoubleGameNode.class).value();
+                double maxZ = Game.checkGameNodeType(maxHitbox.nodes()[2], DoubleGameNode.class).value();
+                hitboxes[i] = new BlockHitbox(
+                        (float) minX,
+                        (float) minY, (float) minZ, (float) maxX, (float) maxY, (float) maxZ
+                );
+            }
+
+            blockHitboxCache.put(gameID + ":" + id, hitboxes);
+        }
+
+        blockHitboxCache.put(BlockHitbox.EMPTY_BLOCK_HITBOX_STRING, BlockHitbox.EMPTY_BLOCK_HITBOX);
     }
 }

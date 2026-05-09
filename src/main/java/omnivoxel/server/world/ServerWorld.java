@@ -2,6 +2,7 @@ package omnivoxel.server.world;
 
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
+import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
@@ -31,7 +32,7 @@ public class ServerWorld {
     // TODO: Remove chunkHeights too
     private void checkForOldChunks(Position3D position3D, ChunkValue chunkValue) {
         if (chunkValue.shouldSave(this.request)) {
-            chunks.remove(position3D);
+            ChunkIO.write(position3D, chunks.remove(position3D).chunk);
         }
     }
 

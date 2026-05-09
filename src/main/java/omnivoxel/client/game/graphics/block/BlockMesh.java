@@ -2,6 +2,7 @@ package omnivoxel.client.game.graphics.block;
 
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.face.BlockFace;
 
 public abstract class BlockMesh {
@@ -21,23 +22,19 @@ public abstract class BlockMesh {
 
     public abstract BlockShape getShape(BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west);
 
+    public abstract BlockHitbox[] getHitbox();
+
     public abstract int[] getUVCoordinates(BlockFace blockFace);
 
     public abstract byte getLightDiffuse(LightChannels channel);
 
     public abstract byte getLightEmitting(LightChannels channel);
 
-    public boolean isTransparent() {
-        return false;
-    }
+    public abstract boolean isTransparent();
 
-    public boolean shouldRenderTransparentMesh() {
-        return false;
-    }
+    public abstract boolean shouldRenderTransparentMesh();
 
-    public boolean shouldRenderFace(BlockFace face, BlockMesh adjacentBlockMesh) {
-        return adjacentBlockMesh.isTransparent();
-    }
+    public abstract boolean shouldRenderFace(BlockFace face, BlockMesh adjacentBlockMesh);
 
     public String getState() {
         return state;

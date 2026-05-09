@@ -2,6 +2,7 @@ package omnivoxel.server.world;
 
 import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.client.chunk.result.ChunkCacheItem;
+import omnivoxel.util.log.Logger;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -44,6 +45,8 @@ public class ChunkCacheHandler {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            } else {
+                Logger.warn("Failed to cache chunk");
             }
         }
     }

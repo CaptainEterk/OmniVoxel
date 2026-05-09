@@ -11,11 +11,11 @@ import omnivoxel.client.game.graphics.light.channel.GeneralLightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannel;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.client.game.graphics.light.channel.SingleLightChannel;
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
@@ -193,6 +193,10 @@ public class ChunkMeshDataLightingGenerator {
 
             int idx = IndexCalculator.calculateBlockIndex(x, y, z);
 
+            if (light < lightChannel[idx]) {
+                continue;
+            }
+
             lightChannel[idx] = light;
 
             if (light < 1) continue;
@@ -206,14 +210,22 @@ public class ChunkMeshDataLightingGenerator {
 
                 if (IndexCalculator.checkBounds(nx, ny, nz)) {
                     int nIdx = IndexCalculator.calculateBlockIndex(nx, ny, nz);
+
                     if (newLight > lightChannel[nIdx]) {
                         lightChannel[nIdx] = newLight;
                         chunkLights.add(nx, ny, nz, newLight);
                     }
+
                 } else {
-                    int ox = nx < 0 ? nx + ConstantCommonSettings.CHUNK_WIDTH : (nx >= ConstantCommonSettings.CHUNK_WIDTH ? nx - ConstantCommonSettings.CHUNK_WIDTH : nx);
-                    int oy = ny < 0 ? ny + ConstantCommonSettings.CHUNK_HEIGHT : (ny >= ConstantCommonSettings.CHUNK_HEIGHT ? ny - ConstantCommonSettings.CHUNK_HEIGHT : ny);
-                    int oz = nz < 0 ? nz + ConstantCommonSettings.CHUNK_LENGTH : (nz >= ConstantCommonSettings.CHUNK_LENGTH ? nz - ConstantCommonSettings.CHUNK_LENGTH : nz);
+                    int ox = nx < 0 ? nx + ConstantCommonSettings.CHUNK_WIDTH :
+                            (nx >= ConstantCommonSettings.CHUNK_WIDTH ? nx - ConstantCommonSettings.CHUNK_WIDTH : nx);
+
+                    int oy = ny < 0 ? ny + ConstantCommonSettings.CHUNK_HEIGHT :
+                            (ny >= ConstantCommonSettings.CHUNK_HEIGHT ? ny - ConstantCommonSettings.CHUNK_HEIGHT : ny);
+
+                    int oz = nz < 0 ? nz + ConstantCommonSettings.CHUNK_LENGTH :
+                            (nz >= ConstantCommonSettings.CHUNK_LENGTH ? nz - ConstantCommonSettings.CHUNK_LENGTH : nz);
+
                     borderLightQueues.get(channel).get(direction).add(ox, oy, oz, newLight);
                 }
             }
@@ -360,7 +372,7 @@ public class ChunkMeshDataLightingGenerator {
                                             List<LightingChunkMeshDataTask> meshDataTasks) {
     }
 
-    private static final class LightNodeQueue {
+    private static final class OldLightNodeQueue {
         private static final int DEFAULT_CAPACITY = 256;
 
         private int[] xs = new int[DEFAULT_CAPACITY];
@@ -440,6 +452,173 @@ public class ChunkMeshDataLightingGenerator {
             ys = Arrays.copyOf(ys, newCapacity);
             zs = Arrays.copyOf(zs, newCapacity);
             lightLevels = Arrays.copyOf(lightLevels, newCapacity);
+        }
+    }
+
+    private static final class LightNodeQueue {
+        private static final int LEVELS = 16;
+        private static final int DEFAULT_CAPACITY = 256;
+
+        private final IntRingBuffer[] levelQueues = new IntRingBuffer[LEVELS];
+
+        private int x;
+        private int y;
+        private int z;
+        private byte lightLevel;
+
+        public LightNodeQueue() {
+            for (int i = 0; i < LEVELS; i++) {
+                levelQueues[i] = new IntRingBuffer(DEFAULT_CAPACITY);
+            }
+        }
+
+        private static int pack(int x, int y, int z) {
+            return (x & 31)
+                    | ((y & 31) << 5)
+                    | ((z & 31) << 10);
+        }
+
+        private static int unpackX(int packed) {
+            return packed & 31;
+        }
+
+        private static int unpackY(int packed) {
+            return (packed >> 5) & 31;
+        }
+
+        private static int unpackZ(int packed) {
+            return (packed >> 10) & 31;
+        }
+
+        public void add(int x, int y, int z, byte lightLevel) {
+            if (lightLevel <= 0) {
+                return;
+            }
+
+            levelQueues[lightLevel & 0xF].add(pack(x, y, z));
+        }
+
+        public void poll() {
+            for (int level = 15; level >= 1; level--) {
+
+                IntRingBuffer queue = levelQueues[level];
+
+                if (!queue.isEmpty()) {
+
+                    int packed = queue.poll();
+
+                    this.x = unpackX(packed);
+                    this.y = unpackY(packed);
+                    this.z = unpackZ(packed);
+                    this.lightLevel = (byte) level;
+
+                    return;
+                }
+            }
+
+            throw new IllegalStateException("Polling empty LightNodeQueue");
+        }
+
+        public boolean isEmpty() {
+            for (int i = 1; i < LEVELS; i++) {
+                if (!levelQueues[i].isEmpty()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public void clear() {
+            for (IntRingBuffer queue : levelQueues) {
+                queue.clear();
+            }
+        }
+
+        public int x() {
+            return x;
+        }
+
+        public int y() {
+            return y;
+        }
+
+        public int z() {
+            return z;
+        }
+
+        public byte lightLevel() {
+            return lightLevel;
+        }
+    }
+
+    private static final class IntRingBuffer {
+        private int[] data;
+        private int head;
+        private int tail;
+        private int mask;
+
+        public IntRingBuffer(int initialCapacity) {
+
+            int capacity = 1;
+
+            while (capacity < initialCapacity) {
+                capacity <<= 1;
+            }
+
+            data = new int[capacity];
+            mask = capacity - 1;
+        }
+
+        public void add(int value) {
+
+            data[tail] = value;
+            tail = (tail + 1) & mask;
+
+            if (tail == head) {
+                grow();
+            }
+        }
+
+        public int poll() {
+
+            int value = data[head];
+            head = (head + 1) & mask;
+
+            return value;
+        }
+
+        public boolean isEmpty() {
+            return head == tail;
+        }
+
+        public void clear() {
+            head = 0;
+            tail = 0;
+        }
+
+        private void grow() {
+
+            int oldCapacity = data.length;
+            int newCapacity = oldCapacity << 1;
+
+            int[] newData = new int[newCapacity];
+
+            int size = size();
+
+            for (int i = 0; i < size; i++) {
+                newData[i] = data[(head + i) & mask];
+            }
+
+            data = newData;
+
+            head = 0;
+            tail = size;
+
+            mask = newCapacity - 1;
+        }
+
+        private int size() {
+            return (tail - head + data.length) & mask;
         }
     }
 

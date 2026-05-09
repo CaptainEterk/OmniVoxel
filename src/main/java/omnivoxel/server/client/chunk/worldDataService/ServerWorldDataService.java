@@ -1,5 +1,6 @@
 package omnivoxel.server.client.chunk.worldDataService;
 
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.annotations.NotNull;
@@ -49,7 +50,7 @@ public final class ServerWorldDataService {
     private final Integer depthSections;
     private final boolean heightIsDensityFunction;
 
-    public ServerWorldDataService(ServerBlockService blockService, Map<String, BlockShape> blockShapeCache, GameNode gameNode, long seed) {
+    public ServerWorldDataService(ServerBlockService blockService, Map<String, BlockShape> blockShapeCache, Map<String, BlockHitbox[]> blockHitboxCache, GameNode gameNode, long seed) {
         this.blockService = blockService;
 
         addDensityFunction(Noise3DDensityFunction.class);
@@ -96,7 +97,8 @@ public final class ServerWorldDataService {
 
         Game.loadNoises(Game.checkGameNodeType(worldGeneratorNode.object().get("noises"), ArrayGameNode.class), seed);
         Game.loadBlocks(worldGeneratorNode, blockService);
-        Game.loadBlockShapes(gameProperties.get("id"), worldGeneratorNode, blockService, blockShapeCache);
+        Game.loadBlockShapes(gameProperties.get("id"), worldGeneratorNode, blockShapeCache);
+        Game.loadBlockHitboxes(gameProperties.get("id"), worldGeneratorNode, blockHitboxCache);
 
         DoubleGameNode chunkMinXNode = Game.checkGameNodeType(worldGeneratorNode.object().get("chunk_min_x"), DoubleGameNode.class);
         DoubleGameNode chunkMinYNode = Game.checkGameNodeType(worldGeneratorNode.object().get("chunk_min_y"), DoubleGameNode.class);

@@ -1,6 +1,7 @@
 package omnivoxel.client.game.graphics.api.opengl.framebuffer;
 
 import omnivoxel.client.game.graphics.api.opengl.OpenGLChecks;
+import omnivoxel.util.log.Logger;
 import org.lwjgl.opengl.GL11C;
 import org.lwjgl.opengl.GL12C;
 import org.lwjgl.opengl.GL30C;
@@ -18,10 +19,26 @@ public final class RenderFramebuffer {
     private int height;
     private int filter;
 
+    private void checkSize() {
+        int maxTexSize = GL11C.glGetInteger(GL11C.GL_MAX_TEXTURE_SIZE);
+        int maxRbSize  = GL11C.glGetInteger(GL30C.GL_MAX_RENDERBUFFER_SIZE);
+
+        int clampedWidth  = Math.min(width,  Math.min(maxTexSize, maxRbSize));
+        int clampedHeight = Math.min(height, Math.min(maxTexSize, maxRbSize));
+
+        if (clampedWidth != width || clampedHeight != height) {
+            Logger.warn("[OpenGL] Clamping FBO from " + width + "x" + height + " to " + clampedWidth + "x" + clampedHeight);
+            width = clampedWidth;
+            height = clampedHeight;
+        }
+    }
+
     public void init(int width, int height, int filter) {
         this.width = Math.max(1, width);
         this.height = Math.max(1, height);
         this.filter = filter;
+
+        checkSize();
 
         fboId = GL30C.glGenFramebuffers();
         GL30C.glBindFramebuffer(GL30C.GL_FRAMEBUFFER, fboId);
@@ -83,6 +100,8 @@ public final class RenderFramebuffer {
 
         this.width = newWidth;
         this.height = newHeight;
+
+        checkSize();
 
         GL11C.glBindTexture(GL11C.GL_TEXTURE_2D, colorTexId);
         GL11C.glTexImage2D(

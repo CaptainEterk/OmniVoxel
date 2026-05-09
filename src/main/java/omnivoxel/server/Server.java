@@ -3,6 +3,7 @@ package omnivoxel.server;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import omnivoxel.common.BlockShape;
+import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.common.network.NetworkUser;
 import omnivoxel.common.settings.ConstantCommonSettings;
@@ -44,14 +45,16 @@ public class Server implements NetworkUser {
     private final WorkerThreadPool<ChunkTask> workerThreadPool;
     private final ServerWorld world;
     private final Map<String, BlockShape> blockShapeCache;
+    private final Map<String, BlockHitbox[]> blockHitboxCache;
     private final ServerBlockService blockService;
     private final ServerWorldHandler worldHandler;
     private final Settings settings;
 
-    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, ServerBlockService blockService, ServerWorldHandler worldHandler, Settings settings) throws InterruptedException, IOException {
+    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, Map<String, BlockHitbox[]> blockHitboxCache, ServerBlockService blockService, ServerWorldHandler worldHandler, Settings settings) throws InterruptedException, IOException {
         this.clients = clients;
         this.world = world;
         this.blockShapeCache = blockShapeCache;
+        this.blockHitboxCache = blockHitboxCache;
         this.blockService = blockService;
         this.worldHandler = worldHandler;
         this.settings = settings;
@@ -65,6 +68,7 @@ public class Server implements NetworkUser {
                             new ServerWorldDataService(
                                     blockService,
                                     blockShapeCache,
+                                    blockHitboxCache,
                                     objectGameNode.object().get("world_generator"),
                                     seed
                             ),
@@ -137,6 +141,7 @@ public class Server implements NetworkUser {
                 for (byte b : bytes) {
                     blockID.append((char) b);
                 }
+                Logger.info("Replacing block: " + bx + " " + by + " " + bz + " with " + blockID);
                 worldHandler.replaceBlock(bx, by, bz, blockService.getBlock(blockID.toString()), clients.get(clientID));
 
                 byteBuf.release();
@@ -159,6 +164,22 @@ public class Server implements NetworkUser {
             });
 
             blockShapeCache.forEach((id, blockShape) -> NetworkService.sendBytes(serverClient.getCTX().channel(), PackageID.REGISTER_BLOCK_SHAPE, null, blockShape.getBytes()));
+
+            blockHitboxCache.forEach((id, blockHitboxes) -> {
+                        byte[] bytes = new byte[Float.BYTES * 6 * blockHitboxes.length + Integer.BYTES * 2 + id.length()];
+                        ByteUtils.addInt(bytes, id.length(), 0);
+
+                        System.arraycopy(id.getBytes(), 0, bytes, Integer.BYTES, id.length());
+
+                        ByteUtils.addInt(bytes, blockHitboxes.length, Integer.BYTES + id.length());
+
+                        for (int i = 0; i < blockHitboxes.length; i++) {
+                            System.arraycopy(blockHitboxes[i].getBytes(), 0, bytes, i * Float.BYTES + Integer.BYTES * 2 + id.length(), Float.BYTES * 6);
+                        }
+
+                        NetworkService.sendBytes(serverClient.getCTX().channel(), PackageID.REGISTER_BLOCK_HITBOX, null, bytes);
+                    }
+            );
 
             blockService.getAllBlocks().forEach((id, serverBlock) -> {
                 if (serverClient.registerBlockID(id)) {
@@ -200,7 +221,7 @@ public class Server implements NetworkUser {
                     });
                 }
 
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < 10; i++) {
                     worldHandler.replaceBlock((int) Math.floor(Math.random() * 16), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 16), ServerBlock.AIR, null);
                 }
 
