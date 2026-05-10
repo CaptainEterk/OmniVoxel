@@ -17,7 +17,6 @@ import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.worldDataService.ServerWorldDataService;
 import omnivoxel.server.games.Game;
-import omnivoxel.server.world.ChunkCacheHandler;
 import omnivoxel.server.world.ServerWorld;
 import omnivoxel.server.world.ServerWorldHandler;
 import omnivoxel.util.boundingBox.WorldBoundingBox;
@@ -203,56 +202,48 @@ public class Server implements NetworkUser {
     }
 
     public void run() {
-        try {
-            final long tickIntervalNanos = 1_000_000_000L / settings.getIntSetting("tps", 20);
+        final long tickIntervalNanos = 1_000_000_000L / settings.getIntSetting("tps", 20);
 
-            int tick = 0;
-            while (true) {
-                long startNano = System.nanoTime();
+        int tick = 0;
+        while (true) {
+            long startNano = System.nanoTime();
 
-                if (tick % settings.getIntSetting("chunk_caching_batch_td", 10) == 0) {
-                    ChunkCacheHandler.cacheAll();
-                }
-
-                if (tick % settings.getIntSetting("lost_client_td", 20) == 0) {
-                    Set<String> values = clients.keySet();
-                    values.forEach(id -> {
-                        if (!NetworkService.checkChannel(clients.get(id).getCTX().channel())) {
-                            clients.remove(id);
-                            Logger.info("Client Lost Contact... Disconnecting: " + id);
-                        }
-                    });
-                }
-
-                for (int i = 0; i < 10; i++) {
-                    worldHandler.replaceBlock((int) Math.floor(Math.random() * 16), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 16), ServerBlock.AIR, null);
-                }
-
-                world.tick();
-
-                sendQueuedClientPackets();
-
-                long elapsed = System.nanoTime() - startNano;
-
-                long sleepNanos = tickIntervalNanos - elapsed;
-
-                tick++;
-
-                if (sleepNanos > 0) {
-                    try {
-                        long sleepMillis = sleepNanos / 1_000_000;
-                        int sleepSubNanos = (int) (sleepNanos % 1_000_000);
-                        Thread.sleep(sleepMillis, sleepSubNanos);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
+            if (tick % settings.getIntSetting("lost_client_td", 20) == 0) {
+                Set<String> values = clients.keySet();
+                values.forEach(id -> {
+                    if (!NetworkService.checkChannel(clients.get(id).getCTX().channel())) {
+                        clients.remove(id);
+                        Logger.info("Client Lost Contact... Disconnecting: " + id);
                     }
-                } else {
-                    Logger.warn(Logger.Priority.NORMAL, "Tick took too long: " + (elapsed / 1_000_000.0) + " ms");
-                }
+                });
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+
+            for (int i = 0; i < 10; i++) {
+                worldHandler.replaceBlock((int) Math.floor(Math.random() * 16), (int) Math.floor(Math.random() * 8) + 100, (int) Math.floor(Math.random() * 16), ServerBlock.AIR, null);
+            }
+
+            world.tick();
+
+            sendQueuedClientPackets();
+
+            long elapsed = System.nanoTime() - startNano;
+
+            long sleepNanos = tickIntervalNanos - elapsed;
+
+            tick++;
+
+            if (sleepNanos > 0) {
+                try {
+                    long sleepMillis = sleepNanos / 1_000_000;
+                    int sleepSubNanos = (int) (sleepNanos % 1_000_000);
+                    Thread.sleep(sleepMillis, sleepSubNanos);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            } else {
+                Logger.warn(Logger.Priority.NORMAL, "Tick took too long: " + (elapsed / 1_000_000.0) + " ms");
+            }
         }
     }
 

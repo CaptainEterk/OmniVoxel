@@ -11,6 +11,7 @@ import omnivoxel.server.world.ChunkCacheHandler;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.bytes.ByteUtils;
 import omnivoxel.util.math.Position3D;
+import omnivoxel.util.thread.AsyncWorkerThread;
 import omnivoxel.world.chunk.BiBlockChunk;
 import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk2d.Chunk2D;
@@ -26,6 +27,7 @@ import java.util.Map;
 
 public class ChunkIO {
     public static final ServerBlockService BLOCK_SERVICE = new ServerBlockService();
+    private static final AsyncWorkerThread<ChunkCacheItem> chunkCacheAsyncWorkerThread = new AsyncWorkerThread<>(ChunkCacheHandler::cache, false);
 
     public static byte[] get(Position3D position3D) throws IOException {
         Path path = Path.of(ConstantServerSettings.CHUNK_SAVE_LOCATION + position3D.getPath());
@@ -211,6 +213,6 @@ public class ChunkIO {
     }
 
     public static void write(Position3D position3D, Chunk<ServerBlock> chunk) {
-        ChunkCacheHandler.queueCache(new ChunkCacheItem(position3D, encode(chunk)));
+        chunkCacheAsyncWorkerThread.add(new ChunkCacheItem(position3D, chunk));
     }
 }

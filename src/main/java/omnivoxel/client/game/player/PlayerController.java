@@ -278,7 +278,6 @@ public class PlayerController {
 
                         boolean isColliding = false;
                         for (BlockHitbox bh : blockHitbox) {
-
                             if (bh.isColliding(hitbox, lx, ly, lz)) {
                                 isColliding = true;
                                 break;
