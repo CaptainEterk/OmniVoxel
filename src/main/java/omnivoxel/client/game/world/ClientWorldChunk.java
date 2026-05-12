@@ -9,13 +9,10 @@ import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.world.chunk.Chunk;
 
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
 
 public class ClientWorldChunk {
     // TODO: Move to ChunkLightingData?
-    private final Map<LightChannels, Map<ChunkMeshDataLightingGenerator.Direction, Queue<ChunkMeshDataLightingGenerator.LightNode>>> neighborLightOverflowQueue;
     private final Map<LightChannels, Map<ChunkMeshDataLightingGenerator.Direction, Map<Integer, Byte>>> neighborLightOverflowMap;
     private MeshData meshData;
     private ChunkMesh mesh;
@@ -28,13 +25,6 @@ public class ClientWorldChunk {
         this.mesh = mesh;
         this.chunkData = chunkData;
         this.chunkLightingData = chunkLightingData;
-        this.neighborLightOverflowQueue = new ConcurrentHashMap<>();
-        for (LightChannels channel : LightChannels.values()) {
-            neighborLightOverflowQueue.put(channel, new ConcurrentHashMap<>());
-            for (ChunkMeshDataLightingGenerator.Direction direction : ChunkMeshDataLightingGenerator.Direction.values()) {
-                neighborLightOverflowQueue.get(channel).put(direction, new LinkedBlockingDeque<>());
-            }
-        }
         this.neighborLightOverflowMap = new ConcurrentHashMap<>();
         for (LightChannels channel : LightChannels.values()) {
             neighborLightOverflowMap.put(channel, new ConcurrentHashMap<>());
@@ -92,20 +82,8 @@ public class ClientWorldChunk {
         return lastFetched;
     }
 
-    public Queue<ChunkMeshDataLightingGenerator.LightNode> getNeighborLightOverflowQueue(LightChannels channel, ChunkMeshDataLightingGenerator.Direction direction) {
-        return neighborLightOverflowQueue.get(channel).get(direction);
-    }
-
-    public Map<ChunkMeshDataLightingGenerator.Direction, Queue<ChunkMeshDataLightingGenerator.LightNode>> getNeighborLightOverflowQueue(LightChannels channel) {
-        return neighborLightOverflowQueue.get(channel);
-    }
-
     public Map<Integer, Byte> getNeighborLightOverflowMap(LightChannels channel, ChunkMeshDataLightingGenerator.Direction direction) {
         return neighborLightOverflowMap.get(channel).get(direction);
-    }
-
-    public Map<ChunkMeshDataLightingGenerator.Direction, Map<Integer, Byte>> getNeighborLightOverflowMap(LightChannels channel) {
-        return neighborLightOverflowMap.get(channel);
     }
 
     public ChunkLightingData getLightingData() {
