@@ -4,10 +4,12 @@ import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.block.ServerBlockAndPosition;
 import omnivoxel.server.client.chunk.ChunkIO;
+import omnivoxel.server.client.chunk.ChunkTask;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
+import omnivoxel.util.thread.WorkerThreadPool;
 import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk2d.Chunk2D;
 
@@ -18,10 +20,12 @@ import java.util.Objects;
 public class ServerWorldHandler {
     private final ServerWorld world;
     private final Map<String, ServerClient> clients;
+    private final WorkerThreadPool<ChunkTask> workerThreadPool;
 
-    public ServerWorldHandler(ServerWorld world, Map<String, ServerClient> clients) {
+    public ServerWorldHandler(ServerWorld world, Map<String, ServerClient> clients, WorkerThreadPool<ChunkTask> workerThreadPool) {
         this.world = world;
         this.clients = clients;
+        this.workerThreadPool = workerThreadPool;
     }
 
     public void replaceBlock(int worldX, int worldY, int worldZ, ServerBlock block, ServerClient client) {
@@ -56,7 +60,12 @@ public class ServerWorldHandler {
                     }
                     clients.forEach((id, serverClient) -> serverClient.queueReplacedBlocks(new ServerBlockAndPosition(worldX, worldY, worldZ, block)));
                 } else {
-                    Logger.debug("Unable to set block (%d, %d, %d) because chunk (%d, %d, %d) is null".formatted(worldX, worldY, worldZ, chunkX, chunkY, chunkZ));
+                    ChunkTask task = new ChunkTask(null, chunkX, chunkY, chunkZ);
+                    if (!workerThreadPool.hasTask(task)) {
+                        // TODO: Make it so that generating the chunk if you can't set the block is a setting
+                        Logger.debug("Unable to set block (%d, %d, %d) because chunk (%d, %d, %d) is null... generating...".formatted(worldX, worldY, worldZ, chunkX, chunkY, chunkZ));
+                        workerThreadPool.submit(task);
+                    }
                 }
             }
         } catch (IOException e) {

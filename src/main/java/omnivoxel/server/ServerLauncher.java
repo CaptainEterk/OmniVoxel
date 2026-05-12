@@ -51,7 +51,7 @@ public class ServerLauncher {
 
         try {
             Map<String, ServerClient> clients = new ConcurrentHashMap<>();
-            Server server = new Server(clients, seed, world, blockShapeCache, blockHitboxCache, ChunkIO.BLOCK_SERVICE, new ServerWorldHandler(world, clients), settings);
+            Server server = new Server(clients, seed, world, blockShapeCache, blockHitboxCache, ChunkIO.BLOCK_SERVICE, settings);
             Thread thread = new Thread(server::run, "Server Tick Loop");
             thread.start();
 

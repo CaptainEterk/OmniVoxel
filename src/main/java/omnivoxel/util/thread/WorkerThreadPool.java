@@ -74,6 +74,10 @@ public class WorkerThreadPool<T extends WorkerTask> {
         }
     }
 
+    public boolean hasTask(T task) {
+        return pendingTasks.contains(task);
+    }
+
     public static final class WorkerThread<V extends WorkerTask> implements Runnable {
         private final BlockingDeque<V> taskQueue;
         private final BiFunction<V, Integer, List<V>> taskHandler;

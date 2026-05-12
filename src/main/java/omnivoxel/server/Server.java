@@ -49,14 +49,12 @@ public class Server implements NetworkUser {
     private final ServerWorldHandler worldHandler;
     private final Settings settings;
 
-    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, Map<String, BlockHitbox[]> blockHitboxCache, ServerBlockService blockService, ServerWorldHandler worldHandler, Settings settings) throws InterruptedException, IOException {
+    public Server(Map<String, ServerClient> clients, long seed, ServerWorld world, Map<String, BlockShape> blockShapeCache, Map<String, BlockHitbox[]> blockHitboxCache, ServerBlockService blockService, Settings settings) throws InterruptedException, IOException {
         this.clients = clients;
         this.world = world;
         this.blockShapeCache = blockShapeCache;
         this.blockHitboxCache = blockHitboxCache;
         this.blockService = blockService;
-        this.worldHandler = worldHandler;
-        this.settings = settings;
 
         GameNode gameNode = GameParser.parseNode(Files.readString(Path.of(ConstantServerSettings.GAME_LOCATION + "main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of(ConstantServerSettings.GAME_LOCATION + "constants.json")), null), ArrayGameNode.class));
 
@@ -80,6 +78,9 @@ public class Server implements NetworkUser {
         } else {
             throw new IllegalArgumentException("gameNode must be an ObjectGameNode, not " + gameNode.getClass());
         }
+
+        this.worldHandler = new ServerWorldHandler(world, clients, workerThreadPool);
+        this.settings = settings;
     }
 
     @Override
