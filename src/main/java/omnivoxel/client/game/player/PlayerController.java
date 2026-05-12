@@ -311,7 +311,7 @@ public class PlayerController {
             frictionFactor = (float) (((onGround ? GROUND_FRICTION : AIR_RESISTANCE) * speed) * deltaTime);
             velocityX *= frictionFactor;
             velocityZ *= frictionFactor;
-            velocityY *= 0.98f*speed;
+            velocityY *= 0.98f * speed;
         } else {
             frictionFactor = (float) (AIR_RESISTANCE * deltaTime);
             velocityX *= frictionFactor;

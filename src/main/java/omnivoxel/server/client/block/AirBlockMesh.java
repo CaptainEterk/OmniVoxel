@@ -8,7 +8,7 @@ import omnivoxel.common.face.BlockFace;
 
 public final class AirBlockMesh extends BlockMesh {
     private final static int[][] emptyUVCoords = new int[6][0];
-    private final static BlockHitbox[] emptyHitboxes = new BlockHitbox[0];
+    private final static BlockHitbox[] emptyHitboxes = BlockHitbox.EMPTY_BLOCK_HITBOX;
 
     @Override
     public String getID() {

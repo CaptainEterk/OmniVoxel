@@ -13,8 +13,6 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.ModelEntityMeshDa
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.EntityMeshDataTask;
 import omnivoxel.client.game.graphics.api.opengl.mesh.tasks.LightingChunkMeshDataTask;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
-import omnivoxel.common.settings.ConstantCommonSettings;
-import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
@@ -23,6 +21,8 @@ import omnivoxel.client.network.request.*;
 import omnivoxel.client.network.util.ByteBufUtils;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.common.network.NetworkUser;
+import omnivoxel.common.settings.ConstantClientSettings;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.ConstantNetworkSettings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.entity.EntityType;

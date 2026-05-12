@@ -1,7 +1,7 @@
 package omnivoxel.server.client.chunk;
 
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.network.NetworkService;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;

@@ -6,8 +6,8 @@ import omnivoxel.client.game.input.KeyInput;
 import omnivoxel.client.game.input.MouseButtonInput;
 import omnivoxel.client.game.input.MouseInput;
 import omnivoxel.client.game.player.PlayerController;
-import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.client.network.Client;
+import omnivoxel.common.settings.ConstantClientSettings;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;

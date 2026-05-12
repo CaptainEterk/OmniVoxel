@@ -21,9 +21,9 @@ public final class RenderFramebuffer {
 
     private void checkSize() {
         int maxTexSize = GL11C.glGetInteger(GL11C.GL_MAX_TEXTURE_SIZE);
-        int maxRbSize  = GL11C.glGetInteger(GL30C.GL_MAX_RENDERBUFFER_SIZE);
+        int maxRbSize = GL11C.glGetInteger(GL30C.GL_MAX_RENDERBUFFER_SIZE);
 
-        int clampedWidth  = Math.min(width,  Math.min(maxTexSize, maxRbSize));
+        int clampedWidth = Math.min(width, Math.min(maxTexSize, maxRbSize));
         int clampedHeight = Math.min(height, Math.min(maxTexSize, maxRbSize));
 
         if (clampedWidth != width || clampedHeight != height) {

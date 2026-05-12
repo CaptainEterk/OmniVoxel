@@ -11,7 +11,7 @@ public final class PipelineStep<T extends WorkerTask> {
 
     public PipelineStep(int threadCount, BiFunction<?, Integer, List<?>> process, boolean daemon) {
         this.workerThreadPool = new WorkerThreadPool<>(threadCount, () -> {
-           return null;
+            return null;
         }, daemon);
     }
 

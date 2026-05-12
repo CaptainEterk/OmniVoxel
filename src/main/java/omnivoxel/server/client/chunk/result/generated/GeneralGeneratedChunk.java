@@ -1,7 +1,7 @@
 package omnivoxel.server.client.chunk.result.generated;
 
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.annotations.NotNull;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.util.IndexCalculator;
 

@@ -1,8 +1,8 @@
 package omnivoxel.client.game.graphics.api.opengl.mesh;
 
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.face.BlockFace;
+import omnivoxel.common.settings.ConstantCommonSettings;
 
 public class ShapeHelper {
     private static final float MAX_PACKED_VALUE = 512f;

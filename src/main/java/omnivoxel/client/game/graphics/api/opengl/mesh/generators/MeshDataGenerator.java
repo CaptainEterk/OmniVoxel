@@ -14,11 +14,11 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.Vertex;
 import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.face.BlockFace;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
@@ -233,7 +233,7 @@ public final class MeshDataGenerator {
                 world.add(position3D, meshData);
             } else {
                 Logger.warn("Mesh data generation failed..." + position3D);
-                return world.get(position3D, false, false) !=  null ? List.of(new ChunkMeshDataTask(null, position3D)) : null;
+                return world.get(position3D, false, false) != null ? List.of(new ChunkMeshDataTask(null, position3D)) : null;
             }
         } else if (meshDataTask instanceof EntityMeshDataTask(ClientEntity entity)) {
             world.addEntity(entityMeshDataGenerator.generateMeshData(entity));

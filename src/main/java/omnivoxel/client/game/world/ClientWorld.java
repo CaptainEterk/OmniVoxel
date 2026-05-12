@@ -9,10 +9,10 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.GeneralEntityMesh
 import omnivoxel.client.game.graphics.api.opengl.mesh.meshData.MeshData;
 import omnivoxel.client.game.graphics.api.opengl.mesh.util.MeshGenerator;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
-import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.ChunkRequest;
+import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.ConstantNetworkSettings;
 import omnivoxel.util.cache.IDCache;

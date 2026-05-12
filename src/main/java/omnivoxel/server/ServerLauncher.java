@@ -17,7 +17,6 @@ import omnivoxel.common.settings.Settings;
 import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.chunk.ChunkIO;
 import omnivoxel.server.world.ServerWorld;
-import omnivoxel.server.world.ServerWorldHandler;
 import omnivoxel.util.log.Logger;
 
 import java.io.IOException;

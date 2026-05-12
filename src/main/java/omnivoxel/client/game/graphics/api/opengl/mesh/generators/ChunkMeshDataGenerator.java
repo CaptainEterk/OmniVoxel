@@ -9,12 +9,12 @@ import omnivoxel.client.game.graphics.block.BlockMesh;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.light.ChunkLightingData;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
@@ -177,7 +177,7 @@ public class ChunkMeshDataGenerator {
         int[] faceIndices = shape.indices()[blockFace.ordinal()];
 
         // TODO: Remove all hardcoding
-        int blockType = Objects.equals(blockMesh.getModID()+"/"+blockMesh.getState(), "core:water_source_block/top") ? 1 : 0;
+        int blockType = Objects.equals(blockMesh.getModID() + "/" + blockMesh.getState(), "core:water_source_block/top") ? 1 : 0;
 
         for (int idx : faceIndices) {
             Vertex pointPosition = faceVertices[idx];

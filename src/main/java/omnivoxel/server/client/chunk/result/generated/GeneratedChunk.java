@@ -1,8 +1,8 @@
 package omnivoxel.server.client.chunk.result.generated;
 
-import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.annotations.NotNull;
 import omnivoxel.common.network.NetworkService;
+import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.BlockIDCount;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.client.ServerClient;

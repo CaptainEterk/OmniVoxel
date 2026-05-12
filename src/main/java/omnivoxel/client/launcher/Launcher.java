@@ -7,14 +7,14 @@ import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.graphics.camera.Camera;
 import omnivoxel.client.game.graphics.camera.Frustum;
 import omnivoxel.client.game.player.PlayerController;
-import omnivoxel.common.settings.ConstantCommonSettings;
-import omnivoxel.common.settings.Settings;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.tick.TickLoop;
 import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.Client;
 import omnivoxel.client.network.ClientLauncher;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
+import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.util.log.Logger;
 import omnivoxel.world.block.BlockService;
 
