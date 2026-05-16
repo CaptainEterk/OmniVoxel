@@ -266,7 +266,7 @@ void main() {
 
         if (blockType == 1u) {
             float fresnel = 1 - abs(dot(vNormal, normalize(faceNormal)));
-            FragColor.a = fresnel;
+            FragColor.a = fresnel/1.5+1-0.66666;
         }
         if (fogFactor < 1.0) {
             FragColor = mix(skyColor, FragColor, fogFactor);
