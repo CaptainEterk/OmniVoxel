@@ -56,8 +56,9 @@ public class PlayerController {
     @NotNull
     private MovementMode movementMode = MovementMode.FALL_COLLIDE;
 
+    // TODO: When the server sends a load state package or something like that, it should position
     private double x;
-    private double y = 128;
+    private double y = 145;
     private double z;
     private double velocityX;
     private double velocityY;

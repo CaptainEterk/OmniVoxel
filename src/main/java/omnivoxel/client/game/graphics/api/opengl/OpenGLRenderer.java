@@ -273,7 +273,7 @@ public class OpenGLRenderer implements Renderer {
 
         shaderProgram.bind();
         shaderProgram.setUniformUnsigned("meshType", 2);
-        float angle = (float) (GLFW.glfwGetTime() / 120 * Math.PI * 2);
+        float angle = (float) (GLFW.glfwGetTime() / 60 * Math.PI);
         float sunY = (float) Math.sin(angle);
 
         float skyIntensity = Math.max(0f, sunY);

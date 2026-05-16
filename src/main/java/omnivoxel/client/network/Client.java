@@ -150,6 +150,7 @@ public final class Client implements NetworkUser {
                             Chunk<BlockWithMesh> chunkData = clientWorldChunk.getChunkData();
 
                             if (chunkData != null) {
+                                clientWorldChunk.setCleanLighting(false);
                                 BlockWithMesh block = blockService.getBlock(blockID.toString());
                                 if (chunkData.getBlock(x, y, z) != block) {
                                     clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, block));

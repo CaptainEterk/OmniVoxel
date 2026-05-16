@@ -47,7 +47,7 @@ public final class AirBlockMesh extends BlockMesh {
 
     @Override
     public byte getLightEmitting(LightChannels channel) {
-        return 15;
+        return 0;
     }
 
     @Override

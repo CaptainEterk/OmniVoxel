@@ -1,9 +1,6 @@
 package omnivoxel.util.thread;
 
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -18,7 +15,7 @@ public class WorkerThreadPool<T extends WorkerTask> {
     private final Set<T> pendingTasks;
 
     @SuppressWarnings("unchecked")
-    public WorkerThreadPool(int threadCount, Supplier<BiFunction<T, Integer, List<T>>> taskHandlerSupplier, boolean daemon) {
+    public WorkerThreadPool(int threadCount, Supplier<BiFunction<T, Integer, Collection<T>>> taskHandlerSupplier, boolean daemon) {
         workers = new WorkerThread[threadCount];
         running = new AtomicBoolean(true);
         pendingTasks = ConcurrentHashMap.newKeySet();
@@ -80,13 +77,13 @@ public class WorkerThreadPool<T extends WorkerTask> {
 
     public static final class WorkerThread<V extends WorkerTask> implements Runnable {
         private final BlockingDeque<V> taskQueue;
-        private final BiFunction<V, Integer, List<V>> taskHandler;
+        private final BiFunction<V, Integer, Collection<V>> taskHandler;
         private final AtomicBoolean running;
         private final Set<V> pendingTasks;
         private final Queue<V> priorityQueue;
         private Thread thread;
 
-        public WorkerThread(BlockingDeque<V> taskQueue, BiFunction<V, Integer, List<V>> taskHandler, AtomicBoolean running, Set<V> pendingTasks) {
+        public WorkerThread(BlockingDeque<V> taskQueue, BiFunction<V, Integer, Collection<V>> taskHandler, AtomicBoolean running, Set<V> pendingTasks) {
             this.taskQueue = taskQueue;
             this.taskHandler = taskHandler;
             this.running = running;
@@ -103,17 +100,7 @@ public class WorkerThreadPool<T extends WorkerTask> {
                     int priorityBudget = 8;
                     while (!priorityQueue.isEmpty() && priorityBudget-- > 0) {
                         V task = priorityQueue.remove();
-                        pendingTasks.remove(task);
-                        List<V> moreTasks = taskHandler.apply(task, priorityQueue.size() + taskQueue.size());
-                        if (moreTasks != null) {
-                            moreTasks.forEach(t -> {
-                                if (pendingTasks.add(t)) {
-                                    priorityQueue.add(t);
-                                } else {
-                                    t.reject();
-                                }
-                            });
-                        }
+                        handleTask(task);
                     }
 
                     V task = priorityQueue.isEmpty()
@@ -121,21 +108,25 @@ public class WorkerThreadPool<T extends WorkerTask> {
                             : taskQueue.poll();
 
                     if (task != null) {
-                        List<V> moreTasks = taskHandler.apply(task, priorityQueue.size() + taskQueue.size());
-                        pendingTasks.remove(task);
-                        if (moreTasks != null) {
-                            moreTasks.forEach(t -> {
-                                if (pendingTasks.add(t)) {
-                                    priorityQueue.add(t);
-                                } else {
-                                    t.reject();
-                                }
-                            });
-                        }
+                        handleTask(task);
                     }
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            }
+        }
+
+        private void handleTask(V task) {
+            pendingTasks.remove(task);
+            Collection<V> moreTasks = taskHandler.apply(task, priorityQueue.size() + taskQueue.size());
+            if (moreTasks != null) {
+                moreTasks.forEach(t -> {
+                    if (pendingTasks.add(t)) {
+                        priorityQueue.add(t);
+                    } else {
+                        t.reject();
+                    }
+                });
             }
         }
 

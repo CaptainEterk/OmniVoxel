@@ -256,10 +256,8 @@ void main() {
 
         float NdotL = max(dot(normalize(faceNormal), sunDir), 0.0);
 
-        // soften so it doesn't go pitch black
         float diffuse = mix(0.2, 1.0, NdotL);
 
-        // apply only to skylight
         float directionalSky = skyLight * skyIntensity * diffuse;
 
         vec3 totalLight = blockLight + vec3(directionalSky);
@@ -268,7 +266,7 @@ void main() {
 
         if (blockType == 1u) {
             float fresnel = 1 - abs(dot(vNormal, normalize(faceNormal)));
-            FragColor.a = fresnel * 5;
+            FragColor.a = fresnel;
         }
         if (fogFactor < 1.0) {
             FragColor = mix(skyColor, FragColor, fogFactor);

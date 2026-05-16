@@ -8,29 +8,26 @@ import omnivoxel.client.game.graphics.light.ChunkLightingData;
 import omnivoxel.client.game.graphics.light.channel.LightChannels;
 import omnivoxel.world.chunk.Chunk;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientWorldChunk {
     // TODO: Move to ChunkLightingData?
-    private final Map<LightChannels, Map<ChunkMeshDataLightingGenerator.Direction, Map<Integer, Byte>>> neighborLightOverflowMap;
+    private final short[][] neighborLightOverflow;
     private MeshData meshData;
     private ChunkMesh mesh;
     private Chunk<BlockWithMesh> chunkData;
     private int lastFetched;
     private ChunkLightingData chunkLightingData;
+    private AtomicBoolean cleanLighting = new AtomicBoolean(false);
 
     private ClientWorldChunk(MeshData meshData, ChunkMesh mesh, Chunk<BlockWithMesh> chunkData, ChunkLightingData chunkLightingData) {
         this.meshData = meshData;
         this.mesh = mesh;
         this.chunkData = chunkData;
         this.chunkLightingData = chunkLightingData;
-        this.neighborLightOverflowMap = new ConcurrentHashMap<>();
-        for (LightChannels channel : LightChannels.values()) {
-            neighborLightOverflowMap.put(channel, new ConcurrentHashMap<>());
-            for (ChunkMeshDataLightingGenerator.Direction direction : ChunkMeshDataLightingGenerator.Direction.values()) {
-                neighborLightOverflowMap.get(channel).put(direction, new ConcurrentHashMap<>());
-            }
+        this.neighborLightOverflow = new short[ChunkMeshDataLightingGenerator.Direction.VALUES.length * LightChannels.values().length][];
+        for (int i = 0; i < neighborLightOverflow.length; i++) {
+            this.neighborLightOverflow[i] = new short[0];
         }
     }
 
@@ -46,8 +43,8 @@ public class ClientWorldChunk {
         this(null, null, chunkData, null);
     }
 
-    public ClientWorldChunk(ChunkLightingData chunkLightingData) {
-        this(null, null, null, chunkLightingData);
+    private static int getOverflowIndex(LightChannels channel, ChunkMeshDataLightingGenerator.Direction direction) {
+        return channel.ordinal() * ChunkMeshDataLightingGenerator.Direction.VALUES.length + direction.ordinal();
     }
 
     public MeshData getMeshData() {
@@ -82,8 +79,12 @@ public class ClientWorldChunk {
         return lastFetched;
     }
 
-    public Map<Integer, Byte> getNeighborLightOverflowMap(LightChannels channel, ChunkMeshDataLightingGenerator.Direction direction) {
-        return neighborLightOverflowMap.get(channel).get(direction);
+    public short[] getNeighborLightOverflow(LightChannels channel, ChunkMeshDataLightingGenerator.Direction direction) {
+        return neighborLightOverflow[getOverflowIndex(channel, direction)];
+    }
+
+    public void setNeighborLightOverflow(LightChannels channel, ChunkMeshDataLightingGenerator.Direction direction, short[] overflow) {
+        neighborLightOverflow[getOverflowIndex(channel, direction)] = overflow;
     }
 
     public ChunkLightingData getLightingData() {
@@ -92,5 +93,13 @@ public class ClientWorldChunk {
 
     public void setChunkLightingData(ChunkLightingData chunkLightingData) {
         this.chunkLightingData = chunkLightingData;
+    }
+
+    public boolean isCleanLighting() {
+        return cleanLighting.get();
+    }
+
+    public void setCleanLighting(boolean cleanLighting) {
+        this.cleanLighting.set(cleanLighting);
     }
 }

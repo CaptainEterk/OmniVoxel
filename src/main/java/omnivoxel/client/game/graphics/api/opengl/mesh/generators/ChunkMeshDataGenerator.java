@@ -31,12 +31,12 @@ public class ChunkMeshDataGenerator {
     private final ClientWorld world;
 
     public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world) {
-        // TODO: Remove hardcoding
         this.worldDataService = worldDataService;
         this.blockService = blockService;
         this.world = world;
     }
 
+    // TODO: Implement greedy meshing
     private MeshData generateChunkMeshData(BlockMesh[] blockMeshes, Position3D position3D) {
         if (blockMeshes == null) {
             Logger.warn("blockMeshes is null");

@@ -233,7 +233,8 @@ public final class MeshDataGenerator {
                 world.add(position3D, meshData);
             } else {
                 Logger.warn("Mesh data generation failed..." + position3D);
-                return world.get(position3D, false, false) != null ? List.of(new ChunkMeshDataTask(null, position3D)) : null;
+                return null;
+//                return world.get(position3D, false, false) != null ? List.of(new ChunkMeshDataTask(null, position3D)) : null;
             }
         } else if (meshDataTask instanceof EntityMeshDataTask(ClientEntity entity)) {
             world.addEntity(entityMeshDataGenerator.generateMeshData(entity));
