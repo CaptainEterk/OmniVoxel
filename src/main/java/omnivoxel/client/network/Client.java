@@ -21,9 +21,9 @@ import omnivoxel.client.network.request.*;
 import omnivoxel.client.network.util.ByteBufUtils;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.common.network.NetworkUser;
-import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.ConstantNetworkSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.server.PackageID;
 import omnivoxel.server.entity.EntityType;
 import omnivoxel.util.bytes.ByteUtils;
@@ -52,17 +52,19 @@ public final class Client implements NetworkUser {
     private final Queue<Position3D> queuedChunkTasks = new LinkedBlockingDeque<>();
     private final ClientWorld world;
     private final BlockService<BlockWithMesh> blockService;
+    private final Settings settings;
     private WorkerThreadPool<MeshDataTask> meshDataGenerators;
     private WorkerThreadPool<LightingChunkMeshDataTask> lightingGenerators;
     private EventLoopGroup group;
     private Channel channel;
     private long lastFlushedTime = System.currentTimeMillis();
 
-    public Client(byte[] clientID, ClientWorldDataService worldDataService, ClientWorld world, BlockService<BlockWithMesh> blockService) {
+    public Client(byte[] clientID, ClientWorldDataService worldDataService, ClientWorld world, BlockService<BlockWithMesh> blockService, Settings settings) {
         this.clientID = clientID;
         this.worldDataService = worldDataService;
         this.world = world;
         this.blockService = blockService;
+        this.settings = settings;
         entities = new ConcurrentHashMap<>();
     }
 
@@ -397,7 +399,7 @@ public final class Client implements NetworkUser {
 
     public void setListeners(IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, State state) {
         meshDataGenerators = new WorkerThreadPool<>(
-                ConstantClientSettings.MAX_MESH_GENERATOR_THREADS,
+                settings.getIntSetting("max_mesh_generator_threads", Runtime.getRuntime().availableProcessors()),
                 () -> new MeshDataGenerator(
                         worldDataService,
                         entityMeshDefinitionCache,
@@ -409,7 +411,7 @@ public final class Client implements NetworkUser {
                 true
         );
         lightingGenerators = new WorkerThreadPool<>(
-                ConstantClientSettings.MAX_LIGHTING_GENERATOR_THREADS,
+                settings.getIntSetting("max_lighting_generator_threads", Runtime.getRuntime().availableProcessors()),
                 () -> new ChunkMeshDataLightingGenerator(
                         world,
                         worldDataService,

@@ -50,11 +50,11 @@ public class Launcher {
         Settings settings = new Settings();
         settings.load(ConstantCommonSettings.CONFIG_LOCATION);
 
-        ClientWorld world = new ClientWorld(state);
+        ClientWorld world = new ClientWorld(state, settings);
 
         BlockService<BlockWithMesh> blockService = new BlockService<>((id -> new BlockWithMesh(id, clientWorldDataService.getBlock(id))));
 
-        Client client = new Client(clientID, clientWorldDataService, world, blockService);
+        Client client = new Client(clientID, clientWorldDataService, world, blockService, settings);
         ClientLauncher clientLauncher = new ClientLauncher(connected, client);
         Thread clientThread = new Thread(clientLauncher, "Client");
         clientThread.start();

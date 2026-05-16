@@ -12,9 +12,9 @@ import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.network.Client;
 import omnivoxel.client.network.request.ChunkRequest;
-import omnivoxel.common.settings.ConstantClientSettings;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.ConstantNetworkSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
@@ -49,9 +49,11 @@ public class ClientWorld {
     private Client client;
     private boolean requesting = true;
     private int tick = 0;
+    private final Settings settings;
 
-    public ClientWorld(State state) {
+    public ClientWorld(State state, Settings settings) {
         this.state = state;
+        this.settings = settings;
         queuedChunks = ConcurrentHashMap.newKeySet();
         nonBufferizedChunks = new ConcurrentLinkedDeque<>();
         this.chunks = new ConcurrentHashMap<>();
@@ -121,7 +123,7 @@ public class ClientWorld {
             if (bufferizing) {
                 count++;
             }
-        } while (bufferizing && count < ConstantClientSettings.BUFFERIZE_CHUNKS_PER_FRAME && System.nanoTime() < endTime);
+        } while (bufferizing && count < settings.getIntSetting("bufferize_chunks_per_frame", Integer.MAX_VALUE) && System.nanoTime() < endTime);
         state.setItem("bufferizing_queue_size", nonBufferizedChunks.size());
         return count;
     }
