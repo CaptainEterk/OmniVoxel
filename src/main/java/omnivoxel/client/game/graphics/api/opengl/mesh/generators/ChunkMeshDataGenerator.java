@@ -36,7 +36,6 @@ public class ChunkMeshDataGenerator {
         this.world = world;
     }
 
-    // TODO: Implement greedy meshing
     private MeshData generateChunkMeshData(BlockMesh[] blockMeshes, Position3D position3D) {
         if (blockMeshes == null) {
             Logger.warn("blockMeshes is null");
@@ -85,7 +84,8 @@ public class ChunkMeshDataGenerator {
                                     transparentVertices,
                                     transparentIndices,
                                     transparentVertexIndexMap,
-                                    chunkLightingData
+                                    chunkLightingData,
+                                    blockMeshes
                             );
                         } else {
                             generateBlockMeshData(
@@ -102,7 +102,8 @@ public class ChunkMeshDataGenerator {
                                     vertices,
                                     indices,
                                     vertexIndexMap,
-                                    chunkLightingData
+                                    chunkLightingData,
+                                    blockMeshes
                             );
                         }
                     }
@@ -121,7 +122,8 @@ public class ChunkMeshDataGenerator {
     private void generateBlockMeshData(
             int x, int y, int z,
             BlockMesh blockMesh, BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west,
-            List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, ChunkLightingData chunkLightingData) {
+            List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, ChunkLightingData chunkLightingData,
+            BlockMesh[] blockMeshes) {
 
         BlockShape shape = blockMesh.getShape(top, bottom, north, south, east, west);
 
@@ -133,17 +135,17 @@ public class ChunkMeshDataGenerator {
         boolean renderWest = shouldRenderFaceCached(blockMesh, shape, west, BlockFace.WEST, top, bottom, north, south, east, west);
 
         if (renderTop)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.TOP, vertices, indices, vertexIndexMap, chunkLightingData);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.TOP, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
         if (renderBottom)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.BOTTOM, vertices, indices, vertexIndexMap, chunkLightingData);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.BOTTOM, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
         if (renderNorth)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.NORTH, vertices, indices, vertexIndexMap, chunkLightingData);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.NORTH, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
         if (renderSouth)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.SOUTH, vertices, indices, vertexIndexMap, chunkLightingData);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.SOUTH, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
         if (renderEast)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.EAST, vertices, indices, vertexIndexMap, chunkLightingData);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.EAST, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
         if (renderWest)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.WEST, vertices, indices, vertexIndexMap, chunkLightingData);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.WEST, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
     }
 
     private boolean shouldRenderFaceCached(BlockMesh originalBlockMesh, BlockShape originalShape, BlockMesh adjacentBlockMesh, BlockFace face,
@@ -170,7 +172,8 @@ public class ChunkMeshDataGenerator {
             List<Integer> vertices,
             List<Integer> indices,
             Map<UniqueVertex, Integer> vertexIndexMap,
-            ChunkLightingData chunkLightingData
+            ChunkLightingData chunkLightingData,
+            BlockMesh[] blockMeshes
     ) {
         int[] uvCoordinates = blockMesh.getUVCoordinates(blockFace);
         Vertex[] faceVertices = shape.vertices()[blockFace.ordinal()];
@@ -182,6 +185,7 @@ public class ChunkMeshDataGenerator {
         for (int idx : faceIndices) {
             Vertex pointPosition = faceVertices[idx];
             Vertex position = pointPosition.add(x, y, z);
+            int ambientOcclusion = sampleAmbientOcclusion(x, y, z, blockFace, pointPosition, blockMeshes);
             MeshDataGenerator.addPoint(
                     vertices,
                     indices,
@@ -190,10 +194,10 @@ public class ChunkMeshDataGenerator {
                     uvCoordinates[idx * 2],
                     uvCoordinates[idx * 2 + 1],
                     blockFace,
-                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.RED),
-                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.GREEN),
-                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.BLUE),
-                    sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, LightChannels.SKYLIGHT),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.RED), ambientOcclusion),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.GREEN), ambientOcclusion),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.BLUE), ambientOcclusion),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.SKYLIGHT), ambientOcclusion),
                     blockType
             );
         }
@@ -201,12 +205,81 @@ public class ChunkMeshDataGenerator {
 
     private byte sampleVertexLight(
             int bx, int by, int bz,
-            BlockFace face,
-            Vertex vertex,
             ChunkLightingData lighting,
             LightChannels channel
     ) {
         return lighting.getChannel(channel).getLighting(IndexCalculator.calculateBlockIndex(bx, by, bz));
+    }
+
+    private int sampleAmbientOcclusion(
+            int bx, int by, int bz,
+            BlockFace face,
+            Vertex vertex,
+            BlockMesh[] blockMeshes
+    ) {
+        int nx = 0;
+        int ny = 0;
+        int nz = 0;
+        int tx1 = 0, ty1 = 0, tz1 = 0;
+        int tx2 = 0, ty2 = 0, tz2 = 0;
+
+        switch (face) {
+            case TOP, BOTTOM -> {
+                ny = face == BlockFace.TOP ? 1 : -1;
+                tx1 = vertexSign(vertex.px());
+                tz2 = vertexSign(vertex.pz());
+            }
+            case NORTH, SOUTH -> {
+                nz = face == BlockFace.NORTH ? 1 : -1;
+                tx1 = vertexSign(vertex.px());
+                ty2 = vertexSign(vertex.py());
+            }
+            case EAST, WEST -> {
+                nx = face == BlockFace.EAST ? 1 : -1;
+                ty1 = vertexSign(vertex.py());
+                tz2 = vertexSign(vertex.pz());
+            }
+            case NONE -> {
+                return 4;
+            }
+        }
+
+        int sampleX = bx + nx;
+        int sampleY = by + ny;
+        int sampleZ = bz + nz;
+
+        boolean side1 = isAmbientOccluder(blockMeshes, sampleX + tx1, sampleY + ty1, sampleZ + tz1);
+        boolean side2 = isAmbientOccluder(blockMeshes, sampleX + tx2, sampleY + ty2, sampleZ + tz2);
+        boolean corner = isAmbientOccluder(blockMeshes, sampleX + tx1 + tx2, sampleY + ty1 + ty2, sampleZ + tz1 + tz2);
+
+        if (side1 && side2) {
+            return 1;
+        }
+
+        return 4 - (booleanValue(side1) + booleanValue(side2) + booleanValue(corner));
+    }
+
+    private int vertexSign(float coordinate) {
+        return coordinate < 0.5f ? -1 : 1;
+    }
+
+    private boolean isAmbientOccluder(BlockMesh[] blockMeshes, int x, int y, int z) {
+        if (x < -1 || x > ConstantCommonSettings.CHUNK_WIDTH ||
+                y < -1 || y > ConstantCommonSettings.CHUNK_HEIGHT ||
+                z < -1 || z > ConstantCommonSettings.CHUNK_LENGTH) {
+            return false;
+        }
+
+        BlockMesh blockMesh = blockMeshes[IndexCalculator.calculateBlockIndexPadded(x, y, z)];
+        return blockMesh != null && !blockMesh.isTransparent();
+    }
+
+    private int booleanValue(boolean value) {
+        return value ? 1 : 0;
+    }
+
+    private byte applyAmbientOcclusion(byte light, int ambientOcclusion) {
+        return (byte) Math.round((light & 0xFF) * (ambientOcclusion / 4.0f));
     }
 
     private BlockMesh[] unpackChunkPadded(Position3D position3D, ClientWorldChunk centerChunk) {
