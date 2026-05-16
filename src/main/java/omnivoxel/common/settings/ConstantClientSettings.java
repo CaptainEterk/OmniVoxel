@@ -12,6 +12,8 @@ public class ConstantClientSettings {
             sensitivity=2f
             frustum_bias=10
             shader=default
+            ambient_occlusion=true
+            smooth_lighting=false
             max_mesh_generator_threads=12
             max_lighting_generator_threads=12
             bufferize_chunks_per_frame=10

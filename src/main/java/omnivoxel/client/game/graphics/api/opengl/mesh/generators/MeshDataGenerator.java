@@ -19,6 +19,7 @@ import omnivoxel.client.game.world.ClientWorld;
 import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.util.cache.IDCache;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
@@ -42,9 +43,9 @@ public final class MeshDataGenerator {
     private final ClientWorld world;
     private final State state;
 
-    public MeshDataGenerator(ClientWorldDataService worldDataService, IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, ClientWorld world, BlockService<BlockWithMesh> blockService, State state) {
+    public MeshDataGenerator(ClientWorldDataService worldDataService, IDCache<String, EntityMeshDataDefinition> entityMeshDefinitionCache, Set<String> queuedEntityMeshData, ClientWorld world, BlockService<BlockWithMesh> blockService, State state, Settings settings) {
         this.state = state;
-        chunkMeshDataGenerator = new ChunkMeshDataGenerator(worldDataService, blockService, world);
+        chunkMeshDataGenerator = new ChunkMeshDataGenerator(worldDataService, blockService, world, settings);
         this.world = world;
         entityMeshDataGenerator = new EntityMeshDataGenerator(entityMeshDefinitionCache, queuedEntityMeshData);
     }

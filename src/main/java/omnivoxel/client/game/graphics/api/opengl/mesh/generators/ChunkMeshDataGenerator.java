@@ -15,6 +15,7 @@ import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.BlockShape;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.Settings;
 import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
@@ -29,11 +30,13 @@ public class ChunkMeshDataGenerator {
     private final ClientWorldDataService worldDataService;
     private final BlockService<BlockWithMesh> blockService;
     private final ClientWorld world;
+    private final Settings settings;
 
-    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world) {
+    public ChunkMeshDataGenerator(ClientWorldDataService worldDataService, BlockService<BlockWithMesh> blockService, ClientWorld world, Settings settings) {
         this.worldDataService = worldDataService;
         this.blockService = blockService;
         this.world = world;
+        this.settings = settings;
     }
 
     private MeshData generateChunkMeshData(BlockMesh[] blockMeshes, Position3D position3D) {
@@ -85,7 +88,8 @@ public class ChunkMeshDataGenerator {
                                     transparentIndices,
                                     transparentVertexIndexMap,
                                     chunkLightingData,
-                                    blockMeshes
+                                    blockMeshes,
+                                    position3D
                             );
                         } else {
                             generateBlockMeshData(
@@ -103,7 +107,8 @@ public class ChunkMeshDataGenerator {
                                     indices,
                                     vertexIndexMap,
                                     chunkLightingData,
-                                    blockMeshes
+                                    blockMeshes,
+                                    position3D
                             );
                         }
                     }
@@ -123,7 +128,8 @@ public class ChunkMeshDataGenerator {
             int x, int y, int z,
             BlockMesh blockMesh, BlockMesh top, BlockMesh bottom, BlockMesh north, BlockMesh south, BlockMesh east, BlockMesh west,
             List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, ChunkLightingData chunkLightingData,
-            BlockMesh[] blockMeshes) {
+            BlockMesh[] blockMeshes,
+            Position3D chunkPosition) {
 
         BlockShape shape = blockMesh.getShape(top, bottom, north, south, east, west);
 
@@ -135,17 +141,17 @@ public class ChunkMeshDataGenerator {
         boolean renderWest = shouldRenderFaceCached(blockMesh, shape, west, BlockFace.WEST, top, bottom, north, south, east, west);
 
         if (renderTop)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.TOP, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.TOP, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
         if (renderBottom)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.BOTTOM, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.BOTTOM, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
         if (renderNorth)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.NORTH, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.NORTH, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
         if (renderSouth)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.SOUTH, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.SOUTH, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
         if (renderEast)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.EAST, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.EAST, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
         if (renderWest)
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.WEST, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes);
+            addFacePrecomputedShape(x, y, z, blockMesh, shape, BlockFace.WEST, vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
     }
 
     private boolean shouldRenderFaceCached(BlockMesh originalBlockMesh, BlockShape originalShape, BlockMesh adjacentBlockMesh, BlockFace face,
@@ -173,7 +179,8 @@ public class ChunkMeshDataGenerator {
             List<Integer> indices,
             Map<UniqueVertex, Integer> vertexIndexMap,
             ChunkLightingData chunkLightingData,
-            BlockMesh[] blockMeshes
+            BlockMesh[] blockMeshes,
+            Position3D chunkPosition
     ) {
         int[] uvCoordinates = blockMesh.getUVCoordinates(blockFace);
         Vertex[] faceVertices = shape.vertices()[blockFace.ordinal()];
@@ -181,11 +188,13 @@ public class ChunkMeshDataGenerator {
 
         // TODO: Remove all hardcoding
         int blockType = Objects.equals(blockMesh.getModID() + "/" + blockMesh.getState(), "core:water_source_block/top") ? 1 : 0;
+        boolean ambientOcclusion = settings.getBooleanSetting("ambient_occlusion", true);
+        boolean smoothLighting = settings.getBooleanSetting("smooth_lighting", false);
 
         for (int idx : faceIndices) {
             Vertex pointPosition = faceVertices[idx];
             Vertex position = pointPosition.add(x, y, z);
-            int ambientOcclusion = sampleAmbientOcclusion(x, y, z, blockFace, pointPosition, blockMeshes);
+            int ambientOcclusionLevel = ambientOcclusion ? sampleAmbientOcclusion(x, y, z, blockFace, pointPosition, blockMeshes) : 4;
             MeshDataGenerator.addPoint(
                     vertices,
                     indices,
@@ -194,10 +203,10 @@ public class ChunkMeshDataGenerator {
                     uvCoordinates[idx * 2],
                     uvCoordinates[idx * 2 + 1],
                     blockFace,
-                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.RED), ambientOcclusion),
-                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.GREEN), ambientOcclusion),
-                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.BLUE), ambientOcclusion),
-                    applyAmbientOcclusion(sampleVertexLight(x, y, z, chunkLightingData, LightChannels.SKYLIGHT), ambientOcclusion),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, chunkPosition, LightChannels.RED, smoothLighting), ambientOcclusionLevel),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, chunkPosition, LightChannels.GREEN, smoothLighting), ambientOcclusionLevel),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, chunkPosition, LightChannels.BLUE, smoothLighting), ambientOcclusionLevel),
+                    applyAmbientOcclusion(sampleVertexLight(x, y, z, blockFace, pointPosition, chunkLightingData, chunkPosition, LightChannels.SKYLIGHT, smoothLighting), ambientOcclusionLevel),
                     blockType
             );
         }
@@ -205,10 +214,133 @@ public class ChunkMeshDataGenerator {
 
     private byte sampleVertexLight(
             int bx, int by, int bz,
+            BlockFace face,
+            Vertex vertex,
             ChunkLightingData lighting,
+            Position3D chunkPosition,
+            LightChannels channel,
+            boolean smoothLighting
+    ) {
+        int sampleX = bx;
+        int sampleY = by;
+        int sampleZ = bz;
+
+        if (face == BlockFace.TOP && isAtMaxBlockEdge(vertex.py())) {
+            sampleY++;
+        } else if (face == BlockFace.BOTTOM && isAtMinBlockEdge(vertex.py())) {
+            sampleY--;
+        } else if (face == BlockFace.NORTH && isAtMaxBlockEdge(vertex.pz())) {
+            sampleZ++;
+        } else if (face == BlockFace.SOUTH && isAtMinBlockEdge(vertex.pz())) {
+            sampleZ--;
+        } else if (face == BlockFace.EAST && isAtMaxBlockEdge(vertex.px())) {
+            sampleX++;
+        } else if (face == BlockFace.WEST && isAtMinBlockEdge(vertex.px())) {
+            sampleX--;
+        }
+
+        if (smoothLighting) {
+            return sampleSmoothVertexLight(sampleX, sampleY, sampleZ, bx, by, bz, face, vertex, lighting, chunkPosition, channel);
+        }
+
+        return sampleLight(sampleX, sampleY, sampleZ, bx, by, bz, lighting, chunkPosition, channel);
+    }
+
+    private byte sampleSmoothVertexLight(
+            int sampleX, int sampleY, int sampleZ,
+            int fallbackX, int fallbackY, int fallbackZ,
+            BlockFace face,
+            Vertex vertex,
+            ChunkLightingData lighting,
+            Position3D chunkPosition,
             LightChannels channel
     ) {
-        return lighting.getChannel(channel).getLighting(IndexCalculator.calculateBlockIndex(bx, by, bz));
+        int tx1 = 0, ty1 = 0, tz1 = 0;
+        int tx2 = 0, ty2 = 0, tz2 = 0;
+
+        switch (face) {
+            case TOP, BOTTOM -> {
+                tx1 = vertexSign(vertex.px());
+                tz2 = vertexSign(vertex.pz());
+            }
+            case NORTH, SOUTH -> {
+                tx1 = vertexSign(vertex.px());
+                ty2 = vertexSign(vertex.py());
+            }
+            case EAST, WEST -> {
+                ty1 = vertexSign(vertex.py());
+                tz2 = vertexSign(vertex.pz());
+            }
+            case NONE -> {
+                return sampleLight(sampleX, sampleY, sampleZ, fallbackX, fallbackY, fallbackZ, lighting, chunkPosition, channel);
+            }
+        }
+
+        int light = 0;
+        light += sampleLight(sampleX, sampleY, sampleZ, fallbackX, fallbackY, fallbackZ, lighting, chunkPosition, channel) & 0xFF;
+        light += sampleLight(sampleX + tx1, sampleY + ty1, sampleZ + tz1, fallbackX, fallbackY, fallbackZ, lighting, chunkPosition, channel) & 0xFF;
+        light += sampleLight(sampleX + tx2, sampleY + ty2, sampleZ + tz2, fallbackX, fallbackY, fallbackZ, lighting, chunkPosition, channel) & 0xFF;
+        light += sampleLight(sampleX + tx1 + tx2, sampleY + ty1 + ty2, sampleZ + tz1 + tz2, fallbackX, fallbackY, fallbackZ, lighting, chunkPosition, channel) & 0xFF;
+
+        return (byte) Math.round(light / 4.0f);
+    }
+
+    private byte sampleLight(
+            int sampleX, int sampleY, int sampleZ,
+            int fallbackX, int fallbackY, int fallbackZ,
+            ChunkLightingData currentLighting,
+            Position3D currentChunkPosition,
+            LightChannels channel
+    ) {
+        if (IndexCalculator.checkBounds(sampleX, sampleY, sampleZ)) {
+            return currentLighting.getChannel(channel).getLighting(IndexCalculator.calculateBlockIndex(sampleX, sampleY, sampleZ));
+        }
+
+        int chunkOffsetX = chunkOffset(sampleX, ConstantCommonSettings.CHUNK_WIDTH);
+        int chunkOffsetY = chunkOffset(sampleY, ConstantCommonSettings.CHUNK_HEIGHT);
+        int chunkOffsetZ = chunkOffset(sampleZ, ConstantCommonSettings.CHUNK_LENGTH);
+        ClientWorldChunk sampleChunk = world.get(currentChunkPosition.add(chunkOffsetX, chunkOffsetY, chunkOffsetZ), false, true);
+
+        if (sampleChunk == null || sampleChunk.getLightingData() == null) {
+            return currentLighting.getChannel(channel).getLighting(IndexCalculator.calculateBlockIndex(fallbackX, fallbackY, fallbackZ));
+        }
+
+        int localX = wrapCoordinate(sampleX, ConstantCommonSettings.CHUNK_WIDTH);
+        int localY = wrapCoordinate(sampleY, ConstantCommonSettings.CHUNK_HEIGHT);
+        int localZ = wrapCoordinate(sampleZ, ConstantCommonSettings.CHUNK_LENGTH);
+        return sampleChunk.getLightingData().getChannel(channel).getLighting(IndexCalculator.calculateBlockIndex(localX, localY, localZ));
+    }
+
+    private int chunkOffset(int coordinate, int size) {
+        if (coordinate < 0) {
+            return -1;
+        }
+
+        if (coordinate >= size) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    private int wrapCoordinate(int coordinate, int size) {
+        if (coordinate < 0) {
+            return size - 1;
+        }
+
+        if (coordinate >= size) {
+            return 0;
+        }
+
+        return coordinate;
+    }
+
+    private boolean isAtMinBlockEdge(float coordinate) {
+        return coordinate <= 0.0f;
+    }
+
+    private boolean isAtMaxBlockEdge(float coordinate) {
+        return coordinate >= 1.0f;
     }
 
     private int sampleAmbientOcclusion(

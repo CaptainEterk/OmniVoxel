@@ -406,7 +406,8 @@ public final class Client implements NetworkUser {
                         queuedEntityMeshData,
                         world,
                         blockService,
-                        state
+                        state,
+                        settings
                 )::generateMeshData,
                 true
         );

@@ -71,4 +71,12 @@ public final class Settings {
         }
         return Float.parseFloat(setting);
     }
+
+    public boolean getBooleanSetting(String settingName, boolean defaultValue) {
+        String setting = getSetting(settingName);
+        if (setting == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(setting);
+    }
 }
