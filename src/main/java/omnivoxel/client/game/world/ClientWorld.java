@@ -209,14 +209,12 @@ public class ClientWorld {
             return;
         }
 
-        Chunk<BlockWithMesh> existingData = existing.getChunkData(-1);
-
         if (!shell) {
             existing.setChunkData(chunk);
             return;
         }
 
-        if (existingData instanceof ChunkShell<BlockWithMesh> existingShell) {
+        if (existing.getChunkData(-1) instanceof ChunkShell<BlockWithMesh> existingShell) {
             if (chunk instanceof ChunkShell<BlockWithMesh> newShell) {
                 existing.setChunkData(existingShell.mergeDown(newShell));
             } else {

@@ -3,6 +3,7 @@ package omnivoxel.client.network.chunk;
 import io.netty.buffer.ByteBuf;
 import omnivoxel.client.game.graphics.block.BlockWithMesh;
 import omnivoxel.client.game.world.ClientWorld;
+import omnivoxel.client.game.world.ClientWorldChunk;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.block.BlockService;

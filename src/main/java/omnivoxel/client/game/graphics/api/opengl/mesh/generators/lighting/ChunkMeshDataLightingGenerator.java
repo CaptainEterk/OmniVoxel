@@ -24,6 +24,7 @@ import omnivoxel.util.math.Position3D;
 import omnivoxel.util.thread.WorkerThreadPool;
 import omnivoxel.world.block.BlockService;
 import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk.ChunkShell;
 import omnivoxel.world.chunk2d.Chunk2D;
 
 import java.util.*;
@@ -152,7 +153,7 @@ public class ChunkMeshDataLightingGenerator {
         for (Position3D offset : DIRECT_NEIGHBOR_OFFSETS) {
             Position3D neighborPosition = position.add(offset.x(), offset.y(), offset.z());
             ClientWorldChunk neighbor = world.get(neighborPosition, false, false);
-            if (neighbor != null && neighbor.getLightingData() != null && neighbor.isCleanLighting()) {
+            if (neighbor != null && neighbor.getLightingData() != null && neighbor.isCleanLighting() && neighbor.getChunkData(-1).getLOD() == 0) {
                 meshDataGenerators.submit(new ChunkMeshDataTask(neighborPosition, "1"));
             }
         }
@@ -190,9 +191,15 @@ public class ChunkMeshDataLightingGenerator {
     private Set<LightingChunkMeshDataTask> generateChunkMeshDataLighting(Position3D position3D, LightChannels channel) {
         ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
 
-        if (clientWorldChunk == null || clientWorldChunk.getChunkData(-1) == null) {
+        if (clientWorldChunk == null || clientWorldChunk.getChunkData(-1) == null || clientWorldChunk.getChunkData(-1) instanceof ChunkShell<BlockWithMesh>) {
             return null;
         }
+
+        //1914216493026976
+        //1914216630114639
+
+        //1914924747491554
+        //1914924578619780
 
         Chunk<BlockWithMesh> chunkData = clientWorldChunk.getChunkData(-1);
 
@@ -202,6 +209,7 @@ public class ChunkMeshDataLightingGenerator {
 
             completeDirtyChunks.remove(position3D);
 
+//            System.out.println(clientWorldChunk.getCount() + " " + position3D + " " + clientWorldChunk + " " + chunkData + " " + clientWorldChunk.getChunks());
             meshDataGenerators.submit(new ChunkMeshDataTask(position3D, "4"));
 
             int foundCompleteDirtyChunkCount = 0;
