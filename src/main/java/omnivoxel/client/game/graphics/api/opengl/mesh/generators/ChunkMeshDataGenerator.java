@@ -536,11 +536,11 @@ public class ChunkMeshDataGenerator {
         rotations = new byte[paddedSize];
     }
 
-    private boolean unpackChunkPadded(Position3D position3D, String root) {
+    private boolean unpackChunkPadded(Position3D position3D) {
         ClientWorldChunk centerChunk = world.get(position3D, false, false);
 
         if (centerChunk == null) {
-            Logger.warn(Logger.Priority.LOW, "The center chunk is null: " + root);
+            Logger.warn(Logger.Priority.LOW, "The center chunk is null");
             return true;
         }
 
@@ -554,7 +554,7 @@ public class ChunkMeshDataGenerator {
         if (negXChunk == null || posXChunk == null ||
                 negYChunk == null || posYChunk == null ||
                 negZChunk == null || posZChunk == null) {
-            Logger.warn(Logger.Priority.LOW, "One or more shell chunks are null: " + root);
+            Logger.warn(Logger.Priority.LOW, "One or more shell chunks are null");
             return true;
         }
 
@@ -572,7 +572,7 @@ public class ChunkMeshDataGenerator {
         if (negX == null || posX == null ||
                 negY == null || posY == null ||
                 negZ == null || posZ == null) {
-            Logger.warn(Logger.Priority.LOW, "One or more shell chunk data are null: " + root);
+            Logger.warn(Logger.Priority.LOW, "One or more shell chunk data are null");
             return true;
         }
 
@@ -590,7 +590,6 @@ public class ChunkMeshDataGenerator {
                     }
 
                     Chunk<BlockWithMesh> chunk = center;
-                    ClientWorldChunk debugChunk = centerChunk;
 
                     int lx = x;
                     int ly = y;
@@ -598,40 +597,28 @@ public class ChunkMeshDataGenerator {
 
                     if (x < 0) {
                         chunk = negX;
-                        debugChunk = negXChunk;
                         lx = chunkWidth - 1;
                     } else if (x >= chunkWidth) {
                         chunk = posX;
-                        debugChunk = posXChunk;
                         lx = 0;
                     } else if (y < 0) {
                         chunk = negY;
-                        debugChunk = negYChunk;
                         ly = chunkHeight - 1;
                     } else if (y >= chunkHeight) {
                         chunk = posY;
-                        debugChunk = posYChunk;
                         ly = 0;
                     } else if (z < 0) {
                         chunk = negZ;
-                        debugChunk = negZChunk;
                         lz = chunkLength - 1;
                     } else if (z >= chunkLength) {
                         chunk = posZ;
-                        debugChunk = posZChunk;
                         lz = 0;
                     }
 
                     int index = IndexCalculator.calculateBlockIndexPadded(x, y, z, chunkWidth, chunkHeight, chunkLength);
 
-                    try {
-                        // TODO: Fix a crash where chunk is a ChunkShell with uninitialized sides
-                        blockMeshes[index] = chunk.getBlock(lx, ly, lz).blockMesh();
-                        rotations[index] = chunk.getBlockRotation(lx, ly, lz);
-                    } catch (Exception e) {
-                        System.err.println(debugChunk.getCount() + " " + position3D + " " + debugChunk + " " + root + " lod " + chunk.getLOD() + " " + debugChunk.getChunkData(-1).getLOD() + " " + chunk + " " + debugChunk.getChunkData(-1) + " " + debugChunk.getChunks());
-                        throw new RuntimeException(e);
-                    }
+                    blockMeshes[index] = chunk.getBlock(lx, ly, lz).blockMesh();
+                    rotations[index] = chunk.getBlockRotation(lx, ly, lz);
                 }
             }
         }
@@ -639,8 +626,8 @@ public class ChunkMeshDataGenerator {
         return false;
     }
 
-    public MeshData generateMeshData(Position3D position3D, String root) {
-        if (unpackChunkPadded(position3D, root)) {
+    public MeshData generateMeshData(Position3D position3D) {
+        if (unpackChunkPadded(position3D)) {
             return null;
         }
         return generateChunkMeshData(position3D);

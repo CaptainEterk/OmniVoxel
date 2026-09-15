@@ -10,7 +10,6 @@ import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueLightVertex;
 import omnivoxel.client.game.graphics.api.opengl.mesh.vertex.UniqueVertex;
 import omnivoxel.client.game.state.State;
 import omnivoxel.client.game.world.ClientWorld;
-import omnivoxel.client.network.chunk.worldDataService.ClientWorldDataService;
 import omnivoxel.common.block.shape.BlockVertex;
 import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.resource.GameResources;
@@ -86,8 +85,8 @@ public final class MeshDataGenerator {
 
     public List<MeshDataTask> generateMeshData(MeshDataTask meshDataTask, int queueSize) {
         state.setItem(Thread.currentThread().getName() + "_queue_size_mdg", queueSize);
-        if (meshDataTask instanceof ChunkMeshDataTask(Position3D position3D, String root)) {
-            MeshData meshData = chunkMeshDataGenerator.generateMeshData(position3D, root);
+        if (meshDataTask instanceof ChunkMeshDataTask(Position3D position3D)) {
+            MeshData meshData = chunkMeshDataGenerator.generateMeshData(position3D);
             if (meshData != null) {
                 world.add(position3D, meshData);
             } else {
