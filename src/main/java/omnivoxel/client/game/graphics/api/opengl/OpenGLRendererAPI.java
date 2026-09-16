@@ -41,6 +41,7 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -506,11 +507,28 @@ public class OpenGLRendererAPI implements RendererAPI {
         textShaderProgram.unbind();
     }
 
+    private final long[] frameTimes = new long[1000];
+    private int frameIndex = 0;
+
     private void updateState() {
         timer.stop();
         timer.start();
-        double deltaTime = timer.averageTimes();
+
+        double deltaTime = timer.getLastDuration();
+
+        frameTimes[frameIndex++ % frameTimes.length] = (long) deltaTime;
+
+        long[] sorted = frameTimes.clone();
+        Arrays.sort(sorted);
+
+        double p99  = sorted[(int) (sorted.length * 0.99)];
+        double p999 = sorted[(int) (sorted.length * 0.999)];
+        double p9999 = sorted[(int) (sorted.length * 0.9999)];
+
         state.setItem("fps", (int) (1_000_000_000 / deltaTime));
+        state.setItem("low1", (int) (1_000_000_000 / p99));
+        state.setItem("low.1", (int) (1_000_000_000 / p999));
+        state.setItem("low.01", (int) (1_000_000_000 / p9999));
     }
 
     // TODO: Remove this replace it with GUI rendering
@@ -518,7 +536,7 @@ public class OpenGLRendererAPI implements RendererAPI {
         if (state.getItem("seeDebug", Boolean.class)) {
             String leftDebugText = ConstantClientSettings.DEFAULT_WINDOW_TITLE + "\n" + String.format(
                     """
-                            FPS: %d
+                            FPS: %d %d/%d/%d
                             Position: %.2f %.2f %.2f
                             Delta Time: %.4f
                             Chunks:
@@ -551,6 +569,9 @@ public class OpenGLRendererAPI implements RendererAPI {
                             \t- Meshing: %d
                             """,
                     state.getItem("fps", Integer.class),
+                    state.getItem("low1", Integer.class),
+                    state.getItem("low.1", Integer.class),
+                    state.getItem("low.01", Integer.class),
                     camera.getX(),
                     camera.getY(),
                     camera.getZ(),
