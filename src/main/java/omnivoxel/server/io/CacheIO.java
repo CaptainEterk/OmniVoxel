@@ -6,8 +6,8 @@ import omnivoxel.util.thread.AsyncWorkerThread;
 public class CacheIO {
     private static final AsyncWorkerThread<CacheItem> cacheAsyncWorkerThread = new AsyncWorkerThread<>(CacheHandler::cache, false, ConstantServerSettings.NECESSARY_CACHE_SIZE);
 
-    public static void add(CacheItem cacheItem, boolean necessary) {
-        cacheAsyncWorkerThread.add(cacheItem, necessary);
+    public static boolean add(CacheItem cacheItem, boolean necessary) {
+        return cacheAsyncWorkerThread.add(cacheItem, necessary);
     }
 
     public static void stop() {

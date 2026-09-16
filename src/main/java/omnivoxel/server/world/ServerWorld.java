@@ -1,6 +1,7 @@
 package omnivoxel.server.world;
 
 import omnivoxel.common.settings.ConstantCommonSettings;
+import omnivoxel.common.settings.ConstantServerSettings;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.io.chunk.ChunkIO;
 import omnivoxel.util.math.Position2D;
@@ -9,6 +10,8 @@ import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk2d.Chunk2D;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,13 +38,17 @@ public class ServerWorld {
 
     private void checkOldChunk3D(Position3D position3D, ChunkValue chunkValue) {
         if (chunkValue.shouldSave(this.request)) {
-            ChunkIO.writeChunk(position3D, chunks.remove(position3D).chunk, false);
+            if (ChunkIO.writeChunk(position3D, chunks.get(position3D).chunk, false)) {
+                chunks.remove(position3D);
+            }
         }
     }
 
     private void checkOldChunk2D(Position2D position2D, Chunk2DValue chunkValue) {
         if (chunkValue.shouldSave(this.request)) {
-            ChunkIO.writeChunk2D(position2D, chunkHeights.remove(position2D).chunk, false);
+            if (ChunkIO.writeChunk2D(position2D, chunkHeights.get(position2D).chunk, false)) {
+                chunkHeights.remove(position2D);
+            }
         }
     }
 

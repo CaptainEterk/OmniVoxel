@@ -86,11 +86,7 @@ public class ChunkService {
                 Position2D position2D = chunkPosition.getPosition2D();
 
                 if (chunkTask.lod() == 0) {
-                    Chunk2D<Integer> chunk2D = world.getChunkHeights(position2D);
-
-                    if (chunk2D == null) {
-                        chunk2D = ChunkIO.decodeChunk2D(ChunkIO.getChunk2D(position2D));
-                    }
+                    Chunk2D<Integer> chunk2D = world.getStoredChunkHeights(position2D);
 
                     if (chunk2D == null) {
                         Logger.warn("Chunk heights are null at " + position2D + ". Rebuilding heightmap...");
@@ -120,7 +116,7 @@ public class ChunkService {
                 );
             }
 
-            System.out.println(queueSize + " " + (System.nanoTime() - startTime) + "ns");
+//            System.out.println(queueSize + " " + (System.nanoTime() - startTime) + "ns");
 
             return null;
         } catch (IOException e) {

@@ -11,7 +11,10 @@ import omnivoxel.util.IndexCalculator;
 import omnivoxel.util.bytes.ByteUtils;
 import omnivoxel.util.math.Position2D;
 import omnivoxel.util.math.Position3D;
-import omnivoxel.world.chunk.*;
+import omnivoxel.world.chunk.BiBlockChunk;
+import omnivoxel.world.chunk.BytePaletteChunk;
+import omnivoxel.world.chunk.Chunk;
+import omnivoxel.world.chunk.SingleBlockChunk;
 import omnivoxel.world.chunk2d.Chunk2D;
 import omnivoxel.world.chunk2d.SingleBlockChunk2D;
 
@@ -251,11 +254,11 @@ public final class ChunkIO {
         return bytes;
     }
 
-    public static void writeChunk(Position3D position3D, Chunk<ServerBlock> chunk, boolean necessary) {
-        CacheIO.add(new Chunk3DCacheItem(position3D, chunk), necessary);
+    public static boolean writeChunk(Position3D position3D, Chunk<ServerBlock> chunk, boolean necessary) {
+        return CacheIO.add(new Chunk3DCacheItem(position3D, chunk), necessary);
     }
 
-    public static void writeChunk2D(Position2D position2D, Chunk2D<Integer> chunk, boolean necessary) {
-        CacheIO.add(new Chunk2DCacheItem(position2D, chunk), necessary);
+    public static boolean writeChunk2D(Position2D position2D, Chunk2D<Integer> chunk, boolean necessary) {
+        return CacheIO.add(new Chunk2DCacheItem(position2D, chunk), necessary);
     }
 }

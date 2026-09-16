@@ -425,12 +425,13 @@ public final class Client implements NetworkUser {
     }
 
     private void receiveChunkHeights(ByteBuf byteBuf) {
-        int cx = byteBuf.getInt(8);
-        int cz = byteBuf.getInt(12);
+        byteBuf.readerIndex(8);
+        int cx = byteBuf.readInt();
+        int cz = byteBuf.readInt();
         Chunk2D<Integer> chunkHeights = new SingleBlockChunk2D<>(0);
         int x = 0, z = 0;
         for (int i = 0; i < ConstantCommonSettings.BLOCKS_IN_CHUNK_2D; i++) {
-            chunkHeights = chunkHeights.setBlock(x, z, byteBuf.getInt(16 + i * Integer.BYTES));
+            chunkHeights = chunkHeights.setBlock(x, z, byteBuf.readInt());
             x++;
             if (x >= ConstantCommonSettings.CHUNK_WIDTH) {
                 x = 0;
