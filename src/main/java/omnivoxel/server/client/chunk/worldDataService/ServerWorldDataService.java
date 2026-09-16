@@ -73,9 +73,7 @@ public final class ServerWorldDataService {
         int chunkHeight = ConstantCommonSettings.CHUNK_HEIGHT;
         int chunkLength = ConstantCommonSettings.CHUNK_LENGTH;
 
-        int scale = 1 << lod;
-
-        int step = scale << 2;
+        int step = (1 << worldGenerator.getNoiseInterpolationScale()) << lod;
 
         int sx = Math.ceilDiv(chunkWidth + 2, step) + 1;
         int sy = Math.ceilDiv(chunkHeight + 2, step) + 1;

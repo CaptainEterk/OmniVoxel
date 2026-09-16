@@ -48,6 +48,7 @@ public class WorldGenerator {
     // TODO: Add functionality for this
     private final Integer depthSections;
     private final boolean heightIsDensityFunction;
+    private final Integer noiseInterpolationScale;
 
     public WorldGenerator(GameNode gameNode, Map<String, BlockShape> blockShapeCache, Map<String, BlockHitbox[]> blockHitboxCache, long seed, ServerBlockService blockService) {
         addDensityFunction(Noise3DDensityFunction.class);
@@ -125,6 +126,10 @@ public class WorldGenerator {
 
         this.depthSections = depthSectionsNode == null ? null : (int) depthSectionsNode.value();
 
+        DoubleGameNode noiseInterpolationNode = Game.checkGameNodeType(worldGeneratorNode.object().get("noise_interpolation"), DoubleGameNode.class);
+
+        this.noiseInterpolationScale = noiseInterpolationNode == null ? null : (int) noiseInterpolationNode.value();
+
         densityFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("density"), ObjectGameNode.class), seed);
         blockFunction = getBlockFunction(Game.checkGameNodeType(Game.checkGameNodeType(worldGeneratorNode.object().get("surface"), ObjectGameNode.class).object().get("block"), ObjectGameNode.class), seed);
         negDensityBlockFunction = getBlockFunction(Game.checkGameNodeType(Game.checkGameNodeType(worldGeneratorNode.object().get("surface"), ObjectGameNode.class).object().get("neg_density"), ObjectGameNode.class), seed);
@@ -190,6 +195,8 @@ public class WorldGenerator {
         blockFunctionCache.put(annotations[0].id(), blockFunctionClass);
     }
 
+    // TODO: Move to a more relevant class
+    // TODO: Make it actually work correctly (if this is called, and the chunk with the highest block in it isn't generated yet, it won't return the correct answer
     public Chunk2D<Integer> rebuildChunkHeights(ServerWorld world, Position2D position2D) {
         Chunk2D<Integer> chunkHeights = new SingleBlockChunk2D<>(0);
 
@@ -302,7 +309,7 @@ public class WorldGenerator {
         return depthSections;
     }
 
-    public boolean isHeightIsDensityFunction() {
-        return heightIsDensityFunction;
+    public int getNoiseInterpolationScale() {
+        return noiseInterpolationScale;
     }
 }
