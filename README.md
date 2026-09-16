@@ -34,13 +34,18 @@ render_filter=linear
 sensitivity=2f
 frustum_bias=10
 shader=default
-ambient_occlusion=false
-smooth_lighting=false
+ambient_occlusion=true
+smooth_lighting=true
 vsync=false
-free_chunk_max=1000
+free_chunk_max=1
 max_mesh_generator_threads=12
 max_lighting_generator_threads=12
-bufferize_chunks_per_frame=10
+bufferize_chunks_per_frame=100
+distance_lod0=0.1
+distance_lod1=0.4
+distance_lod2=1.0
+distance_lod3=1.0
+distance_lod4=1.0
 ```
 
 **FPS (loading):** 120-240<br>
@@ -48,5 +53,5 @@ bufferize_chunks_per_frame=10
 **Memory Usage (client):** 700 Mb<br>
 **Memory Usage (server):** 20 Mb<br>
 **Memory Usage (GPU):** 400 Mb<br>
-**Total loading time (pre-generated):** 45s<br>
-**Total loading time (runtime-generated):** 54s<br>
+**Total loading time (pre-generated):** 19s<br>
+**Total loading time (runtime-generated):** 29s<br>
