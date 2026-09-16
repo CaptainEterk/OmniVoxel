@@ -1,7 +1,7 @@
 #version 330 core
 
-// TODO: Make these uniforms
 #define TEXTURE_SIZE 16u
+
 in vec2 TexCoord;
 smooth in vec3 position;
 in vec4 vLighting;
@@ -12,7 +12,6 @@ in vec2 skyUV;
 
 out vec4 FragColor;
 
-// TODO: Make this do text as well (3)
 uniform uint meshType;
 
 uniform vec3 cameraPosition;
@@ -33,37 +32,101 @@ uniform sampler2D blockTexture;
 uniform float skyIntensity;
 uniform vec4 highlightColor;
 
-// SKY SHADER
-vec3 skyColor(vec3 dir, vec3 sunDir) {
-    float t = max(dir.y * 0.5 + 0.5, 0.0);
 
-    float sunHeight = sunDir.y;
+// ============================================================
+// AURORA SETTINGS
+// ============================================================
 
-    vec3 daySky = vec3(0.2, 0.5, 0.9);
-    vec3 sunsetSky = vec3(1.0, 0.3, 0.05);
-    vec3 nightSky = vec3(0.02, 0.02, 0.05);
+#define AURORA_BOTTOM_COLOR vec3(0.05, 0.35, 0.15)
+#define AURORA_TOP_COLOR    vec3(0.15, 0.8, 0.35)
 
-    float dayFactor = smoothstep(0.0, 0.3, sunHeight);
-    float nightFactor = smoothstep(-0.3, 0.0, sunHeight);
+#define AURORA_ALPHA 1.0
+#define AURORA_DENSITY 0.5
+#define AURORA_SHARPNESS 1.0
 
-    vec3 skyBase = mix(nightSky, sunsetSky, nightFactor);
-    skyBase = mix(skyBase, daySky, dayFactor);
+#define AURORA_SAMPLES 30
 
-    return mix(nightSky, skyBase, t);
+#define AURORA_START_HEIGHT 2.0
+#define AURORA_END_HEIGHT   4.0
+
+#define AURORA_FLOW_SCALE    0.15
+#define AURORA_FLOW_STRENGTH 1.0
+#define AURORA_FLOW_SPEED    0.1
+#define AURORA_FLOW_X_SPEED  0.0
+
+#define AURORA_WIGGLE_SCALE    0.5
+#define AURORA_WIGGLE_STRENGTH 0.5
+#define AURORA_WIGGLE_SPEED    0.2
+
+#define AURORA_OPACITY_PER_SAMPLE 0.08
+
+#define UNDERSPARKLE_PRIMARY   vec3(0.3, 1.0, 0.5)
+#define UNDERSPARKLE_SECONDARY vec3(0.8, 1.0, 0.3)
+#define UNDERSPARKLE_SCALE 3.0
+#define UNDERSPARKLE_SPEED 0.2
+#define UNDERSPARKLE_THRESHOLD 0.8
+#define UNDERSPARKLE_MAX_HEIGHT 0.5
+
+float hash(vec3 p)
+{
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
 }
 
-vec3 applySunset(vec3 dir, vec3 sunDir) {
-    float horizon = 1.0 - abs(dir.y);
-    float alignment = max(dot(dir, sunDir), 0.0);
+float noise3D(vec3 p)
+{
+    vec3 i = floor(p);
+    vec3 f = fract(p);
 
-    float glow = pow(alignment, 4.0) * horizon;
+    f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
 
-    vec3 sunsetColor = vec3(1.0, 0.4, 0.1);
+    float n000 = hash(i);
+    float n100 = hash(i + vec3(1, 0, 0));
+    float n010 = hash(i + vec3(0, 1, 0));
+    float n110 = hash(i + vec3(1, 1, 0));
+    float n001 = hash(i + vec3(0, 0, 1));
+    float n101 = hash(i + vec3(1, 0, 1));
+    float n011 = hash(i + vec3(0, 1, 1));
+    float n111 = hash(i + vec3(1, 1, 1));
 
-    return sunsetColor * glow * 2.0;
+    float x00 = mix(n000, n100, f.x);
+    float x10 = mix(n010, n110, f.x);
+    float x01 = mix(n001, n101, f.x);
+    float x11 = mix(n011, n111, f.x);
+
+    float y0 = mix(x00, x10, f.y);
+    float y1 = mix(x01, x11, f.y);
+
+    return mix(y0, y1, f.z);
 }
 
-vec3 getSunDir(float time) {
+
+// ============================================================
+// AURORA FUNCTIONS
+// ============================================================
+
+float makeStripe(float x, float halfSizeNormalized)
+{
+    float baseValue = fract(x);
+
+    float left = smoothstep(
+            0.5 - halfSizeNormalized,
+            0.5,
+            baseValue
+    );
+
+    float right = smoothstep(
+            0.5 + halfSizeNormalized,
+            0.5,
+            baseValue
+    );
+
+    return left * right;
+}
+
+vec3 getSunDir(float time)
+{
     float angle = time * 0.05;
 
     return normalize(vec3(
@@ -73,167 +136,454 @@ vec3 getSunDir(float time) {
     ));
 }
 
-vec3 applySun(vec3 dir, vec3 sunDir) {
-    float sunDot = max(dot(dir, sunDir), 0.0);
+float getNightFactor(float time)
+{
+    vec3 sunDir = getSunDir(time);
 
-    float disk = pow(sunDot, 1024.0);
-    float glow = pow(sunDot, 32.0);
-
-    vec3 sunColor = vec3(1.0, 0.9, 0.6);
-
-    return sunColor * (disk * 15.0 + glow * 0.5);
+    return 1.0 - smoothstep(
+            -0.15,
+            0.25,
+            sunDir.y
+    );
 }
 
-float hash(vec3 p) {
-    p = fract(p * 0.3183099 + vec3(0.1, 0.1, 0.1));
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+vec3 getSunColor(float time)
+{
+    vec3 sunDir = getSunDir(time);
+
+    // 0 at noon, 1 at horizon/night.
+    float horizon =
+    1.0 - abs(sunDir.y);
+
+    // Warm near sunrise/sunset.
+    float sunset =
+    smoothstep(
+            0.0,
+            0.35,
+            horizon
+    );
+
+    return mix(
+            vec3(1.0, 0.95, 0.8),
+            vec3(1.0, 0.45, 0.15),
+            sunset
+    );
 }
 
-vec3 getMoonDir(float time) {
-    // Opposite the sun, slower rotation
-    float angle = time * 0.02 + 3.14159;// π offset for opposite side
-    return normalize(vec3(cos(angle), sin(angle) * 0.5, sin(angle * 0.3)));
+float getSunDisk(vec3 viewDir, float time)
+{
+    vec3 sunDir = getSunDir(time);
+
+    float d = dot(viewDir, sunDir);
+
+    // Angular size of the sun.
+    float radius = 0.9994;
+
+    return smoothstep(
+            radius,
+            radius + 0.0005,
+            d
+    );
 }
 
-vec3 applyMoon(vec3 dir, vec3 moonDir) {
-    float moonDot = max(dot(dir, moonDir), 0.0);
-    float disk = pow(moonDot, 256.0);
-    float glow = pow(moonDot, 16.0);
+vec4 aurora(vec3 viewDir)
+{
+    // Looking at/below the horizon.
+    if (viewDir.y < 0.001)
+    return vec4(0.0);
 
-    vec3 moonColor = vec3(0.8, 0.8, 0.85);// pale white
-    return moonColor * (disk * 2.0 + glow * 0.2);
+    float accumulatedAlpha = 0.0;
+    vec3 accumulatedColor = vec3(0.0);
+
+    float flowTime = time * AURORA_FLOW_SPEED;
+    float wiggleTime = time * AURORA_WIGGLE_SPEED;
+
+    for (int i = 0; i < AURORA_SAMPLES; i++)
+    {
+        float heightFactor =
+        float(i) / float(AURORA_SAMPLES - 1);
+
+        float height =
+        mix(
+        AURORA_START_HEIGHT,
+                AURORA_END_HEIGHT,
+                heightFactor
+        );
+
+        // Intersect the view ray with this horizontal layer.
+        float t = height / viewDir.y;
+
+        vec3 p = viewDir * t;
+        vec2 worldPos = p.xz;
+
+
+        // ----------------------------------------------------
+        // FLOW
+        // ----------------------------------------------------
+
+        vec2 flow;
+
+        flow.x = noise3D(vec3(
+                worldPos.x * AURORA_FLOW_SCALE,
+                worldPos.y * AURORA_FLOW_SCALE,
+                flowTime
+        ));
+
+        flow.y = noise3D(vec3(
+                worldPos.x * AURORA_FLOW_SCALE,
+                worldPos.y * AURORA_FLOW_SCALE,
+                0.5 + flowTime
+        ));
+
+        vec2 flowDir = normalize(flow);
+
+
+        // ----------------------------------------------------
+        // WIGGLE
+        // ----------------------------------------------------
+
+        vec2 wigglePos =
+        worldPos * AURORA_WIGGLE_SCALE;
+
+        float timeOffset =
+        wigglePos.x + wigglePos.y;
+
+        vec2 wiggleNoise;
+
+        wiggleNoise.x = noise3D(vec3(
+                wigglePos.x,
+                wigglePos.y,
+                wiggleTime + timeOffset
+        ));
+
+        wiggleNoise.y = noise3D(vec3(
+                wigglePos.x,
+                wigglePos.y,
+                0.5 + wiggleTime + timeOffset
+        ));
+
+        vec2 wiggle =
+        wiggleNoise * AURORA_WIGGLE_STRENGTH;
+
+
+        // ----------------------------------------------------
+        // WARP
+        // ----------------------------------------------------
+
+        vec2 warpedPos =
+        worldPos
+        + flowDir * AURORA_FLOW_STRENGTH
+        + wiggle
+        + vec2(
+        AURORA_FLOW_X_SPEED * time,
+                AURORA_FLOW_X_SPEED * time
+        );
+
+
+        // ----------------------------------------------------
+        // BANDS
+        // ----------------------------------------------------
+
+        float largeBands =
+        makeStripe(
+                warpedPos.x * AURORA_DENSITY,
+                0.2
+        );
+
+        float smallerBands =
+        makeStripe(
+                warpedPos.x * AURORA_DENSITY * 1.7,
+                0.1
+        );
+
+        float baseBands =
+        pow(
+                max(largeBands, smallerBands),
+                AURORA_SHARPNESS
+        );
+
+
+        // ----------------------------------------------------
+        // VERTICAL FALLOFF
+        // ----------------------------------------------------
+
+        float verticalIntensity =
+        smoothstep(
+                0.0,
+                0.15,
+                heightFactor
+        )
+        *
+        smoothstep(
+                1.0,
+                0.5,
+                heightFactor
+        );
+
+
+        // ----------------------------------------------------
+        // UNDER-SPARKLE
+        // ----------------------------------------------------
+
+        float undersparkleIntensity =
+        1.0 -
+        smoothstep(
+                0.0,
+                UNDERSPARKLE_MAX_HEIGHT,
+                heightFactor
+        );
+
+        vec2 sparklePos =
+        warpedPos * UNDERSPARKLE_SCALE;
+
+        float sparkleTime =
+        time * UNDERSPARKLE_SPEED;
+
+        float sparkleNoise =
+        1.0 -
+        noise3D(vec3(
+                sparklePos.x + sparkleTime,
+                sparklePos.y + sparkleTime,
+                sparkleTime * 0.3
+        ));
+
+        sparkleNoise =
+        smoothstep(
+        UNDERSPARKLE_THRESHOLD,
+                1.0,
+                sparkleNoise
+        );
+
+
+        float sparkleColorNoise =
+        noise3D(vec3(
+                sparklePos.x * 0.3 + 10.0,
+                sparklePos.y * 0.3 + 10.0,
+                0.0
+        ));
+
+        vec3 sparkleColor =
+        mix(
+        UNDERSPARKLE_PRIMARY,
+                UNDERSPARKLE_SECONDARY,
+                smoothstep(
+                        0.4,
+                        1.0,
+                        sparkleColorNoise
+                )
+        );
+
+        float sparkleVisibility =
+        smoothstep(
+                0.5,
+                1.0,
+                baseBands
+        );
+
+        vec3 sparkle =
+        sparkleVisibility
+        * undersparkleIntensity
+        * sparkleColor
+        * sparkleNoise;
+
+
+        // ----------------------------------------------------
+        // CURTAIN
+        // ----------------------------------------------------
+
+        float curtain =
+        baseBands * verticalIntensity;
+
+
+        // ----------------------------------------------------
+        // ACCUMULATION
+        // ----------------------------------------------------
+
+        float sampleAlpha =
+        curtain * AURORA_OPACITY_PER_SAMPLE;
+
+        float sampleWeight =
+        sampleAlpha * (1.0 - accumulatedAlpha);
+
+        vec3 selectedColor =
+        mix(
+        AURORA_BOTTOM_COLOR,
+                AURORA_TOP_COLOR,
+                heightFactor
+        );
+
+        accumulatedColor +=
+        selectedColor
+        * curtain
+        * sampleWeight;
+
+        accumulatedColor +=
+        sparkle
+        * verticalIntensity
+        * sampleWeight;
+
+        accumulatedAlpha +=
+        sampleAlpha
+        * (1.0 - accumulatedAlpha);
+
+        if (accumulatedAlpha > 0.95)
+        break;
+    }
+
+
+    float upFactor =
+    smoothstep(
+            0.05,
+            0.7,
+            viewDir.y
+    );
+
+    // Day/night cycle.
+    // Aurora is strongest when the sun is below the horizon.
+    float nightFactor = getNightFactor(time);
+
+    // Keep a small amount of aurora around twilight,
+    // but strongly suppress it during the day.
+    float auroraVisibility =
+    smoothstep(
+            0.05,
+            0.35,
+            nightFactor
+    );
+
+    float finalAlpha =
+    accumulatedAlpha
+    * upFactor
+    * AURORA_ALPHA
+    * auroraVisibility;
+
+    return vec4(
+            accumulatedColor
+            * upFactor
+            * AURORA_ALPHA
+            * auroraVisibility,
+            finalAlpha
+    );
 }
 
-vec3 milkyWayGlow(vec3 dir) {
-    // Define the plane of the Milky Way
-    vec3 planeNormal = normalize(vec3(0.0, 0.3, 1.0));
-    float distance = abs(dot(dir, planeNormal));
+vec3 getDaySkyColor(vec3 viewDir)
+{
+    float h = clamp(viewDir.y * 0.5 + 0.5, 0.0, 1.0);
 
-    // Band factor: brightest along the plane, falloff away from it
-    float bandFactor = smoothstep(0.25, 0.0, distance);// 1 along plane, 0 far away
+    vec3 horizon = vec3(0.45, 0.65, 0.9);
+    vec3 zenith = vec3(0.05, 0.2, 0.65);
 
-    // Milky Way color gradient (core: reddish-yellow, edges: bluish)
-    vec3 coreColor = vec3(1.0, 0.8, 0.6);
-    vec3 edgeColor = vec3(0.6, 0.7, 1.0);
-
-    vec3 color = mix(edgeColor, coreColor, bandFactor);
-
-    // Slight glow
-    return color * bandFactor * 0.5;
+    return mix(horizon, zenith, h);
 }
 
-float twinkle(vec3 cell, float t) {
-    // Random seed per star cell
-    float rnd1 = hash(cell);// controls speed
-    float rnd2 = hash(cell * 1.37);// controls phase/offset
+vec3 getNightSkyColor(vec3 viewDir)
+{
+    float h = clamp(viewDir.y * 0.5 + 0.5, 0.0, 1.0);
 
-    // Speed range: slow to fast
-    float speed = mix(0.05, 0.25, rnd1);
+    vec3 horizon = vec3(0.015, 0.025, 0.07);
+    vec3 zenith = vec3(0.002, 0.005, 0.02);
 
-    // Phase offset
-    float phase = rnd2 * 6.28318;
-
-    // Sin for twinkle
-    return sin(t * speed + phase) * 0.5 + 0.5;
+    return mix(horizon, zenith, h);
 }
 
-float starBand(vec3 dir) {
-    // Define the plane of the Milky Way (tilted slightly)
-    vec3 planeNormal = normalize(vec3(0.0, 0.3, 1.0));
-
-    // Distance from the plane
-    float distance = abs(dot(dir, planeNormal));
-
-    // Band factor: brightest at the plane, falls off quickly
-    return smoothstep(0.01, 0.15, distance);// 0 near plane, 1 far away
-}
-
-vec3 stars(vec3 dir) {
-    float bandFactor = (1.0 - starBand(dir)) / 10.0;
-
-    float scale = 300.0;
-    vec3 p = normalize(dir) * scale;
-    vec3 cell = floor(p);
-    vec3 local = fract(p) - 0.5;
-
-    float rnd = hash(cell);
-
-    float starPresent = step(1.0 - (0.995 * bandFactor + 0.01), rnd);
-    float d = length(local);
-    float intensity = smoothstep(0.5, 0.0, d);
-
-    vec3 starColor = vec3(1.0, 0.95, 0.8);
-
-    float tw = twinkle(cell, time);
-    return starPresent * intensity * tw * starColor;
-}
-
-float getNightFactor(vec3 sunDir) {
-    return smoothstep(0.1, -0.2, sunDir.y);
-}
-
-vec4 skyColorMain() {
+vec4 skyColorMain()
+{
     vec2 ndc = skyUV * 2.0 - 1.0;
 
     vec4 clip = vec4(ndc, -1.0, 1.0);
 
     vec4 view = invProjection * clip;
-    view = vec4(view.xy, -1.0, 0.0);
 
-    vec3 dir = normalize((invView * view).xyz);
+    view = vec4(
+            view.xy,
+            -1.0,
+            0.0
+    );
+
+    vec3 dir =
+    normalize(
+            (invView * view).xyz
+    );
+
+    // --------------------------------------------------------
+    // DAY / NIGHT
+    // --------------------------------------------------------
 
     vec3 sunDir = getSunDir(time);
 
-    float nightFactor = getNightFactor(sunDir);
+    float nightFactor =
+    1.0 -
+    smoothstep(
+            -0.15,
+            0.25,
+            sunDir.y
+    );
 
-    vec3 sky = skyColor(dir, sunDir);
-    vec3 sunset = applySunset(dir, sunDir);
-    vec3 sun = applySun(dir, sunDir);
+    vec3 daySky =
+    getDaySkyColor(dir);
 
-    vec3 moonDir = getMoonDir(time);
-    vec3 moon = applyMoon(dir, moonDir);
+    vec3 nightSky =
+    getNightSkyColor(dir);
 
-    vec3 mwGlow = milkyWayGlow(dir) * nightFactor;
+    vec3 sky =
+    mix(
+            daySky,
+            nightSky,
+            nightFactor
+    );
 
-    vec3 starsField = stars(dir) * nightFactor;
 
-    return vec4(sky + sunset + sun + moon + mwGlow + starsField, 1.0);
-}
+    // --------------------------------------------------------
+    // SUN
+    // --------------------------------------------------------
 
-// BLOCK SHADER
+    float sun =
+    getSunDisk(
+            dir,
+            time
+    );
 
-float hash(vec2 p) {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
-}
+    vec3 sunColor =
+    getSunColor(time);
 
-float cubicWeight(float t) {
-    t = abs(t);
-    return (t <= 1.0) ? 1.0 - 2.0 * t * t + t * t * t : ((t < 2.0) ? 4.0 - 8.0 * t + 5.0 * t * t - t * t * t : 0.0);
-}
+    // Strong visible sun disk.
+    sky +=
+    sunColor
+    * sun
+    * 5.0;
 
-float smoothNoiseCubic(vec2 uv) {
-    vec2 i = floor(uv);
-    vec2 f = fract(uv);
-    float result = 0.0;
-    float totalWeight = 0.0;
 
-    for (int dx = -1; dx <= 2; dx++) {
-        for (int dz = -1; dz <= 2; dz++) {
-            vec2 neighbor = i + vec2(float(dx), float(dz));
-            float weight = cubicWeight(f.x - float(dx)) * cubicWeight(f.y - float(dz));
-            result += hash(neighbor) * weight;
-            totalWeight += weight;
-        }
-    }
+    // --------------------------------------------------------
+    // SUN GLOW
+    // --------------------------------------------------------
 
-    return result / totalWeight;
-}
+    float sunDistance =
+    max(
+            dot(dir, sunDir),
+            0.0
+    );
 
-float simpleNoise(vec2 pos) {
-    return smoothNoiseCubic(pos);
+    float sunGlow =
+    pow(
+            sunDistance,
+            64.0
+    );
+
+    sky +=
+    sunColor
+    * sunGlow
+    * 0.15;
+
+    vec4 auroraColor =
+    aurora(dir);
+
+    sky += auroraColor.rgb;
+
+
+    return vec4(
+            sky,
+            1.0
+    );
 }
 
 void main() {
@@ -269,6 +619,7 @@ void main() {
         float directionalSky = skyLight * skyIntensity * diffuse;
 
         vec3 totalLight = blockLight + vec3(directionalSky);
+
         totalLight = max(totalLight, vec3(ambient));
 
         totalLight = pow(totalLight, vec3(1.2));
@@ -290,5 +641,7 @@ void main() {
         FragColor = skyColorMain();
     } else if (meshType == 3u) {
         FragColor = highlightColor;
+    } else if (meshType == 4u) {
+        FragColor = texture(skyTexture, skyUV);
     }
 }

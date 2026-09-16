@@ -133,7 +133,7 @@ void main() {
         TexCoord = vUV;
 
         gl_Position = projection * cameraView * model * vec4(position, 1.0);
-    } else if (meshType == 2u) {
+    } else if (meshType == 2u || meshType == 4u) {
         skyUV = aPos * 0.5 + 0.5;
         gl_Position = vec4(aPos, 0.0, 1.0);
     } else if (meshType == 3u) {

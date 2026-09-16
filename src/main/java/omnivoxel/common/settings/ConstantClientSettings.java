@@ -8,12 +8,13 @@ public class ConstantClientSettings {
             height=750
             render_distance=128
             render_scale=1.0
+            sky_scale=0.5
             render_filter=nearest
             sensitivity=2f
             frustum_bias=10
             shader=default
             ambient_occlusion=true
-            smooth_lighting=false
+            smooth_lighting=true
             max_mesh_generator_threads=12
             max_lighting_generator_threads=12
             bufferize_chunks_per_frame=10

@@ -66,6 +66,7 @@ public class OpenGLRendererAPI implements RendererAPI {
     private final CameraCullingService cameraCullingService;
     private final Map<String, WireframeMesh> wireframeShapeMeshes = new HashMap<>();
     private final ShaderProgramHandler shaderProgramHandler = new ShaderProgramHandler();
+    private final long[] frameTimes = new long[1000];
     // TODO: Remove all TEMP
     // Window
     private Window window;
@@ -84,6 +85,7 @@ public class OpenGLRendererAPI implements RendererAPI {
     private int renderFilter;
     private Timer timer;
     private FullscreenQuad fullscreenQuad;
+    private int frameIndex = 0;
 
     public OpenGLRendererAPI(State state, Settings settings, TextRenderer textRenderer, ClientWorld world, Camera camera, Client client, AtomicBoolean gameRunning, Queue<Consumer<Window>> contextTasks, MenuSystem menuSystem, CameraCullingService cameraCullingService) {
         this.state = state;
@@ -115,7 +117,7 @@ public class OpenGLRendererAPI implements RendererAPI {
 
             if (skyFramebuffer != null && renderTracksWindowSize) {
                 updateInternalRenderSizeFromSettings();
-                skyFramebuffer.resize(renderWidth, renderHeight);
+                skyFramebuffer.resize((int) (renderWidth * settings.getFloatSetting("sky_scale", 1.0f)), (int) (renderHeight * settings.getFloatSetting("sky_scale", 1.0f)));
             }
 
             textShaderProgram.bind();
@@ -221,10 +223,18 @@ public class OpenGLRendererAPI implements RendererAPI {
 
     private void initRenderTarget() {
         updateInternalRenderSizeFromSettings();
+
         renderFramebuffer = new RenderFramebuffer();
         renderFramebuffer.init(renderWidth, renderHeight, renderFilter);
+
+        float skyScale = settings.getFloatSetting("sky_scale", 1.0f);
+
+        int skyWidth = Math.max(1, Math.round(renderWidth * skyScale));
+        int skyHeight = Math.max(1, Math.round(renderHeight * skyScale));
+
         skyFramebuffer = new RenderFramebuffer();
-        skyFramebuffer.init(renderWidth, renderHeight, renderFilter);
+        skyFramebuffer.init(skyWidth, skyHeight, renderFilter);
+
         OpenGLChecks.checkError("initialize render targets");
     }
 
@@ -248,8 +258,6 @@ public class OpenGLRendererAPI implements RendererAPI {
         GL11C.glDisable(GL11C.GL_CULL_FACE);
         GL11C.glDisable(GL11C.GL_DEPTH_TEST);
 
-        shaderProgram.bind();
-        shaderProgram.setUniformUnsigned("meshType", 2);
         float angle = (float) (GLFW.glfwGetTime() / 60 * Math.PI);
         float sunY = (float) Math.sin(angle);
 
@@ -263,6 +271,8 @@ public class OpenGLRendererAPI implements RendererAPI {
     }
 
     private void renderSky() {
+        shaderProgram.bind();
+        shaderProgram.setUniformUnsigned("meshType", 2);
         skyFramebuffer.bindForDraw();
         GL11C.glViewport(0, 0, skyFramebuffer.width(), skyFramebuffer.height());
         GL11C.glClear(GL11C.GL_COLOR_BUFFER_BIT);
@@ -270,6 +280,7 @@ public class OpenGLRendererAPI implements RendererAPI {
         shaderProgram.setUniform("skyTexture", 1);
 
         clearRenderFramebuffer();
+        shaderProgram.setUniformUnsigned("meshType", 4);
         GL11C.glViewport(0, 0, renderFramebuffer.width(), renderFramebuffer.height());
         renderSkyToCurrentFramebuffer();
 
@@ -507,9 +518,6 @@ public class OpenGLRendererAPI implements RendererAPI {
         textShaderProgram.unbind();
     }
 
-    private final long[] frameTimes = new long[1000];
-    private int frameIndex = 0;
-
     private void updateState() {
         timer.stop();
         timer.start();
@@ -521,7 +529,7 @@ public class OpenGLRendererAPI implements RendererAPI {
         long[] sorted = frameTimes.clone();
         Arrays.sort(sorted);
 
-        double p99  = sorted[(int) (sorted.length * 0.99)];
+        double p99 = sorted[(int) (sorted.length * 0.99)];
         double p999 = sorted[(int) (sorted.length * 0.999)];
         double p9999 = sorted[(int) (sorted.length * 0.9999)];
 
@@ -682,13 +690,10 @@ public class OpenGLRendererAPI implements RendererAPI {
         periodicTimeExecutorCollection.execute();
 
         updateTime();
-        clearSkyFramebuffer();
-        renderSky();
-
         update();
 
+        renderSky();
         renderEntities();
-
     }
 
     @Override
