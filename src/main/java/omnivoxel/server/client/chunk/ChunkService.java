@@ -1,9 +1,9 @@
 package omnivoxel.server.client.chunk;
 
+import omnivoxel.client.game.state.State;
 import omnivoxel.common.network.NetworkService;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.server.PackageID;
-import omnivoxel.server.client.ServerClient;
 import omnivoxel.server.client.block.ServerBlock;
 import omnivoxel.server.client.chunk.blockService.ServerBlockService;
 import omnivoxel.server.client.chunk.result.generated.GeneratedChunk;
@@ -26,8 +26,10 @@ import java.util.Set;
 public class ChunkService {
     private final ChunkGenerator chunkGenerator;
     private final ServerWorld world;
+    private final State state;
 
-    public ChunkService(ServerWorldDataService worldDataService, ServerBlockService blockService, ServerWorld world, Set<WorldBoundingBox> worldBoundingBoxes) {
+    public ChunkService(ServerWorldDataService worldDataService, ServerBlockService blockService, ServerWorld world, Set<WorldBoundingBox> worldBoundingBoxes, State state) {
+        this.state = state;
         this.chunkGenerator = new ChunkGenerator(worldDataService, blockService, world, worldBoundingBoxes);
         this.world = world;
     }
@@ -77,12 +79,10 @@ public class ChunkService {
 
     public List<ChunkTask> serve(ChunkTask chunkTask, int queueSize) {
         try {
-            long startTime = System.nanoTime();
-
             Position3D chunkPosition = new Position3D(chunkTask.x(), chunkTask.y(), chunkTask.z());
             byte[] chunk = getChunkBytes(chunkPosition, chunkTask.lod());
 
-            if (chunkTask.serverClient() != null) {
+            if (chunkTask.serverClient() != null && chunkTask.serverClient().isOpen()) {
                 Position2D position2D = chunkPosition.getPosition2D();
 
                 if (chunkTask.lod() == 0) {
@@ -116,7 +116,7 @@ public class ChunkService {
                 );
             }
 
-            System.out.println(queueSize + " " + (System.nanoTime() - startTime) + "ns");
+            state.setItem(Thread.currentThread().getName() + "_wg_queue", queueSize);
 
             return null;
         } catch (IOException e) {

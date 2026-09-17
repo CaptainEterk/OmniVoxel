@@ -2,6 +2,7 @@ package omnivoxel.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import omnivoxel.client.game.state.State;
 import omnivoxel.common.block.hitbox.BlockHitbox;
 import omnivoxel.common.block.shape.BlockShape;
 import omnivoxel.common.network.NetworkService;
@@ -71,6 +72,7 @@ public class Server implements NetworkUser {
         this.entityStorageManager = new EntityStorageManager(entityStorage);
 
         GameNode gameNode = GameParser.parseNode(Files.readString(Path.of(ConstantServerSettings.GAME_LOCATION + "main.json")), Game.checkGameNodeType(GameParser.parseNode(Files.readString(Path.of(ConstantServerSettings.GAME_LOCATION + "constants.json")), null), ArrayGameNode.class));
+        State state = new State();
 
         if (gameNode instanceof ObjectGameNode objectGameNode) {
             this.worldGenerator = new WorldGenerator(objectGameNode.object().get("world_generator"), blockShapeCache, blockHitboxCache, seed, blockService);
@@ -83,7 +85,8 @@ public class Server implements NetworkUser {
                             ),
                             blockService,
                             world,
-                            worldBoundingBoxes
+                            worldBoundingBoxes,
+                            state
                     )::serve,
                     true
             );

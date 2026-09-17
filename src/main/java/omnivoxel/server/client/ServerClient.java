@@ -66,4 +66,8 @@ public class ServerClient {
     public void disconnect() {
         disconnect.accept(this);
     }
+
+    public boolean isOpen() {
+        return ctx.channel().isOpen();
+    }
 }
