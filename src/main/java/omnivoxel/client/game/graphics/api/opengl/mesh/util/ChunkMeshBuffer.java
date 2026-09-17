@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ChunkMeshBuffer {
-
     private static final int VERTEX_STRIDE =
             3 * Integer.BYTES;
 

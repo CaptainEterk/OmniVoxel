@@ -59,7 +59,7 @@ public final class GameLoop {
                 new MenuSystem(new MenuRenderer(mainComponent), textRenderer),
                 new CameraCullingService(camera)
         );
-        chunkRenderer = new ChunkRenderer(rendererAPI, state, settings, camera, world, new RenderedChunkProvider());
+        chunkRenderer = new ChunkRenderer(rendererAPI, state, settings, camera, world, new RenderedChunkProvider(), rendererAPI.getShaderProgramHandler());
     }
 
     public void init() throws IOException {
@@ -74,7 +74,7 @@ public final class GameLoop {
                 1024L * 1024L * 1024L
         );
 
-        chunkIndirectBuffer.init(100_000);
+        chunkIndirectBuffer.init(300_000);
 
         chunkRenderer.initResources(chunkMeshBuffer, chunkIndirectBuffer);
     }

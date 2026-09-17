@@ -10,11 +10,19 @@
 #define CHUNK_SIZE vec3(32.0, 32.0, 32.0)
 
 struct Chunk {
-    ivec3 position;
+    ivec4 position;
     uint lod;
-    uint indexCount;
-    uint firstIndex;
-    uint baseVertex;
+    uint solidIndexCount;
+    uint solidFirstIndex;
+    uint solidBaseVertex;
+    uint transparentIndexCount;
+    uint transparentFirstIndex;
+    uint transparentBaseVertex;
+    uint decorationIndexCount;
+    uint decorationFirstIndex;
+    uint decorationBaseVertex;
+    uint padding0;
+    uint padding1;
 };
 
 layout(std430, binding = 0) readonly buffer Chunks {
@@ -104,7 +112,7 @@ void main() {
         float scale = float(1 << chunk.lod);
 
         xyz *= 0.0625 * scale;
-        xyz += chunk.position * CHUNK_SIZE;
+        xyz += chunk.position.xyz * CHUNK_SIZE;
 
         // Texture
         TexCoord = vec2(float(u), float(v));

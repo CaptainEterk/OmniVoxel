@@ -29,7 +29,8 @@ import java.util.List;
 import java.util.Map;
 
 public class ChunkRenderer {
-    private static final int CHUNK_GPU_SIZE = 32;
+    private static final int CHUNK_GPU_SIZE = 64;
+    private static final int INDIRECT_COMMAND_SIZE = 5 * Integer.BYTES;
     private final RendererAPI rendererAPI;
     private final State state;
     private final Settings settings;
@@ -49,13 +50,17 @@ public class ChunkRenderer {
     private int indirectDrawCount;
 
     public ChunkRenderer(RendererAPI rendererAPI, State state, Settings settings, Camera camera, ClientWorld world, RenderedChunkProvider renderedChunkProvider) {
+        this(rendererAPI, state, settings, camera, world, renderedChunkProvider, rendererAPI.getShaderProgramHandler());
+    }
+
+    public ChunkRenderer(RendererAPI rendererAPI, State state, Settings settings, Camera camera, ClientWorld world, RenderedChunkProvider renderedChunkProvider, ShaderProgramHandler shaderProgramHandler) {
         this.rendererAPI = rendererAPI;
         this.state = state;
         this.settings = settings;
         this.camera = camera;
         this.world = world;
         this.renderedChunkProvider = renderedChunkProvider;
-        this.shaderProgramHandler = rendererAPI.getShaderProgramHandler();
+        this.shaderProgramHandler = shaderProgramHandler;
     }
 
     public void initResources(ChunkMeshBuffer chunkMeshBuffer, ChunkIndirectBuffer chunkIndirectBuffer) throws IOException {
@@ -115,6 +120,15 @@ public class ChunkRenderer {
                 float squaredRenderDistance = rdChunks * rdChunks;
 
                 ensureChunkBuffer(chunks.size());
+                int requiredIndirectCommands = Math.multiplyExact(chunks.size(), 3);
+                if (requiredIndirectCommands > chunkIndirectBuffer.capacity()) {
+                    throw new IllegalStateException(
+                            "Chunk indirect buffer is too small: required=" +
+                                    requiredIndirectCommands +
+                                    ", capacity=" +
+                                    chunkIndirectBuffer.capacity()
+                    );
+                }
 
                 ByteBuffer chunkData = MemoryUtil.memAlloc(chunks.size() * CHUNK_GPU_SIZE);
 
@@ -145,22 +159,26 @@ public class ChunkRenderer {
                         chunkData.putInt(position.x());
                         chunkData.putInt(position.y());
                         chunkData.putInt(position.z());
+                        chunkData.putInt(0);
 
                         if (clientChunk == null || clientChunk.getMesh() == null) {
-                            chunkData.putInt(0);
-                            chunkData.putInt(0);
-                            chunkData.putInt(0);
-                            chunkData.putInt(0);
+                            for (int i = 0; i < 12; i++) {
+                                chunkData.putInt(0);
+                            }
                         } else {
-                            RenderMesh renderMesh = clientChunk.getMesh().solid();
+                            RenderMesh solidMesh = clientChunk.getMesh().solid();
+                            RenderMesh transparentMesh = clientChunk.getMesh().transparent();
+                            RenderMesh decorationMesh = clientChunk.getMesh().decoration();
 
                             chunkData.putInt(clientChunk.getMesh().lod());
-                            chunkData.putInt(renderMesh.indexCount());
-                            chunkData.putInt(renderMesh.firstIndex());
-                            chunkData.putInt(renderMesh.baseVertex());
+
+                            putMesh(chunkData, solidMesh);
+                            putMesh(chunkData, transparentMesh);
+                            putMesh(chunkData, decorationMesh);
+                            chunkData.putInt(0);
+                            chunkData.putInt(0);
                         }
 
-                        chunkData.putInt(0);
                     }
 
                     chunkData.flip();
@@ -178,10 +196,7 @@ public class ChunkRenderer {
 
                 chunkCullingComputeShaderProgram.bind();
 
-                chunkCullingComputeShaderProgram.setUniformUnsigned(
-                        "chunkCount",
-                        chunks.size()
-                );
+                chunkCullingComputeShaderProgram.setUniformUnsigned("chunkCount", chunks.size());
 
                 GL43C.glBindBufferBase(
                         GL43C.GL_SHADER_STORAGE_BUFFER,
@@ -216,12 +231,9 @@ public class ChunkRenderer {
 
         state.setItem("total_rendered_chunks", indirectDrawCount);
         state.setItem("shouldUpdateVisibleMeshes", false);
-        shaderProgramHandler.getShaderProgram("default").bind();
-        shaderProgramHandler.getShaderProgram("default").setUniformUnsigned("meshType", 0);
-
-        GL11C.glEnable(GL11C.GL_DEPTH_TEST);
-        GL11C.glDepthFunc(GL11C.GL_LEQUAL);
-        GL11C.glDepthMask(true);
+        ShaderProgram shaderProgram = shaderProgramHandler.getShaderProgram("default");
+        shaderProgram.bind();
+        shaderProgram.setUniformUnsigned("meshType", 0);
 
         GL11C.glBindTexture(
                 GL11C.GL_TEXTURE_2D,
@@ -243,13 +255,9 @@ public class ChunkRenderer {
                 chunkIndirectBuffer.buffer()
         );
 
-        GL45C.glMultiDrawElementsIndirect(
-                GL11C.GL_TRIANGLES,
-                GL11C.GL_UNSIGNED_INT,
-                0L,
-                indirectDrawCount,
-                0
-        );
+        renderIndirectMeshes(shaderProgram, 0, true, true, false);
+        renderIndirectMeshes(shaderProgram, 2, false, true, false);
+        renderIndirectMeshes(shaderProgram, 1, false, false, true);
 
         chunkMeshBuffer.endFrame();
 
@@ -257,5 +265,55 @@ public class ChunkRenderer {
         state.setItem("indirect_buffer_used_percentage", (double) chunkMeshBuffer.usedVertexBytes() / (chunkMeshBuffer.usedVertexBytes() + chunkMeshBuffer.remainingVertexBytes()) * 100.0);
 
         OpenGLChecks.checkError("chunks");
+    }
+
+    private static void putMesh(ByteBuffer chunkData, RenderMesh mesh) {
+        chunkData.putInt(mesh.indexCount());
+        chunkData.putInt(mesh.firstIndex());
+        chunkData.putInt(mesh.baseVertex());
+    }
+
+    private void renderIndirectMeshes(
+            ShaderProgram shaderProgram,
+            int meshType,
+            boolean cullFace,
+            boolean depthMask,
+            boolean blend
+    ) {
+        if (indirectDrawCount == 0) {
+            return;
+        }
+
+        // All chunk categories use the chunk shader path; meshType selects
+        // unrelated entity and sky shader paths.
+        shaderProgram.setUniformUnsigned("meshType", 0);
+
+        GL11C.glEnable(GL11C.GL_DEPTH_TEST);
+        GL11C.glDepthFunc(GL11C.GL_LEQUAL);
+
+        if (cullFace) {
+            GL11C.glEnable(GL11C.GL_CULL_FACE);
+            GL11C.glCullFace(GL11C.GL_BACK);
+        } else {
+            GL11C.glDisable(GL11C.GL_CULL_FACE);
+        }
+
+        GL11C.glDepthMask(depthMask);
+
+        if (blend) {
+            GL11C.glEnable(GL11C.GL_BLEND);
+            GL11C.glBlendFunc(GL11C.GL_SRC_ALPHA, GL11C.GL_ONE_MINUS_SRC_ALPHA);
+        } else {
+            GL11C.glDisable(GL11C.GL_BLEND);
+        }
+
+        long offset = (long) meshType * indirectDrawCount * INDIRECT_COMMAND_SIZE;
+        GL45C.glMultiDrawElementsIndirect(
+                GL11C.GL_TRIANGLES,
+                GL11C.GL_UNSIGNED_INT,
+                offset,
+                indirectDrawCount,
+                0
+        );
     }
 }

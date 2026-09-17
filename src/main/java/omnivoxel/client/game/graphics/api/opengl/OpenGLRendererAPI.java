@@ -194,7 +194,7 @@ public class OpenGLRendererAPI implements RendererAPI {
             state.setItem("Worker-" + i + "_queue_size_mdg", 0);
         }
         state.setItem("indirect_buffer_size", 0L);
-        state.setItem("indirect_buffer_used_percentage", 0);
+        state.setItem("indirect_buffer_used_percentage", 0.0);
 
         periodicTimeExecutorCollection = new ExecutorCollection<>();
         periodicTimeExecutorCollection.add(new PeriodicTimeExecutor(() -> state.setItem("attemptFreeChunksTime", true), 2.0));

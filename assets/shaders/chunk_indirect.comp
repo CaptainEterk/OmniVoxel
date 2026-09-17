@@ -3,11 +3,19 @@
 layout(local_size_x = 64) in;
 
 struct Chunk {
-    ivec3 position;
+    ivec4 position;
     uint lod;
-    uint indexCount;
-    uint firstIndex;
-    uint baseVertex;
+    uint solidIndexCount;
+    uint solidFirstIndex;
+    uint solidBaseVertex;
+    uint transparentIndexCount;
+    uint transparentFirstIndex;
+    uint transparentBaseVertex;
+    uint decorationIndexCount;
+    uint decorationFirstIndex;
+    uint decorationBaseVertex;
+    uint padding0;
+    uint padding1;
 };
 
 struct DrawCommand {
@@ -36,9 +44,21 @@ void main() {
 
     Chunk chunk = chunks[id];
 
-    commands[id].count = chunk.indexCount;
-    commands[id].instanceCount = 1;
-    commands[id].firstIndex = chunk.firstIndex;
-    commands[id].baseVertex = int(chunk.baseVertex);
+    commands[id].count = chunk.solidIndexCount;
+    commands[id].instanceCount = chunk.solidIndexCount > 0u ? 1u : 0u;
+    commands[id].firstIndex = chunk.solidFirstIndex;
+    commands[id].baseVertex = int(chunk.solidBaseVertex);
     commands[id].baseInstance = id;
+
+    commands[id + chunkCount].count = chunk.transparentIndexCount;
+    commands[id + chunkCount].instanceCount = chunk.transparentIndexCount > 0u ? 1u : 0u;
+    commands[id + chunkCount].firstIndex = chunk.transparentFirstIndex;
+    commands[id + chunkCount].baseVertex = int(chunk.transparentBaseVertex);
+    commands[id + chunkCount].baseInstance = id;
+
+    commands[id + chunkCount * 2u].count = chunk.decorationIndexCount;
+    commands[id + chunkCount * 2u].instanceCount = chunk.decorationIndexCount > 0u ? 1u : 0u;
+    commands[id + chunkCount * 2u].firstIndex = chunk.decorationFirstIndex;
+    commands[id + chunkCount * 2u].baseVertex = int(chunk.decorationBaseVertex);
+    commands[id + chunkCount * 2u].baseInstance = id;
 }
