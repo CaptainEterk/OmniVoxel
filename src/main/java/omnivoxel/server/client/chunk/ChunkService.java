@@ -116,7 +116,7 @@ public class ChunkService {
                 );
             }
 
-//            System.out.println(queueSize + " " + (System.nanoTime() - startTime) + "ns");
+            System.out.println(queueSize + " " + (System.nanoTime() - startTime) + "ns");
 
             return null;
         } catch (IOException e) {

@@ -49,6 +49,7 @@ public class WorldGenerator {
     private final Integer depthSections;
     private final boolean heightIsDensityFunction;
     private final Integer noiseInterpolationScale;
+    private final Integer heightStep;
 
     public WorldGenerator(GameNode gameNode, Map<String, BlockShape> blockShapeCache, Map<String, BlockHitbox[]> blockHitboxCache, long seed, ServerBlockService blockService) {
         addDensityFunction(Noise3DDensityFunction.class);
@@ -129,6 +130,10 @@ public class WorldGenerator {
         DoubleGameNode noiseInterpolationNode = Game.checkGameNodeType(worldGeneratorNode.object().get("noise_interpolation"), DoubleGameNode.class);
 
         this.noiseInterpolationScale = noiseInterpolationNode == null ? null : (int) noiseInterpolationNode.value();
+
+        DoubleGameNode heightStepNode = Game.checkGameNodeType(worldGeneratorNode.object().get("height_step"), DoubleGameNode.class);
+
+        this.heightStep = heightStepNode == null ? null : (int) heightStepNode.value();
 
         densityFunction = getDensityFunction(Game.checkGameNodeType(worldGeneratorNode.object().get("density"), ObjectGameNode.class), seed);
         blockFunction = getBlockFunction(Game.checkGameNodeType(Game.checkGameNodeType(worldGeneratorNode.object().get("surface"), ObjectGameNode.class).object().get("block"), ObjectGameNode.class), seed);
@@ -309,7 +314,11 @@ public class WorldGenerator {
         return depthSections;
     }
 
-    public int getNoiseInterpolationScale() {
+    public Integer getNoiseInterpolationScale() {
         return noiseInterpolationScale;
+    }
+
+    public Integer getHeightStep() {
+        return heightStep;
     }
 }

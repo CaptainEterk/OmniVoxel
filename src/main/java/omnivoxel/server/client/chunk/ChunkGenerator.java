@@ -56,7 +56,7 @@ public final class ChunkGenerator {
                 }
             }
         } else if (world.getStoredChunkHeights(position3D.getPosition2D()) == null) {
-            worldDataService.getChunkInfo(world, position3D, lod);
+//            worldDataService.getChunkInfo(world, position3D, lod);
         }
 
         return chunk == null ? new SingleBlockChunk<>(ServerBlock.AIR, lod) : chunk;

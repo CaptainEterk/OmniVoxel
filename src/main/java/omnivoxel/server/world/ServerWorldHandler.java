@@ -38,16 +38,16 @@ public class ServerWorldHandler {
         workerThreadPool.submit(new ChunkTask(null, 0, 0, -1, 0));
         workerThreadPool.submit(new ChunkTask(null, -1, 0, -1, 0));
 
-//        int count = 0;
-////        for (int y = -10; y < 100; y++) {
-//            for (int x = -100; x < 100; x++) {
-//                for (int z = -100; z < 100; z++) {
-//                    workerThreadPool.submit(new ChunkTask(null, x, 0, z, 0));
-//                    count++;
-//                }
-//            }
-////        }
-//        System.out.println(count);
+        int count = 0;
+//        for (int y = -10; y < 100; y++) {
+            for (int x = -100; x < 100; x++) {
+                for (int z = -100; z < 100; z++) {
+                    workerThreadPool.submit(new ChunkTask(null, x, 0, z, 0));
+                    count++;
+                }
+            }
+//        }
+        System.out.println(count);
     }
 
     public void replaceBlock(int worldX, int worldY, int worldZ, ServerBlock block, byte rotation, ServerClient client) {
