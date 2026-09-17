@@ -15,14 +15,13 @@ import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.settings.ConstantCommonSettings;
 import omnivoxel.common.settings.Settings;
 import omnivoxel.util.IndexCalculator;
+import omnivoxel.util.IntegerDynamicList;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import omnivoxel.world.chunk.Chunk;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ChunkMeshDataGenerator {
@@ -53,12 +52,12 @@ public class ChunkMeshDataGenerator {
             BlockFace.NORTH
     };
     private final ClientWorld world;
-    private final List<Integer> vertices = new ArrayList<>();
-    private final List<Integer> indices = new ArrayList<>();
-    private final List<Integer> transparentVertices = new ArrayList<>();
-    private final List<Integer> transparentIndices = new ArrayList<>();
-    private final List<Integer> decorationVertices = new ArrayList<>();
-    private final List<Integer> decorationIndices = new ArrayList<>();
+    private final IntegerDynamicList solidVertices = new IntegerDynamicList();
+    private final IntegerDynamicList solidIndices = new IntegerDynamicList();
+    private final IntegerDynamicList transparentVertices = new IntegerDynamicList();
+    private final IntegerDynamicList transparentIndices = new IntegerDynamicList();
+    private final IntegerDynamicList decorationVertices = new IntegerDynamicList();
+    private final IntegerDynamicList decorationIndices = new IntegerDynamicList();
     private final Map<UniqueVertex, Integer> vertexIndexMap = new HashMap<>();
     private final Map<UniqueVertex, Integer> transparentVertexIndexMap = new HashMap<>();
     private final Map<UniqueVertex, Integer> decorationVertexIndexMap = new HashMap<>();
@@ -113,8 +112,8 @@ public class ChunkMeshDataGenerator {
             return null;
         }
 
-        vertices.clear();
-        indices.clear();
+        solidVertices.clear();
+        solidIndices.clear();
         transparentVertices.clear();
         transparentIndices.clear();
         decorationVertices.clear();
@@ -181,8 +180,8 @@ public class ChunkMeshDataGenerator {
                                     index + getPaddedNeighborOffset(BlockFace.SOUTH),
                                     index + getPaddedNeighborOffset(BlockFace.EAST),
                                     index + getPaddedNeighborOffset(BlockFace.WEST),
-                                    vertices,
-                                    indices,
+                                    solidVertices,
+                                    solidIndices,
                                     vertexIndexMap,
                                     chunkLightingData,
                                     blockMeshes,
@@ -195,8 +194,8 @@ public class ChunkMeshDataGenerator {
             }
         }
 
-        ByteBuffer vertexBuffer = MeshDataGenerator.createIntBuffer(vertices);
-        ByteBuffer indexBuffer = MeshDataGenerator.createIntBuffer(indices);
+        ByteBuffer vertexBuffer = MeshDataGenerator.createIntBuffer(solidVertices);
+        ByteBuffer indexBuffer = MeshDataGenerator.createIntBuffer(solidIndices);
         ByteBuffer transparentVertexBuffer = MeshDataGenerator.createIntBuffer(transparentVertices);
         ByteBuffer transparentIndexBuffer = MeshDataGenerator.createIntBuffer(transparentIndices);
         ByteBuffer decorationVertexBuffer = MeshDataGenerator.createIntBuffer(decorationVertices);
@@ -208,7 +207,7 @@ public class ChunkMeshDataGenerator {
     private void generateBlockMeshData(
             int x, int y, int z,
             BlockMesh blockMesh, int topIndex, int bottomIndex, int northIndex, int southIndex, int eastIndex, int westIndex,
-            List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, ChunkLightingData chunkLightingData,
+            IntegerDynamicList vertices, IntegerDynamicList indices, Map<UniqueVertex, Integer> vertexIndexMap, ChunkLightingData chunkLightingData,
             BlockMesh[] blockMeshes,
             byte[] rotations,
             Position3D chunkPosition
@@ -238,8 +237,8 @@ public class ChunkMeshDataGenerator {
             byte rotationOffset,
             BlockMesh adjacent,
             byte adjacentRotation,
-            List<Integer> vertices,
-            List<Integer> indices,
+            IntegerDynamicList vertices,
+            IntegerDynamicList indices,
             Map<UniqueVertex, Integer> vertexIndexMap,
             ChunkLightingData chunkLightingData,
             BlockMesh[] blockMeshes,
@@ -247,12 +246,12 @@ public class ChunkMeshDataGenerator {
     ) {
         BlockFace sourceFace = UNROTATE[rotationOffset + worldFace];
         BlockFace face = BlockFace.NORMAL_VALUES[worldFace];
-        if (shouldRenderFaceCached(blockMesh, shape, adjacent, sourceFace.ordinal(), worldFace, adjacentRotation)) {
-            addFacePrecomputedShape(x, y, z, blockMesh, shape, sourceFace, face, (byte) (rotationOffset / 6), vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
+        if (shouldRenderFace(blockMesh, shape, adjacent, sourceFace.ordinal(), worldFace, adjacentRotation)) {
+            addFace(x, y, z, blockMesh, shape, sourceFace, face, (byte) (rotationOffset / 6), vertices, indices, vertexIndexMap, chunkLightingData, blockMeshes, chunkPosition);
         }
     }
 
-    private boolean shouldRenderFaceCached(BlockMesh originalBlockMesh, BlockShape originalShape, BlockMesh adjacentBlockMesh, int sourceFaceOrdinal, int worldFaceOrdinal, byte adjacentRotation) {
+    private boolean shouldRenderFace(BlockMesh originalBlockMesh, BlockShape originalShape, BlockMesh adjacentBlockMesh, int sourceFaceOrdinal, int worldFaceOrdinal, byte adjacentRotation) {
         if (adjacentBlockMesh == null) {
             Logger.warn("Adjacent block mesh is null");
             return true;
@@ -275,7 +274,7 @@ public class ChunkMeshDataGenerator {
                 || !originalShape.id().equals(adjacentBlockMesh.getShape().id());
     }
 
-    private void addFacePrecomputedShape(
+    private void addFace(
             int x,
             int y,
             int z,
@@ -284,8 +283,8 @@ public class ChunkMeshDataGenerator {
             BlockFace blockFace,
             BlockFace worldFace,
             byte rotation,
-            List<Integer> vertices,
-            List<Integer> indices,
+            IntegerDynamicList vertices,
+            IntegerDynamicList indices,
             Map<UniqueVertex, Integer> vertexIndexMap,
             ChunkLightingData chunkLightingData,
             BlockMesh[] blockMeshes,

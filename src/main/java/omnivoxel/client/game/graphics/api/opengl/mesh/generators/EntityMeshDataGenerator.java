@@ -6,6 +6,7 @@ import omnivoxel.common.entity.EntityVertex;
 import omnivoxel.common.resource.GameResources;
 import omnivoxel.server.entity.ServerEntityMesh;
 import omnivoxel.server.entity.ServerEntityShape;
+import omnivoxel.util.IntegerDynamicList;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -13,7 +14,7 @@ import java.util.*;
 public class EntityMeshDataGenerator {
     public EntityMeshData generateMeshData(ServerEntityMesh serverEntityMesh, GameResources gameResources) {
         List<Float> vertices = new ArrayList<>();
-        List<Integer> indices = new ArrayList<>();
+        IntegerDynamicList indices = new IntegerDynamicList();
         Map<EntityVertex, Integer> vertexIndexMap = new HashMap<>();
 
         ServerEntityShape serverEntityShape = gameResources.serverEntityShapes().get(serverEntityMesh.shapeID());

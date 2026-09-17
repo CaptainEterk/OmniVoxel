@@ -15,6 +15,7 @@ import omnivoxel.common.face.BlockFace;
 import omnivoxel.common.resource.GameResources;
 import omnivoxel.common.settings.Settings;
 import omnivoxel.server.entity.ServerEntityMesh;
+import omnivoxel.util.IntegerDynamicList;
 import omnivoxel.util.log.Logger;
 import omnivoxel.util.math.Position3D;
 import org.lwjgl.system.MemoryUtil;
@@ -36,7 +37,7 @@ public final class MeshDataGenerator {
         entityMeshDataGenerator = new EntityMeshDataGenerator();
     }
 
-    public static void addPoint(List<Integer> vertices, List<Integer> indices, Map<UniqueVertex, Integer> vertexIndexMap, BlockVertex position, int tx, int ty, BlockFace normal, byte r, byte g, byte b, byte s, boolean loose, int type, int[] vertexData) {
+    public static void addPoint(IntegerDynamicList vertices, IntegerDynamicList indices, Map<UniqueVertex, Integer> vertexIndexMap, BlockVertex position, int tx, int ty, BlockFace normal, byte r, byte g, byte b, byte s, boolean loose, int type, int[] vertexData) {
         UniqueVertex vertex = new UniqueLightVertex(position, new TextureVertex(tx, ty), normal, r, g, b, s);
 
         if (!vertexIndexMap.containsKey(vertex)) {
@@ -49,14 +50,14 @@ public final class MeshDataGenerator {
         indices.add(vertexIndexMap.get(vertex) / 3);
     }
 
-    public static ByteBuffer createIntBuffer(List<Integer> data) {
-        if (data.isEmpty()) {
+    public static ByteBuffer createIntBuffer(IntegerDynamicList data) {
+        if (data.size() == 0) {
             return null;
         }
         ByteBuffer buffer = MemoryUtil.memAlloc(data.size() * Integer.BYTES);
         try {
-            for (int value : data) {
-                buffer.putInt(value);
+            for (int i = 0; i < data.size(); i++) {
+                buffer.putInt(data.get(i));
             }
             buffer.flip();
             return buffer;
