@@ -65,8 +65,8 @@ public class ServerWorldHandler {
                 if (chunk == null) {
                     chunk = ChunkIO.decode(ChunkIO.get(position3D));
                 }
-                if (chunk != null) {
-                    if (!Objects.equals(chunk.getBlock(x, y, z).id(), block.id()) || chunk.getBlockRotation(x, y, z) != rotation) {
+                if (chunk != null && chunk.getLOD() > 0) {
+                    if (chunk.getBlockRotation(x, y, z) != rotation || !Objects.equals(chunk.getBlock(x, y, z).id(), block.id())) {
                         chunk = chunk.setBlock(x, y, z, block, rotation);
                         world.put(position3D, chunk);
                         ChunkIO.writeChunk(position3D, chunk, true);
@@ -82,37 +82,37 @@ public class ServerWorldHandler {
                         int currentHighestY = chunkHeights.getBlock(x, z);
                         boolean updateChunkHeights = false;
                         if (currentHighestY == worldY) {
+                            int minY = worldGenerator.getBlockMinY();
                             int cachedChunkY = chunkY;
                             Chunk<ServerBlock> cachedChunk = chunk;
-                            for (int hy = worldY - 1; hy > worldGenerator.getBlockMinY(); hy--) {
+                            for (int hy = worldY - 1; hy > minY; hy--) {
                                 int highestChunkY = IndexCalculator.chunkY(hy);
-                                if (cachedChunkY != highestChunkY) {
+                                if (highestChunkY != cachedChunkY) {
                                     cachedChunkY = highestChunkY;
-                                    Position3D chunkPosition = new Position3D(chunkX, highestChunkY, chunkZ);
-                                    cachedChunk = world.get(chunkPosition);
+                                    Position3D pos = new Position3D(chunkX, highestChunkY, chunkZ);
+                                    cachedChunk = world.get(pos);
                                     if (cachedChunk == null) {
-                                        cachedChunk = ChunkIO.decode(ChunkIO.get(chunkPosition));
+                                        cachedChunk = ChunkIO.decode(ChunkIO.get(pos));
                                     }
                                     if (cachedChunk == null) {
-                                        hy -= ConstantCommonSettings.CHUNK_HEIGHT - 1;
+                                        hy = highestChunkY * ConstantCommonSettings.CHUNK_HEIGHT - 1;
                                         continue;
                                     }
                                 }
-                                if (cachedChunk.getBlock(x, IndexCalculator.localY(hy), z).partOfGround()) {
+                                if (cachedChunk != null && cachedChunk.getBlock(x, IndexCalculator.localY(hy), z).partOfGround()) {
                                     chunkHeights = chunkHeights.setBlock(x, z, hy);
                                     updateChunkHeights = true;
                                     break;
                                 }
-                            }
-                            if (!updateChunkHeights) {
-                                chunkHeights = chunkHeights.setBlock(x, z, worldGenerator.getBlockMinY());
-                                updateChunkHeights = true;
+                                if (hy == minY + 1) {
+                                    chunkHeights = chunkHeights.setBlock(x, z, minY);
+                                    updateChunkHeights = true;
+                                }
                             }
                         } else if (block.partOfGround() && worldY > currentHighestY) {
                             chunkHeights = chunkHeights.setBlock(x, z, worldY);
                             updateChunkHeights = true;
                         }
-
                         if (updateChunkHeights) {
                             world.putChunkHeights(position2D, chunkHeights);
                             ChunkIO.writeChunk2D(position2D, chunkHeights, true);
@@ -124,7 +124,7 @@ public class ServerWorldHandler {
                     ChunkTask task = new ChunkTask(null, chunkX, chunkY, chunkZ, 0);
                     if (!workerThreadPool.hasTask(task)) {
                         // TODO: Make it so that generating the chunk if you can't set the block is a setting
-                        Logger.debug("Unable to set block (%d, %d, %d) because chunk (%d, %d, %d) is null... generating...".formatted(worldX, worldY, worldZ, chunkX, chunkY, chunkZ));
+                        Logger.debug("Unable to set block (%d, %d, %d) because chunk (%d, %d, %d) is null or an LOD... generating...".formatted(worldX, worldY, worldZ, chunkX, chunkY, chunkZ));
                         workerThreadPool.submit(task);
                     }
                 }
