@@ -10,10 +10,7 @@ import omnivoxel.world.chunk.Chunk;
 import omnivoxel.world.chunk.ChunkLODSampler;
 import omnivoxel.world.chunk.ChunkShell;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ClientWorldChunk {
@@ -21,9 +18,7 @@ public class ClientWorldChunk {
     // TODO: Move to ChunkLightingData?
     private final short[][] neighborLightOverflow;
     private final AtomicBoolean[] cleanLighting;
-    private final List<ChunkBWM> chunks = new CopyOnWriteArrayList<>();
     private final AtomicReference<Chunk<BlockWithMesh>> chunkData;
-    private final AtomicInteger count = new AtomicInteger(0);
     private MeshData meshData;
     private ChunkMesh mesh;
     private int lastFetched;
@@ -33,7 +28,6 @@ public class ClientWorldChunk {
         this.meshData = meshData;
         this.mesh = mesh;
         this.chunkData = new AtomicReference<>(chunkData);
-        chunks.add(new ChunkBWM(chunkData, Thread.currentThread().getName()));
         this.chunkLightingData = chunkLightingData;
         this.neighborLightOverflow = new short[Direction.VALUES.length * LightChannels.values().length][];
         for (int i = 0; i < neighborLightOverflow.length; i++) {
@@ -66,10 +60,6 @@ public class ClientWorldChunk {
         return channel.ordinal() * Direction.VALUES.length + direction.ordinal();
     }
 
-    public List<ChunkBWM> getChunks() {
-        return chunks;
-    }
-
     public MeshData getMeshData() {
         return meshData;
     }
@@ -86,12 +76,7 @@ public class ClientWorldChunk {
         this.mesh = mesh;
     }
 
-    public int getCount() {
-        return count.get();
-    }
-
     public Chunk<BlockWithMesh> getChunkData(int lod) {
-        count.incrementAndGet();
         return ChunkLODSampler.sample(chunkData.get(), lod);
     }
 
@@ -112,8 +97,6 @@ public class ClientWorldChunk {
                 break;
             }
         }
-        count.incrementAndGet();
-        chunks.add(new ChunkBWM(this.chunkData.get(), Thread.currentThread().getName()));
     }
 
     public void touch(int tick) {
@@ -161,8 +144,5 @@ public class ClientWorldChunk {
         } else {
             this.cleanLighting[channel.ordinal()].set(cleanLighting);
         }
-    }
-
-    public record ChunkBWM(Chunk<BlockWithMesh> chunk, String threadName) {
     }
 }
