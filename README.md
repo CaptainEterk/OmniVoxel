@@ -37,21 +37,22 @@ shader=default
 ambient_occlusion=true
 smooth_lighting=true
 vsync=false
-free_chunk_max=1
+free_chunk_max=100
+sky_scale=0.5
 max_mesh_generator_threads=12
 max_lighting_generator_threads=12
-bufferize_chunks_per_frame=100
-distance_lod0=0.1
-distance_lod1=0.4
+bufferize_chunks_per_frame=20
+distance_lod0=0.4
+distance_lod1=1.0
 distance_lod2=1.0
 distance_lod3=1.0
 distance_lod4=1.0
 ```
 
-**FPS (loading):** 120-240<br>
-**FPS (loaded):** 240<br>
-**Memory Usage (client):** 700 Mb<br>
-**Memory Usage (server):** 20 Mb<br>
+**FPS avg/1% (loading):** 120/40<br>
+**FPS avg/1% (loaded):** 180/140<br>
+**Memory Usage (client):** 600 Mb<br>
+**Memory Usage (server):** 12 Mb<br>
 **Memory Usage (GPU):** 400 Mb<br>
-**Total loading time (pre-generated):** 19s<br>
-**Total loading time (runtime-generated):** 29s<br>
+**Total loading time (pre-generated):** 17s<br>
+**Total loading time (runtime-generated):** 23s<br>

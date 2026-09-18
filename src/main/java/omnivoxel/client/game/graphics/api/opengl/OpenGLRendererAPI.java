@@ -50,7 +50,7 @@ import java.util.function.Consumer;
 
 public class OpenGLRendererAPI implements RendererAPI {
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f().identity();
-    private static final int FPS_SAMPLES = 60;
+    private static final int FPS_SAMPLES = 240;
     // Client
     private final Client client;
     // State
@@ -533,7 +533,7 @@ public class OpenGLRendererAPI implements RendererAPI {
         double p999 = sorted[(int) (sorted.length * 0.999)];
         double p9999 = sorted[(int) (sorted.length * 0.9999)];
 
-        state.setItem("fps", (int) (1_000_000_000 / deltaTime));
+        state.setItem("fps", (int) (1_000_000_000 / timer.averageTimes()));
         state.setItem("low1", (int) (1_000_000_000 / p99));
         state.setItem("low.1", (int) (1_000_000_000 / p999));
         state.setItem("low.01", (int) (1_000_000_000 / p9999));
