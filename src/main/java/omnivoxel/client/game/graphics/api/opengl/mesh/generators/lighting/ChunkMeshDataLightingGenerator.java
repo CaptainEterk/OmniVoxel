@@ -67,6 +67,113 @@ public class ChunkMeshDataLightingGenerator {
         }
     }
 
+    public Set<LightingChunkMeshDataTask> generateLightingMeshData(LightingChunkMeshDataTask lightingChunkMeshDataTask, int queueSize) {
+        state.setItem(Thread.currentThread().getName() + "_queue_size_cmdlg", queueSize);
+        if (lightingChunkMeshDataTask.blocks() != null) {
+            Position3D position = lightingChunkMeshDataTask.position3D();
+            int previousLod = getNativeLod(position);
+            ChunkUnpacker.unpackChunkPadded(lightingChunkMeshDataTask.blocks(), position, blockService, world);
+            if (previousLod != -1 && previousLod != getNativeLod(position)) {
+                remeshDirectNeighbors(position, lightingChunkMeshDataTask.priority());
+            }
+        }
+        return generateChunkMeshDataLighting(lightingChunkMeshDataTask.position3D(), lightingChunkMeshDataTask.channel(), lightingChunkMeshDataTask.priority());
+    }
+
+    private Set<LightingChunkMeshDataTask> generateChunkMeshDataLighting(Position3D position3D, LightChannels channel, boolean priority) {
+        ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
+
+        if (clientWorldChunk == null || clientWorldChunk.getChunkData(-1) == null || clientWorldChunk.getChunkData(-1) instanceof ChunkShell<BlockWithMesh>) {
+            return null;
+        }
+
+        Chunk<BlockWithMesh> chunkData = clientWorldChunk.getChunkData(-1);
+
+        if (chunkData.getLOD() > 0) {
+            clientWorldChunk.setChunkLightingData(new ChunkLightingData(new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 15)));
+            clientWorldChunk.setCleanLighting(true);
+
+            completeDirtyChunks.remove(position3D);
+
+            meshDataGenerators.submit(new ChunkMeshDataTask(position3D), priority);
+
+            int foundCompleteDirtyChunkCount = 0;
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                        if (!(x == 0 && y == 0 && z == 0)) {
+                            Position3D neighborPos = position3D.add(x, y, z);
+                            if (completeDirtyChunks.contains(neighborPos)) {
+                                foundCompleteDirtyNeighborPositions[foundCompleteDirtyChunkCount] = neighborPos;
+                                foundCompleteDirtyNeighborChunks[foundCompleteDirtyChunkCount++] = world.get(neighborPos, false, false);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < foundCompleteDirtyChunkCount; i++) {
+                checkCompleteDirtyNeighbor(foundCompleteDirtyNeighborPositions[i], foundCompleteDirtyNeighborChunks[i], priority);
+            }
+
+            return null;
+        }
+
+        if (channel == null) {
+            Set<LightingChunkMeshDataTask> out = new HashSet<>();
+            for (LightChannels lightChannel : LightChannels.values()) {
+                Set<LightingChunkMeshDataTask> lightingChunkMeshDataTasks = generateChunkMeshDataLighting(position3D, lightChannel, priority);
+                if (lightingChunkMeshDataTasks != null) {
+                    out.addAll(lightingChunkMeshDataTasks);
+                }
+            }
+            return out;
+        }
+
+        createLightingDataIfEmpty(clientWorldChunk);
+
+        int foundCompleteDirtyChunkCount = 0;
+
+        boolean failed = false;
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (!(x == 0 && y == 0 && z == 0)) {
+                        Position3D neighborPos = position3D.add(x, y, z);
+                        ClientWorldChunk neighborChunk = world.get(neighborPos, false, false);
+                        failed |= isNeighborLightingInvalid(neighborChunk, channel);
+                        if (completeDirtyChunks.contains(neighborPos)) {
+                            foundCompleteDirtyNeighborPositions[foundCompleteDirtyChunkCount] = neighborPos;
+                            foundCompleteDirtyNeighborChunks[foundCompleteDirtyChunkCount++] = neighborChunk;
+                        }
+                    }
+                }
+            }
+        }
+
+        Set<LightingChunkMeshDataTask> meshDataTasks = new HashSet<>();
+
+        LightChannel lightChannel = generateLighting(clientWorldChunk, chunkData, position3D, channel, meshDataTasks);
+        clientWorldChunk.getLightingData().setChannel(channel, lightChannel);
+
+        clientWorldChunk.setCleanLighting(channel, !failed);
+
+        for (int i = 0; i < foundCompleteDirtyChunkCount; i++) {
+            checkCompleteDirtyNeighbor(foundCompleteDirtyNeighborPositions[i], foundCompleteDirtyNeighborChunks[i], priority);
+        }
+
+        if (clientWorldChunk.getLightingData().isComplete()) {
+            if (clientWorldChunk.isCleanLighting()) {
+                completeDirtyChunks.remove(position3D);
+                meshDataGenerators.submit(new ChunkMeshDataTask(position3D), priority);
+            } else {
+                completeDirtyChunks.add(position3D);
+            }
+        }
+
+        return meshDataTasks;
+    }
+
     private static short encodeUV(int x, int y, int z, Direction dir) {
         int a = 0, b = 0;
 
@@ -131,39 +238,26 @@ public class ChunkMeshDataLightingGenerator {
         }
     }
 
-    public Set<LightingChunkMeshDataTask> generateLightingMeshData(LightingChunkMeshDataTask lightingChunkMeshDataTask, int queueSize) {
-        state.setItem(Thread.currentThread().getName() + "_queue_size_cmdlg", queueSize);
-        if (lightingChunkMeshDataTask.blocks() != null) {
-            Position3D position = lightingChunkMeshDataTask.position3D();
-            int previousLod = getNativeLod(position);
-            ChunkUnpacker.unpackChunkPadded(lightingChunkMeshDataTask.blocks(), position, blockService, world);
-            if (previousLod != -1 && previousLod != getNativeLod(position)) {
-                remeshDirectNeighbors(position);
-            }
-        }
-        return generateChunkMeshDataLighting(lightingChunkMeshDataTask.position3D(), lightingChunkMeshDataTask.channel());
-    }
-
     private int getNativeLod(Position3D position) {
         ClientWorldChunk chunk = world.get(position, false, false);
         return chunk == null || chunk.getChunkData(-1) == null ? -1 : chunk.getChunkData(-1).getLOD();
     }
 
-    private void remeshDirectNeighbors(Position3D position) {
+    private void remeshDirectNeighbors(Position3D position, boolean priority) {
         for (Position3D offset : DIRECT_NEIGHBOR_OFFSETS) {
             Position3D neighborPosition = position.add(offset.x(), offset.y(), offset.z());
             ClientWorldChunk neighbor = world.get(neighborPosition, false, false);
             if (neighbor != null && neighbor.getLightingData() != null && neighbor.isCleanLighting() && neighbor.getChunkData(-1).getLOD() == 0) {
-                meshDataGenerators.submit(new ChunkMeshDataTask(neighborPosition));
+                meshDataGenerators.submit(new ChunkMeshDataTask(neighborPosition), priority);
             }
         }
     }
 
-    private void checkCompleteDirtyNeighbor(Position3D position3D, ClientWorldChunk clientWorldChunk) {
+    private void checkCompleteDirtyNeighbor(Position3D position3D, ClientWorldChunk clientWorldChunk, boolean priority) {
         if (clientWorldChunk != null && clientWorldChunk.getLightingData() != null) {
             if (clientWorldChunk.isCleanLighting()) {
                 if (completeDirtyChunks.remove(position3D)) {
-                    meshDataGenerators.submit(new ChunkMeshDataTask(position3D));
+                    meshDataGenerators.submit(new ChunkMeshDataTask(position3D), priority);
                 }
             } else {
                 boolean failed = false;
@@ -180,106 +274,12 @@ public class ChunkMeshDataLightingGenerator {
                 }
                 if (!failed) {
                     if (completeDirtyChunks.remove(position3D)) {
-                        meshDataGenerators.submit(new ChunkMeshDataTask(position3D));
+                        meshDataGenerators.submit(new ChunkMeshDataTask(position3D), priority);
                     }
                     clientWorldChunk.setCleanLighting(true);
                 }
             }
         }
-    }
-
-    private Set<LightingChunkMeshDataTask> generateChunkMeshDataLighting(Position3D position3D, LightChannels channel) {
-        ClientWorldChunk clientWorldChunk = world.get(position3D, false, false);
-
-        if (clientWorldChunk == null || clientWorldChunk.getChunkData(-1) == null || clientWorldChunk.getChunkData(-1) instanceof ChunkShell<BlockWithMesh>) {
-            return null;
-        }
-
-        Chunk<BlockWithMesh> chunkData = clientWorldChunk.getChunkData(-1);
-
-        if (chunkData.getLOD() > 0) {
-            clientWorldChunk.setChunkLightingData(new ChunkLightingData(new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 0), new SingleLightChannel((byte) 15)));
-            clientWorldChunk.setCleanLighting(true);
-
-            completeDirtyChunks.remove(position3D);
-
-            meshDataGenerators.submit(new ChunkMeshDataTask(position3D));
-
-            int foundCompleteDirtyChunkCount = 0;
-            for (int x = -1; x <= 1; x++) {
-                for (int y = -1; y <= 1; y++) {
-                    for (int z = -1; z <= 1; z++) {
-                        if (!(x == 0 && y == 0 && z == 0)) {
-                            Position3D neighborPos = position3D.add(x, y, z);
-                            if (completeDirtyChunks.contains(neighborPos)) {
-                                foundCompleteDirtyNeighborPositions[foundCompleteDirtyChunkCount] = neighborPos;
-                                foundCompleteDirtyNeighborChunks[foundCompleteDirtyChunkCount++] = world.get(neighborPos, false, false);
-                            }
-                        }
-                    }
-                }
-            }
-
-            for (int i = 0; i < foundCompleteDirtyChunkCount; i++) {
-                checkCompleteDirtyNeighbor(foundCompleteDirtyNeighborPositions[i], foundCompleteDirtyNeighborChunks[i]);
-            }
-
-            return null;
-        }
-
-        if (channel == null) {
-            Set<LightingChunkMeshDataTask> out = new HashSet<>();
-            for (LightChannels lightChannel : LightChannels.values()) {
-                Set<LightingChunkMeshDataTask> lightingChunkMeshDataTasks = generateChunkMeshDataLighting(position3D, lightChannel);
-                if (lightingChunkMeshDataTasks != null) {
-                    out.addAll(lightingChunkMeshDataTasks);
-                }
-            }
-            return out;
-        }
-
-        createLightingDataIfEmpty(clientWorldChunk);
-
-        int foundCompleteDirtyChunkCount = 0;
-
-        boolean failed = false;
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    if (!(x == 0 && y == 0 && z == 0)) {
-                        Position3D neighborPos = position3D.add(x, y, z);
-                        ClientWorldChunk neighborChunk = world.get(neighborPos, false, false);
-                        failed |= isNeighborLightingInvalid(neighborChunk, channel);
-                        if (completeDirtyChunks.contains(neighborPos)) {
-                            foundCompleteDirtyNeighborPositions[foundCompleteDirtyChunkCount] = neighborPos;
-                            foundCompleteDirtyNeighborChunks[foundCompleteDirtyChunkCount++] = neighborChunk;
-                        }
-                    }
-                }
-            }
-        }
-
-        Set<LightingChunkMeshDataTask> meshDataTasks = new HashSet<>();
-
-        LightChannel lightChannel = generateLighting(clientWorldChunk, chunkData, position3D, channel, meshDataTasks);
-        clientWorldChunk.getLightingData().setChannel(channel, lightChannel);
-
-        clientWorldChunk.setCleanLighting(channel, !failed);
-
-        for (int i = 0; i < foundCompleteDirtyChunkCount; i++) {
-            checkCompleteDirtyNeighbor(foundCompleteDirtyNeighborPositions[i], foundCompleteDirtyNeighborChunks[i]);
-        }
-
-        if (clientWorldChunk.getLightingData().isComplete()) {
-            if (clientWorldChunk.isCleanLighting()) {
-                completeDirtyChunks.remove(position3D);
-                meshDataGenerators.submit(new ChunkMeshDataTask(position3D));
-            } else {
-                completeDirtyChunks.add(position3D);
-            }
-        }
-
-        return meshDataTasks;
     }
 
     private LightChannel generateLighting(ClientWorldChunk clientWorldChunk, Chunk<BlockWithMesh> chunk, Position3D chunkPos, LightChannels lightChannels, Collection<LightingChunkMeshDataTask> meshDataTasks) {

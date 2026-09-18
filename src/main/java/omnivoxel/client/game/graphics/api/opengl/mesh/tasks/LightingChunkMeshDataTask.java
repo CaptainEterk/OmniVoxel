@@ -8,7 +8,7 @@ import omnivoxel.util.math.Position3D;
 import java.util.Objects;
 
 public record LightingChunkMeshDataTask(ByteBuf blocks, Position3D position3D,
-                                        LightChannels channel) implements MeshDataTask {
+                                        LightChannels channel, boolean priority) implements MeshDataTask {
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;

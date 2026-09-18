@@ -8,28 +8,38 @@ import java.util.Arrays;
 public final class LightNodeQueue {
     private static final int DEFAULT_CAPACITY = ConstantCommonSettings.BLOCKS_IN_CHUNK;
 
-    private int[] xs = new int[DEFAULT_CAPACITY];
-    private int[] ys = new int[DEFAULT_CAPACITY];
-    private int[] zs = new int[DEFAULT_CAPACITY];
-    private byte[] lightLevels = new byte[DEFAULT_CAPACITY];
+    private static final int COORD_MASK = 0x1F;
+
+    private static final int Y_SHIFT = 5;
+    private static final int Z_SHIFT = 10;
+    private static final int LIGHT_SHIFT = 15;
+
+    private int[] queue = new int[DEFAULT_CAPACITY];
+
     private int head;
     private int tail;
+
     private int x;
     private int y;
     private int z;
     private byte lightLevel;
+
     private int allSameLightCount;
 
     public void add(int x, int y, int z, byte lightLevel) {
         if (allSameLightCount > 0) {
-            throw new IllegalStateException("Cannot add to queue when all the light levels are the same");
+            throw new IllegalStateException(
+                    "Cannot add to queue when all the light levels are the same"
+            );
         }
+
         ensureCapacity();
-        xs[tail] = x;
-        ys[tail] = y;
-        zs[tail] = z;
-        lightLevels[tail] = lightLevel;
-        tail++;
+
+        queue[tail++] =
+                (x & COORD_MASK)
+                        | ((y & COORD_MASK) << Y_SHIFT)
+                        | ((z & COORD_MASK) << Z_SHIFT)
+                        | ((lightLevel & 0xFF) << LIGHT_SHIFT);
     }
 
     public void poll() {
@@ -39,11 +49,12 @@ public final class LightNodeQueue {
             z = IndexCalculator.z(allSameLightCount);
             allSameLightCount--;
         } else {
-            x = xs[head];
-            y = ys[head];
-            z = zs[head];
-            lightLevel = lightLevels[head];
-            head++;
+            int node = queue[head++];
+
+            x = node & COORD_MASK;
+            y = (node >>> Y_SHIFT) & COORD_MASK;
+            z = (node >>> Z_SHIFT) & COORD_MASK;
+            lightLevel = (byte) (node >>> LIGHT_SHIFT);
         }
     }
 
@@ -74,30 +85,21 @@ public final class LightNodeQueue {
     }
 
     private void ensureCapacity() {
-        if (tail < xs.length) {
+        if (tail < queue.length) {
             return;
         }
 
         if (head > 0) {
             int size = tail - head;
-            System.arraycopy(xs, head, xs, 0, size);
-            System.arraycopy(ys, head, ys, 0, size);
-            System.arraycopy(zs, head, zs, 0, size);
-            System.arraycopy(lightLevels, head, lightLevels, 0, size);
+
+            System.arraycopy(queue, head, queue, 0, size);
+
             head = 0;
             tail = size;
             return;
         }
 
-        int newCapacity = xs.length << 1;
-        xs = Arrays.copyOf(xs, newCapacity);
-        ys = Arrays.copyOf(ys, newCapacity);
-        zs = Arrays.copyOf(zs, newCapacity);
-        lightLevels = Arrays.copyOf(lightLevels, newCapacity);
-    }
-
-    public void fill(byte lightEmitting) {
-        allSameLightCount = ConstantCommonSettings.BLOCKS_IN_CHUNK - 1;
-        lightLevel = lightEmitting;
+        int newCapacity = queue.length << 1;
+        queue = Arrays.copyOf(queue, newCapacity);
     }
 }

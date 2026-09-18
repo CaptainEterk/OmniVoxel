@@ -306,22 +306,22 @@ public final class Client implements NetworkUser {
                 BlockWithMesh block = blockService.getBlock(blockID);
                 if (chunkData.getBlock(x, y, z) != block || chunkData.getBlockRotation(x, y, z) != rotation) {
                     clientWorldChunk.setChunkData(chunkData.setBlock(x, y, z, block, rotation));
-                    lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition, null), true);
+                    lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition, null, true), true);
 
                     if (x == 0)
-                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0), null), true);
+                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(-1, 0, 0), null, true), true);
                     if (x == ConstantCommonSettings.CHUNK_WIDTH - 1)
-                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(1, 0, 0), null), true);
+                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(1, 0, 0), null, true), true);
 
                     if (y == 0)
-                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, -1, 0), null), true);
+                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, -1, 0), null, true), true);
                     if (y == ConstantCommonSettings.CHUNK_HEIGHT - 1)
-                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 1, 0), null), true);
+                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 1, 0), null, true), true);
 
                     if (z == 0)
-                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, -1), null), true);
+                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, -1), null, true), true);
                     if (z == ConstantCommonSettings.CHUNK_LENGTH - 1)
-                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, 1), null), true);
+                        lightingGenerators.submit(new LightingChunkMeshDataTask(null, chunkPosition.add(0, 0, 1), null, true), true);
                 }
             }
         }
@@ -421,7 +421,7 @@ public final class Client implements NetworkUser {
 
         world.receivedChunk(position3D);
 
-        lightingGenerators.submit(new LightingChunkMeshDataTask(byteBuf, position3D, null));
+        lightingGenerators.submit(new LightingChunkMeshDataTask(byteBuf, position3D, null, false));
     }
 
     private void receiveChunkHeights(ByteBuf byteBuf) {
