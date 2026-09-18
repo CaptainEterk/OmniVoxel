@@ -276,10 +276,11 @@ public class Server implements NetworkUser {
                     if (!NetworkService.checkChannel(client.getCTX().channel())) {
                         Logger.info("Client lost contact...");
                         removeClient(client);
+                    } else {
+                        NetworkService.flush(client.getCTX().channel());
                     }
                 }
             }
-
             if (tick % settings.getIntSetting("entity_save_td", 20) == 0) {
                 // TODO: Actually save entities
             }

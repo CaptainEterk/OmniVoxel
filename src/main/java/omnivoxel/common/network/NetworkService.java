@@ -7,13 +7,17 @@ import omnivoxel.server.PackageID;
 import omnivoxel.util.log.Logger;
 
 public class NetworkService {
-    private static void flush(Channel channel, ByteBuf byteBuf, Runnable onError) {
-        channel.writeAndFlush(byteBuf).addListener(f -> {
+    private static void write(Channel channel, ByteBuf byteBuf, Runnable onError) {
+        channel.write(byteBuf).addListener(f -> {
             if (!f.isSuccess()) {
                 Logger.error(Logger.Priority.HIGH, "Failed to send packet: " + f.cause());
                 onError.run();
             }
         });
+    }
+
+    public static void flush(Channel channel) {
+        channel.flush();
     }
 
     private static boolean checkChannel(Channel channel, PackageID id) {
@@ -43,7 +47,7 @@ public class NetworkService {
             for (double i : numbers) {
                 buffer.writeDouble(i);
             }
-            flush(channel, buffer, onError);
+            write(channel, buffer, onError);
         }
     }
 
@@ -65,7 +69,7 @@ public class NetworkService {
             for (byte[] bites : bytes) {
                 buffer.writeBytes(bites);
             }
-            flush(channel, buffer, onError);
+            write(channel, buffer, onError);
         }
     }
 
@@ -85,7 +89,7 @@ public class NetworkService {
                 buffer.writeInt(bites.length);
                 buffer.writeBytes(bites);
             }
-            flush(channel, buffer, onError);
+            write(channel, buffer, onError);
         }
     }
 
@@ -104,7 +108,7 @@ public class NetworkService {
                 buffer.writeInt(bites.length);
                 buffer.writeBytes(bites);
             }
-            flush(channel, buffer, onError);
+            write(channel, buffer, onError);
         }
     }
 
@@ -117,7 +121,7 @@ public class NetworkService {
             for (int i : numbers) {
                 buffer.writeInt(i);
             }
-            flush(channel, buffer, onError);
+            write(channel, buffer, onError);
         }
     }
 }

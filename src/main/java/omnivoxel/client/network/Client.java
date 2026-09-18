@@ -483,6 +483,8 @@ public final class Client implements NetworkUser {
             }
             lastFlushedTime += ConstantNetworkSettings.CHUNK_REQUEST_BATCHING_TIME;
         }
+
+        NetworkService.flush(channel);
     }
 
     public void sendRequest(Request request) {
